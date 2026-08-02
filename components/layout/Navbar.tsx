@@ -24,7 +24,7 @@ import { Avatar } from "@/components/ui/Avatar"
 const NAV_ITEMS = [
   { href: "/feed", label: "Feed", icon: Home },
   { href: "/search", label: "Search", icon: Search },
-  { href: "/create", label: "Create", icon: PlusSquare },
+  { href: "/post/create", label: "Create", icon: PlusSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/profile", label: "Profile", icon: User },
 ]
@@ -44,17 +44,6 @@ export function Navbar() {
     // TODO: real Supabase signOut goes here, then redirect to /.
     router.push("/")
   }
-
-  const createButton = (
-    <Link
-      href="/create"
-      aria-label="Create post"
-      className="transition-app hidden h-11 items-center justify-center gap-2 rounded-card bg-accent-600 text-sm font-semibold text-white hover:bg-accent-700 sm:inline-flex"
-    >
-      <PlusSquare size={18} />
-      Create
-    </Link>
-  )
 
   return (
     <>

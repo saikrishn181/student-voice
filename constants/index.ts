@@ -1,7 +1,7 @@
 // Fixed application values (states/districts, categories, organization types).
 // FIXED constant set reused by auth/onboarding and future feed phases.
 
-import type { CategoryId, OrganizationType } from "@/lib/types"
+import type { Category, OrganizationType } from "@/lib/types"
 
 // Regions for the onboarding/region page. Store as an array so order is stable.
 // TODO: replace with an API/database of Indian states & districts in a later phase.
@@ -62,20 +62,32 @@ export const ORGANIZATION_TYPES: {
   { value: "other", label: "Other" },
 ]
 
-// List of post categories (used by feed filters in Phase 2, and by the
-// CategoryTag badge in later phases).
+// List of post categories (feed filter in Phase 2+).
 export const CATEGORIES: {
-  id: CategoryId
+  value: Category
   label: string
   emoji: string
 }[] = [
-  { id: "education", label: "Education", emoji: "📚" },
-  { id: "campus", label: "Campus", emoji: "🏫" },
-  { id: "transport", label: "Transport", emoji: "🚌" },
-  { id: "hostel", label: "Hostel & Food", emoji: "🏠" },
-  { id: "fees", label: "Fees & Funds", emoji: "💰" },
-  { id: "other", label: "Other", emoji: "✳️" },
+  { value: "Academic", label: "Academic", emoji: "📚" },
+  { value: "Harassment", label: "Harassment", emoji: "⚠️" },
+  { value: "Mental Health", label: "Mental Health", emoji: "🧠" },
+  { value: "Financial", label: "Financial", emoji: "💰" },
+  { value: "Exams", label: "Exams", emoji: "📝" },
+  { value: "Placements", label: "Placements", emoji: "💼" },
 ]
+
+// Options shape for the Select component (create-post page, filters).
+export const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({
+  value: c.value,
+  label: `${c.emoji} ${c.label}`,
+}))
+
+export function labelForCategory(category: Category): string {
+  return CATEGORIES.find((c) => c.value === category)?.label ?? category
+}
+
+// How many posts to load per batch in the infinite-scroll feed.
+export const FEED_PAGE_SIZE = 10
 
 // The default Redirect target after a successful login (user already has a region).
 export const LOGGED_IN_HOME = "/feed"

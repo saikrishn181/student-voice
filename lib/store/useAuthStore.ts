@@ -56,6 +56,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
         // Organizations start unverified; this drives the Phase 3 flow.
         verificationStatus:
           payload.accountType === "organization" ? "pending" : undefined,
+        bio: payload.accountType === "organization" ? "New organization on StudentVoice" : undefined,
+        followerCount: 0,
+        followingCount: 0,
         createdAt: new Date().toISOString(),
       },
     }),
