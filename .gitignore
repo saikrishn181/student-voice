@@ -1,4 +1,17 @@
+# Dependencies
+node_modules/
+
+# Next.js build output & dev cache
+.next/
+out/
+
 # Logs
 *.log
+npm-debug.log*
+
+# OS
 .DS_Store
-node_modules/
+Thumbs.db
+
+# Env / secrets
+.env*.local
