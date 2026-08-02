@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+
+  /* Ensure interactive elements meet a comfortable tap target on touch devices */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+}
+
+@layer components {
+  /* Consistent card surface used across phases */
+  .surface-card {
+    @apply rounded-card border border-slate-200 bg-white shadow-card;
+  }
+
+  /* Shared interactive transition (150-200ms ease) */
+  .transition-app {
+    @apply transition-all duration-fast ease-smooth;
+  }
+}
+
+/* Custom scrollbar for dropdown/popover scroll regions */
+.scroll-slim::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
