@@ -13,20 +13,12 @@ export function VerifiedBadge({ className }: { className?: string }) {
   )
 }
 
-// RegionTag — a "district, state" pill for a post's location.
-export function RegionTag({
-  state,
-  district,
-  className,
-}: {
-  state: string
-  district: string
-  className?: string
-}) {
+// RegionTag — a "state" pill for a post's location.
+export function RegionTag({ state, className }: { state: string; className?: string }) {
   return (
     <Badge tone="neutral" className={className}>
       <MapPin size={13} aria-hidden />
-      {district}, {state}
+      {state}
     </Badge>
   )
 }

@@ -2,21 +2,23 @@
 
 // Text/email/password/tel input with label, optional error message, and a
 // show/hide toggle for password fields.
-import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from "react"
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: ReactNode
   error?: string
+  leftAdornment?: ReactNode
   rightAdornment?: ReactNode
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, id, type = "text", className, rightAdornment, ...props },
+  { label, error, id, type = "text", className, leftAdornment, rightAdornment, ...props },
   ref,
 ) {
-  const autoId = id || props.name || "input"
+  const generatedId = useId()
+  const autoId = id || props.name || generatedId
   const [showPw, setShowPw] = useState(false)
   const isPassword = type === "password"
   const resolvedType = isPassword ? (showPw ? "text" : "password") : type
@@ -30,6 +32,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       ) : null}
 
       <div className="relative">
+        {leftAdornment ? (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+            {leftAdornment}
+          </span>
+        ) : null}
         <input
           ref={ref}
           id={autoId}
@@ -42,6 +49,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
               ? "border-red-500 focus:border-red-500 focus:ring-red-500/30"
               : "border-slate-300",
             isPassword && "pr-12",
+            leftAdornment && "pl-10",
             className,
           )}
           aria-invalid={error ? true : undefined}

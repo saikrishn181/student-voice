@@ -34,9 +34,9 @@ const variantClasses: Record<Variant, string> = {
     "bg-transparent text-gray-600 hover:bg-slate-100 text-gray-800 focus-visible:ring-primary-400",
 }
 
-// Tap-target: sm keeps a compact chip, md+ guarantee 44px height.
+// Tap-target: sm keeps a compact chip on desktop, 44px minimum on mobile touch.
 const sizeClasses: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm",
+  sm: "h-11 min-h-11 sm:h-9 sm:min-h-0 px-3 text-sm",
   md: "h-11 px-5 text-sm", // h-11 = 44px on mobile
   lg: "h-12 px-6 text-base", // 48px, comfortable on mobile
 }

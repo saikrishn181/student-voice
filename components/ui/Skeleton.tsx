@@ -1,4 +1,5 @@
-// Gray placeholder blocks for loading states. Pulse animation.
+// Gray placeholder blocks for loading states. Pulse animation is disabled
+// for users who prefer reduced motion.
 import { cn } from "@/lib/utils"
 
 interface SkeletonProps {
@@ -6,5 +7,10 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return <div className={cn("animate-pulse rounded-card bg-slate-200", className)} />
+  return (
+    <div
+      className={cn("rounded-card bg-slate-200 motion-safe:animate-pulse", className)}
+      aria-hidden
+    />
+  )
 }

@@ -10,6 +10,7 @@
 import Image from "next/image"
 import { useCallback, useRef, useState } from "react"
 import { Skeleton } from "@/components/ui/Skeleton"
+import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import type { MediaType } from "@/lib/types"
 
@@ -75,7 +76,7 @@ export function MediaDisplay({
         {mediaType === "photo" ? (
           <Image
             src={mediaUrl}
-            alt="Post media"
+            alt={s["media.alt"]}
             fill
             sizes="(max-width: 1024px) 100vw, 720px"
             className={cn("object-contain transition-opacity duration-fast", !revealed && "opacity-0")}
@@ -89,6 +90,7 @@ export function MediaDisplay({
             preload="metadata"
             muted
             playsInline
+            aria-label={s["media.alt"]}
             className={cn("h-full w-full object-contain", !revealed && "opacity-0")}
             onLoadedMetadata={handleVideoMetadata}
           />

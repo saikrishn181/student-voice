@@ -18,15 +18,17 @@ import {
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
+import { useNotificationStore } from "@/lib/store/useNotificationStore"
+import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/components/ui/Avatar"
 
 const NAV_ITEMS = [
-  { href: "/feed", label: "Feed", icon: Home },
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/post/create", label: "Create", icon: PlusSquare },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/feed", label: s["nav.feed"], icon: Home },
+  { href: "/search", label: s["nav.search"], icon: Search },
+  { href: "/post/create", label: s["nav.create"], icon: PlusSquare },
+  { href: "/notifications", label: s["nav.notifications"], icon: Bell },
+  { href: "/profile", label: s["nav.profile"], icon: User },
 ]
 
 export function Navbar() {
@@ -35,13 +37,22 @@ export function Navbar() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const logout = useAuthStore((s) => s.logout)
   const showToast = useToastStore((s) => s.show)
+  const notifications = useNotificationStore((s) => s.notifications)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
-  const handleLogout = () => {
-    logout()
+  const unreadCount = notifications.filter((n) => !n.read).length
+
+  const renderUnread = () =>
+    unreadCount > 0 ? (
+      <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[11px] font-semibold leading-none text-white">
+        {unreadCount > 9 ? "9+" : unreadCount}
+      </span>
+    ) : null
+
+  const handleLogout = async () => {
     setProfileMenuOpen(false)
+    await logout()
     showToast("Logged out successfully", "info")
-    // TODO: real Supabase signOut goes here, then redirect to /.
     router.push("/")
   }
 
@@ -53,7 +64,7 @@ export function Navbar() {
           <span className="flex h-9 w-9 items-center justify-center rounded-card bg-primary-700 text-white">
             <Megaphone size={20} />
           </span>
-          <span className="text-lg font-bold text-primary-700">StudentVoice</span>
+          <span className="text-lg font-bold text-primary-700">{s["app.name"]}</span>
         </Link>
 
         <nav className="flex-1 space-y-1 px-3 py-2">
@@ -70,8 +81,9 @@ export function Navbar() {
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-800",
                 )}
               >
-                <item.icon size={20} />
+                <item.icon size={20} aria-hidden />
                 {item.label}
+                {item.href === "/notifications" ? renderUnread() : null}
               </Link>
             )
           })}
@@ -84,8 +96,8 @@ export function Navbar() {
               onClick={handleLogout}
               className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
             >
-              <LogOut size={20} />
-              Log out
+              <LogOut size={20} aria-hidden />
+              {s["nav.logout"]}
             </button>
           </div>
         ) : null}
@@ -109,7 +121,14 @@ export function Navbar() {
               )}
               style={{ minHeight: 48 }}
             >
-              <item.icon size={22} />
+              <span className="relative">
+                <item.icon size={22} aria-hidden />
+                {item.href === "/notifications" && unreadCount > 0 ? (
+                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[9px] font-semibold leading-none text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </span>
             </Link>
           )
         })}

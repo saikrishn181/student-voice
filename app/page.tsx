@@ -5,22 +5,23 @@
 import Link from "next/link"
 import { Megaphone, ArrowRight, MapPin, HelpCircle, HeartHandshake } from "lucide-react"
 import { Button } from "@/components/ui/Button"
+import s from "@/lib/strings"
 
 const FEATURES = [
   {
     icon: MapPin,
-    title: "Region by region",
-    text: "Problems are anchored to your state and district so support comes from the people closest to you.",
+    titleKey: "hero.features.region.title" as const,
+    textKey: "hero.features.region.text" as const,
   },
   {
     icon: HelpCircle,
-    title: "Post problems",
-    text: "Students and student organizations can share real issues — from campus facilities to fees and transport.",
+    titleKey: "hero.features.post.title" as const,
+    textKey: "hero.features.post.text" as const,
   },
   {
     icon: HeartHandshake,
-    title: "Get real support",
-    text: "The community — and relevant organizations — step in to help, upvote, and act.",
+    titleKey: "hero.features.support.title" as const,
+    textKey: "hero.features.support.text" as const,
   },
 ]
 
@@ -32,18 +33,18 @@ export default function LandingPage() {
         <div className="mx-auto flex w-full max-w-content items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-card bg-primary-700 text-white">
-              <Megaphone size={20} />
+              <Megaphone size={20} aria-hidden />
             </span>
-            <span className="text-lg font-bold text-primary-700">StudentVoice</span>
+            <span className="text-lg font-bold text-primary-700">{s["app.name"]}</span>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                Log In
+                {s["auth.login.button"]}
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="sm">Sign Up</Button>
+              <Button size="sm">{s["auth.signup.studentButton"]}</Button>
             </Link>
           </div>
         </div>
@@ -53,28 +54,25 @@ export default function LandingPage() {
       <section className="mx-auto grid w-full max-w-content items-center gap-10 px-4 py-12 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-16 lg:px-8">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-            🇮🇳 Built for students of India
+            🇮🇳 {s["hero.builtForIndia"]}
           </span>
           <h1 className="mt-4 text-display text-slate-900">
-            Your voice, heard &amp; supported —{" "}
-            <span className="text-primary-700">region by region</span>
+            {s["hero.title"]} <span className="text-primary-700">{s["hero.titleHighlight"]}</span>
           </h1>
           <p className="mt-4 max-w-xl text-body-lg text-slate-600">
-            StudentVoice helps students and student organizations post the problems that matter on
-            campus, and get real support from the people closest to them. No noise — just genuine
-            help where you live.
+            {s["hero.subtitle"]}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/signup" className="flex-1 sm:flex-none">
               <Button size="lg" fullWidth className="sm:min-w-44">
-                Create your account
-                <ArrowRight size={18} />
+                {s["hero.cta.createAccount"]}
+                <ArrowRight size={18} aria-hidden />
               </Button>
             </Link>
             <Link href="/login" className="flex-1 sm:flex-none">
               <Button size="lg" variant="outline" fullWidth className="sm:min-w-40">
-                Log In
+                {s["hero.cta.login"]}
               </Button>
             </Link>
           </div>
@@ -83,22 +81,21 @@ export default function LandingPage() {
         {/* Illustration (right on desktop, below on mobile) */}
         <div className="relative mx-auto w-full max-w-sm">
           <div className="surface-card relative z-10 overflow-hidden p-5">
-<div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
-                <Megaphone size={18} className="text-primary-700" />
+                <Megaphone size={18} className="text-primary-700" aria-hidden />
               </span>
               <div>
-                <p className="font-semibold text-slate-800">Campus Water Issue</p>
-                <p className="text-body-sm text-slate-500">Mumbai, Maharashtra</p>
+                <p className="font-semibold text-slate-800">{s["hero.demoPost.title"]}</p>
+                <p className="text-body-sm text-slate-500">{s["hero.demoPost.location"]}</p>
               </div>
             </div>
             <p className="mt-3 text-body-sm text-slate-600">
-              Hostel watering is broken for 3 days. Need the warden&apos;s action and student
-              support.
+              {s["hero.demoPost.body"]}
             </p>
             <div className="mt-4 flex items-center justify-between">
               <span className="inline-flex items-center gap-1 rounded-pill bg-accent-50 px-2.5 py-1 text-xs font-semibold text-accent-700">
-                <HeartHandshake size={14} /> 42 Support
+                <HeartHandshake size={14} aria-hidden /> {s["hero.demoPost.support"](42)}
               </span>
               <span className="text-body-sm text-slate-400">2h ago</span>
             </div>
@@ -106,7 +103,7 @@ export default function LandingPage() {
 
           {/* decorative supporting card */}
           <div className="absolute -bottom-4 -right-2 z-0 hidden rounded-card bg-primary-700 px-4 py-3 text-white shadow-popover sm:block">
-            <p className="text-sm font-semibold">6 districts active today</p>
+            <p className="text-sm font-semibold">{s["hero.demoCard.states"]}</p>
           </div>
         </div>
       </section>
@@ -115,12 +112,12 @@ export default function LandingPage() {
       <section className="w-full border-t border-slate-200 bg-white">
         <div className="mx-auto grid w-full max-w-content gap-6 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
           {FEATURES.map((f) => (
-            <div key={f.title} className="flex flex-col gap-2">
+            <div key={f.titleKey} className="flex flex-col gap-2">
               <span className="flex h-11 w-11 items-center justify-center rounded-card bg-primary-50 text-primary-700">
-                <f.icon size={22} />
+                <f.icon size={22} aria-hidden />
               </span>
-              <h3 className="text-h4 text-slate-900">{f.title}</h3>
-              <p className="text-body-sm text-slate-600">{f.text}</p>
+              <h3 className="text-h4 text-slate-900">{s[f.titleKey]}</h3>
+              <p className="text-body-sm text-slate-600">{s[f.textKey]}</p>
             </div>
           ))}
         </div>

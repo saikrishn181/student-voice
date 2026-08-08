@@ -1,8 +1,9 @@
 "use client"
 
 // Modal: centered on desktop, full-screen sheet on mobile. Closes on backdrop
-// click and Escape. Renders into a portal attached to document.body.
-import { useEffect, useRef, type ReactNode } from "react"
+// click and Escape. Traps keyboard focus while open and returns focus to the
+// triggering element when closed. Renders into a portal attached to document.body.
+import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -15,33 +16,68 @@ interface ModalProps {
   className?: string
 }
 
+// All focusable elements within the dialog.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
-  const mountedRef = useRef(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
 
+  // Remember which element had focus before the modal opened, so we can
+  // return focus to it when the modal closes.
   useEffect(() => {
-    mountedRef.current = true
-    if (!open) return
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", onKey)
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = ""
-    }
-  }, [open, onClose])
-
-  useEffect(() => {
-    if (!mountedRef.current) return
     if (open) {
-      // Focus the modal on open for a11y.
-      requestAnimationFrame(() => dialogRef.current?.focus())
+      previouslyFocused.current = document.activeElement as HTMLElement
+      requestAnimationFrame(() => {
+        // Focus the first focusable element inside the dialog.
+        const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)
+        first?.focus()
+      })
+    } else if (previouslyFocused.current && previouslyFocused.current.isConnected) {
+      previouslyFocused.current.focus()
     }
   }, [open])
 
-  const dialogRef = useRef<HTMLDivElement>(null)
+  // Trap focus inside the dialog while open.
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose()
+        return
+      }
+      if (e.key !== "Tab") return
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE)
+      if (!focusable || focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    },
+    [onClose],
+  )
+
+  useEffect(() => {
+    if (!open) return
+    document.addEventListener("keydown", handleKeyDown)
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = ""
+    }
+  }, [open, handleKeyDown])
 
   if (typeof window === "undefined" || !open) return null
 

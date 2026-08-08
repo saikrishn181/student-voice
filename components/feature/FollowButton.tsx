@@ -5,6 +5,7 @@
 import { UserCheck } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { usePostStore } from "@/lib/store/usePostStore"
+import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 
 interface FollowButtonProps {
@@ -27,6 +28,7 @@ export function FollowButton({ followerId, followingId, className }: FollowButto
       variant={isFollowing ? "outline" : "primary"}
       onClick={() => toggleFollow(followerId, followingId)}
       aria-pressed={isFollowing}
+      aria-label={isFollowing ? s["follow.button.following"] : s["follow.button.follow"]}
       className={cn("gap-1.5 px-3", className)}
     >
       <UserCheck size={16} aria-hidden />

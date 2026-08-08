@@ -1,8 +1,8 @@
 "use client"
 
-// Wrapper around a native <select> for accessible state/district/category
+// Wrapper around a native <select> for accessible state/category
 // pickers. Native select is the most reliable option dropdown on all platforms.
-import { forwardRef, type SelectHTMLAttributes, type ReactNode } from "react"
+import { forwardRef, useId, type SelectHTMLAttributes, type ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,7 +23,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   { label, options, placeholder, error, className, id, ...props },
   ref,
 ) {
-  const autoId = id || "select"
+  const generatedId = useId()
+  const autoId = id || generatedId
   return (
     <div className="flex w-full flex-col gap-1.5">
       {label ? (

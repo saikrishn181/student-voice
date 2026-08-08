@@ -18,17 +18,6 @@ export function initialsOf(name: string): string {
   return (first + last).toUpperCase()
 }
 
-// Deterministic pseudo-random small string for mock ids.
-export function mockId(prefix = "id"): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`
-}
-
-// Simulate async latency for mocked logins / lookups. A real Supabase call will
-// replace these functions in a later phase.
-export function fakeDelay(ms = 800): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 // Clamp a value between min and max.
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)

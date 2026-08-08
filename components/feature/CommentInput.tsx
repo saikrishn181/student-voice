@@ -8,6 +8,7 @@ import { Button, Input } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
+import s from "@/lib/strings"
 
 interface CommentInputProps {
   postId: string
@@ -24,15 +25,14 @@ export function CommentInput({ postId, className }: CommentInputProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!isLoggedIn || !currentUser) {
-      showToast("You must be logged in to comment", "error")
+      showToast(s["validation.loginToComment"], "error")
       return
     }
     if (!text.trim()) {
-      showToast("Please write something first", "error")
+      showToast(s["validation.commentEmpty"], "error")
       return
     }
 
-    // TODO: replace with real Supabase insert for `comments`.
     const isOrg = currentUser.accountType === "organization"
     addComment(postId, currentUser.id, text.trim(), isOrg)
     setText("")
@@ -44,17 +44,17 @@ export function CommentInput({ postId, className }: CommentInputProps) {
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={isLoggedIn ? "Write a comment…" : "Log in to comment"}
+          placeholder={isLoggedIn ? s["comment.placeholder"] : s["comment.placeholderLoggedOut"]}
           disabled={!isLoggedIn}
-          aria-label="Write a comment"
-          title={!isLoggedIn ? "Log in to comment" : undefined}
+          aria-label={s["comment.postButton"]}
+          title={!isLoggedIn ? s["comment.placeholderLoggedOut"] : undefined}
           className="h-11 flex-1"
         />
         <Button
           type="submit"
           size="md"
           disabled={!isLoggedIn || !text.trim()}
-          aria-label="Post comment"
+          aria-label={s["comment.postButton"]}
           className="shrink-0"
         >
           <Send size={16} aria-hidden />

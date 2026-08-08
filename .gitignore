@@ -15,3 +15,6 @@ Thumbs.db
 
 # Env / secrets
 .env*.local
+
+# Local AI-assisted dev tooling (not part of the app)
+.opencode/

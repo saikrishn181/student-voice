@@ -4,6 +4,7 @@
 // so any page can call `toast.success/error/info`.
 import { CheckCircle2, Info, AlertCircle, X } from "lucide-react"
 import { useToastStore, toast } from "@/lib/store/useToastStore"
+import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import type { ToastKind } from "@/lib/types"
 
@@ -50,7 +51,7 @@ export function Toaster() {
             <p className="flex-1 text-sm font-medium text-slate-700">{t.message}</p>
             <button
               type="button"
-              aria-label="Dismiss notification"
+              aria-label={s["dismissNotification"]}
               onClick={() => dismiss(t.id)}
               className="transition-app rounded-md p-1 text-slate-400 hover:text-slate-600"
             >

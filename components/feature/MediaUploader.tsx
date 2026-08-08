@@ -9,6 +9,7 @@ import { useRef, useState } from "react"
 import { ImagePlus, UploadCloud, X } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { useToastStore } from "@/lib/store/useToastStore"
+import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import { MediaDisplay } from "./MediaDisplay"
 
@@ -17,6 +18,7 @@ const MAX_FILE_SIZE_MB = 50
 export interface PickedMedia {
   url: string
   type: "photo" | "video"
+  file: File
 }
 
 interface MediaUploaderProps {
@@ -38,21 +40,21 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
     if (!file) return
 
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      showToast("Only images and videos are allowed", "error")
+      showToast(s["validation.fileType"], "error")
       return
     }
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      showToast(`File too large (max ${MAX_FILE_SIZE_MB}MB)`, "error")
+      showToast(s["validation.fileSize"], "error")
       return
     }
 
     resetProgress()
     const url = URL.createObjectURL(file)
     const kind = file.type.startsWith("video/") ? "video" : "photo"
-    onChange({ url, type: kind })
+    onChange({ url, type: kind, file })
 
-    // Simulate upload progress; the real Upload would replace this.
-    // TODO: replace with real Supabase Storage upload + progress.
+    // Simulate upload progress; the real upload happens on form submit via
+    // lib/supabase/storage.
     let p = 0
     const timer = window.setInterval(() => {
       p += 12
@@ -87,8 +89,8 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
           <button
             type="button"
             onClick={handleRemove}
-            aria-label="Remove media"
-            className="transition-app absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900"
+            aria-label={s["media.uploader.remove"]}
+            className="transition-app absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900"
           >
             <X size={18} />
           </button>
@@ -115,12 +117,12 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
               : "border-slate-300 bg-white hover:border-primary-400 hover:bg-slate-50",
           )}
         >
-          <ImagePlus size={28} className="text-slate-400" />
+          <ImagePlus size={28} className="text-slate-400" aria-hidden />
           <span className="text-sm font-semibold text-slate-700">
-            Drag &amp; drop or tap to select
+            {s["media.uploader.dragDrop"]}
           </span>
           <span className="text-xs text-slate-400">
-            Photos or videos · max {MAX_FILE_SIZE_MB}MB
+            {s["media.uploader.formats"](MAX_FILE_SIZE_MB)}
           </span>
         </button>
       )}
@@ -142,7 +144,7 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
           Replace file
         </Button>
       ) : (
-        <span className="sr-only">Media uploader</span>
+        <span className="sr-only">{s["media.uploader.label"]}</span>
       )}
     </div>
   )

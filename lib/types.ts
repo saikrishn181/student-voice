@@ -11,11 +11,12 @@ export type OrganizationType =
   | "campus_club"
   | "other"
 
-// TODO: replace with Supabase Auth user row
 export interface User {
   id: string
   name: string
   email: string
+  // Optional public handle (shown as @username on profiles). Set in settings.
+  username?: string
   accountType: AccountType
   // Only meaningful when accountType === "organization"
   organizationType?: OrganizationType
@@ -23,11 +24,27 @@ export interface User {
   verificationStatus?: "pending" | "verified" | "rejected"
   avatarUrl?: string
   state?: string
-  district?: string
   bio?: string
   followerCount: number
   followingCount: number
   createdAt: string // ISO
+}
+
+// Profile row shape from the `public.profiles` Supabase table (snake_case).
+export interface Profile {
+  id: string
+  name: string
+  email: string
+  username: string | null
+  account_type: AccountType
+  organization_type: OrganizationType | null
+  verification_status: "pending" | "verified" | "rejected" | null
+  avatar_url: string | null
+  state: string | null
+  bio: string | null
+  follower_count: number
+  following_count: number
+  created_at: string
 }
 
 // Post categories (Phase 2).
@@ -39,9 +56,25 @@ export type Category =
   | "Exams"
   | "Placements"
 
+export type NotificationType =
+  | "support"
+  | "comment"
+  | "follow"
+  | "offer_help"
+  | "verification_approved"
+
+export interface Notification {
+  id: string
+  userId: string
+  type: NotificationType
+  actorId: string
+  postId?: string
+  read: boolean
+  createdAt: string // ISO
+}
+
 export type MediaType = "photo" | "video" | null
 
-// TODO: replace with Supabase posts table row
 export interface Post {
   id: string
   authorId: string
@@ -51,7 +84,6 @@ export interface Post {
   // Width/height ratio (e.g. 1.5). null until MediaDisplay measures it at runtime.
   mediaAspectRatio: number | null
   state: string
-  district: string
   category: Category
   supportCount: number
   commentCount: number
@@ -59,7 +91,6 @@ export interface Post {
   supportedByCurrentUser: boolean
 }
 
-// TODO: replace with Supabase comments table row
 export interface Comment {
   id: string
   postId: string
@@ -74,12 +105,6 @@ export interface Comment {
 export interface Follow {
   followerId: string
   followingId: string
-}
-
-// Region types (state -> district), used on the onboarding/region page.
-export interface Region {
-  state: string
-  districts: string[]
 }
 
 export type ToastTone = "success" | "error" | "info"

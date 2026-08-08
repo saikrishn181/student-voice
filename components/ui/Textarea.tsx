@@ -2,7 +2,7 @@
 
 // Multi-line text input, styled like the rest of the Input family. Used for
 // post bodies and long-form fields.
-import { forwardRef, type TextareaHTMLAttributes, type ReactNode } from "react"
+import { forwardRef, useId, type TextareaHTMLAttributes, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -14,7 +14,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   { label, error, id, className, rows = 4, ...props },
   ref,
 ) {
-  const autoId = id || props.name || "textarea"
+  const generatedId = useId()
+  const autoId = id || props.name || generatedId
   return (
     <div className="flex w-full flex-col gap-1.5">
       {label ? (
