@@ -29,7 +29,7 @@ drop policy if exists "post-media: authenticated update" on storage.objects;
 create policy "post-media: authenticated update"
   on storage.objects for update
   to authenticated
-  using (bucket_id = 'post-media' and owner = auth.uid());
+  using (bucket_id = 'post-media' and owner = auth.uid()) with check (bucket_id = 'post-media' and owner = auth.uid());
 
 drop policy if exists "post-media: authenticated delete" on storage.objects;
 create policy "post-media: authenticated delete"
@@ -64,7 +64,7 @@ create policy "Profiles are viewable by everyone"
 
 drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
-  on public.profiles for update using (auth.uid() = id);
+  on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
 
 -- ============================================================
 -- AUTOMATIC PROFILE CREATION ON SIGNUP
@@ -132,7 +132,7 @@ create policy "Users can create posts"
 
 drop policy if exists "Users can update their own posts" on public.posts;
 create policy "Users can update their own posts"
-  on public.posts for update using (auth.uid() = author_id);
+  on public.posts for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
 
 drop policy if exists "Users can delete their own posts" on public.posts;
 create policy "Users can delete their own posts"
@@ -280,7 +280,7 @@ create policy "Users see their own notifications"
 
 drop policy if exists "Users update their own notifications" on public.notifications;
 create policy "Users update their own notifications"
-  on public.notifications for update using (auth.uid() = user_id);
+  on public.notifications for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Create a 'support' or 'comment' notification when someone interacts with a post.
 create or replace function public.notify_on_post_interaction()
@@ -336,3 +336,13 @@ create trigger notify_on_comment
 -- Seed users must already exist in auth.users for the FK to pass. The app lets
 -- you sign up normally; run `seed-auth.sql` afterward to add demo sign-ins, then
 -- `seed-data.sql` for posts/comments/notifications.
+
+-- ============================================================
+-- PREVENT MASS ASSIGNMENT (COLUMN RESTRICTIONS)
+-- ============================================================
+REVOKE UPDATE (follower_count, following_count, verification_status, account_type) ON public.profiles FROM authenticated, anon;
+REVOKE UPDATE (support_count, comment_count, author_id, created_at) ON public.posts FROM authenticated, anon;
+REVOKE UPDATE (post_id, author_id, is_org_help, created_at) ON public.comments FROM authenticated, anon;
+REVOKE UPDATE (user_id, type, actor_id, post_id, created_at) ON public.notifications FROM authenticated, anon;
+REVOKE UPDATE (follower_id, following_id, created_at) ON public.follows FROM authenticated, anon;
+REVOKE UPDATE (post_id, user_id, created_at) ON public.post_supports FROM authenticated, anon;
