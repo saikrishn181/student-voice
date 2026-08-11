@@ -50,6 +50,9 @@ export default function EditPostPage() {
       setState(fresh.state)
       setExistingMediaUrl(fresh.mediaUrl)
       setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
+      if (fresh.mediaUrl && fresh.mediaType) {
+        setMedia({ url: fresh.mediaUrl, type: fresh.mediaType as "photo" | "video", file: new File([], "") })
+      }
       setLoaded(true)
     })
   }, [postId, currentUser?.id])
@@ -62,6 +65,9 @@ export default function EditPostPage() {
       setState(post.state)
       setExistingMediaUrl(post.mediaUrl)
       setExistingMediaType(post.mediaType as "photo" | "video" | null)
+      if (post.mediaUrl && post.mediaType) {
+        setMedia({ url: post.mediaUrl, type: post.mediaType as "photo" | "video", file: new File([], "") })
+      }
       setLoaded(true)
     }
   }, [post, loaded])
@@ -94,7 +100,7 @@ export default function EditPostPage() {
     let mediaAspectRatio: number | null = null
 
     // If a new file was picked, upload it (replacing the old media).
-    if (media?.file) {
+    if (media?.file && media.file.size > 0) {
       const upload = await uploadPostMedia(media.file)
       if (!upload.ok) {
         setSubmitting(false)
@@ -104,7 +110,8 @@ export default function EditPostPage() {
       mediaUrl = upload.url ?? null
       mediaType = media.type
       mediaAspectRatio = upload.aspectRatio ?? null
-    } else if (media === null && existingMediaUrl === null) {
+    } else if (media === null) {
+      mediaUrl = null
       mediaType = null
       mediaAspectRatio = null
     }
@@ -140,6 +147,23 @@ export default function EditPostPage() {
           action={
             <Button onClick={() => router.push("/feed")}>
               {s["postDetail.notFound.backToFeed"]}
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
+  if (loaded && post && currentUser && post.authorId !== currentUser.id) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <EmptyState
+          icon={Send}
+          title="Not Authorized"
+          description="You do not have permission to edit this post."
+          action={
+            <Button onClick={() => router.push(`/post/${postId}`)}>
+              Return to Post
             </Button>
           }
         />

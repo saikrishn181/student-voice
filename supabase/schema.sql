@@ -25,15 +25,17 @@ create policy "post-media: public read"
   on storage.objects for select
   using (bucket_id = 'post-media');
 
-drop policy if exists "post-media: public update" on storage.objects;
-create policy "post-media: public update"
+drop policy if exists "post-media: authenticated update" on storage.objects;
+create policy "post-media: authenticated update"
   on storage.objects for update
-  using (bucket_id = 'post-media');
+  to authenticated
+  using (bucket_id = 'post-media' and owner = auth.uid());
 
-drop policy if exists "post-media: public delete" on storage.objects;
-create policy "post-media: public delete"
+drop policy if exists "post-media: authenticated delete" on storage.objects;
+create policy "post-media: authenticated delete"
   on storage.objects for delete
-  using (bucket_id = 'post-media');
+  to authenticated
+  using (bucket_id = 'post-media' and owner = auth.uid());
 
 -- ============================================================
 -- PROFILES (1:1 with auth.users, created via trigger on signup)
