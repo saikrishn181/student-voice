@@ -186,6 +186,7 @@ create policy "Admins update reports"
 -- PRIVATE ACCOUNTS (post visibility)
 -- ============================================================
 drop policy if exists "Posts are public by everyone" on public.posts;
+drop policy if exists "Posts visible per privacy" on public.posts;
 create policy "Posts visible per privacy"
   on public.posts for select
   using (
