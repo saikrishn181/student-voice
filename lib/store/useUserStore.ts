@@ -32,6 +32,8 @@ interface UserState {
   users: Record<string, User>
   loadAll: () => Promise<User[]>
   loadById: (id: string) => Promise<User | null>
+  // Batch-load many profile ids in one query (followers/following lists).
+  loadMany: (ids: string[]) => Promise<void>
 }
 
 export const useUserStore = create<UserState>()((set, get) => ({
@@ -64,5 +66,20 @@ export const useUserStore = create<UserState>()((set, get) => ({
     const user = rowToUser(data as Profile)
     set((s) => ({ users: { ...s.users, [id]: user } }))
     return user
+  },
+
+  loadMany: async (ids) => {
+    const missing = [...new Set(ids)].filter((id) => !get().users[id])
+    if (missing.length === 0) return
+    const supabase = createSupabaseBrowserClient()
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", missing)
+    if (error || !data) return
+    const users = data.map((row) => rowToUser(row as Profile))
+    set((s) => ({
+      users: { ...s.users, ...Object.fromEntries(users.map((u) => [u.id, u])) },
+    }))
   },
 }))

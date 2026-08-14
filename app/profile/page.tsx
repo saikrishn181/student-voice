@@ -10,10 +10,11 @@ import { Card, Avatar, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useUserById } from "@/hooks"
-import { PostCard, EditProfileModal } from "@/components/feature"
+import { PostCard, EditProfileModal, FollowersModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
 import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
+import type { FollowsTab } from "@/components/feature/FollowersModal"
 
 // One incoming follow request row: shows who wants to follow you, with
 // Accept / Reject actions. Accepting creates the follow via the DB trigger.
@@ -115,6 +116,7 @@ export default function ProfilePage() {
   const showToast = useToastStore((s) => s.show)
   const [loading, setLoading] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [followsTab, setFollowsTab] = useState<FollowsTab | null>(null)
 
   // Incoming follow requests (sent TO me) for the accept/reject list.
   const myIncoming = followRequests.filter((r) => r.targetId === currentUser?.id)
@@ -190,14 +192,24 @@ export default function ProfilePage() {
             <p className="max-w-md text-body-sm text-slate-600">{currentUser.bio}</p>
           ) : null}
           <div className="flex gap-6 text-center">
-            <div>
+            <button
+              type="button"
+              onClick={() => setFollowsTab("followers")}
+              className="rounded-card p-1 transition-colors hover:bg-slate-50"
+              aria-label={s["follow.modal.followers"]}
+            >
               <p className="text-h4 text-slate-900">{currentUser.followerCount}</p>
               <p className="text-xs text-slate-500">{s["profile.followers"]}</p>
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFollowsTab("following")}
+              className="rounded-card p-1 transition-colors hover:bg-slate-50"
+              aria-label={s["follow.modal.following"]}
+            >
               <p className="text-h4 text-slate-900">{currentUser.followingCount}</p>
               <p className="text-xs text-slate-500">{s["profile.following"]}</p>
-            </div>
+            </button>
           </div>
         </Card>
 
@@ -285,6 +297,12 @@ export default function ProfilePage() {
       </div>
 
       <EditProfileModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <FollowersModal
+        open={followsTab !== null}
+        onClose={() => setFollowsTab(null)}
+        userId={currentUser.id}
+        initialTab={followsTab ?? "followers"}
+      />
     </div>
   )
 }

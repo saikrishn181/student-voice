@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Lock, MessageSquare, UserPlus, UserCheck, Clock, ShieldCheck } from "lucide-react"
 import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
-import { PostCard, VerifiedBadge, FollowButton } from "@/components/feature"
+import { PostCard, VerifiedBadge, FollowButton, FollowersModal } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -21,7 +21,9 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useUserById } from "@/hooks"
 import s from "@/lib/strings"
+import { cn } from "@/lib/utils"
 import type { Post, User } from "@/lib/types"
+import type { FollowsTab } from "@/components/feature/FollowersModal"
 
 interface ProfileStats {
   posts_count: number
@@ -46,6 +48,7 @@ export default function PublicProfilePage({
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [followsTab, setFollowsTab] = useState<FollowsTab | null>(null)
 
   const isSelf = currentUser?.id === params.id
   const isFollowing = follows.some(
@@ -172,19 +175,38 @@ export default function PublicProfilePage({
             <p className="max-w-md text-body-sm text-slate-600">{targetUser.bio}</p>
           ) : null}
 
-          {/* Stats */}
+          {/* Stats — clickable for followers/owner only (private accounts keep
+              their lists private too). */}
           <div className="flex gap-6 text-center">
+            <button
+              type="button"
+              disabled={!canViewContent}
+              onClick={() => setFollowsTab("followers")}
+              className={cn(
+                "rounded-card p-1 transition-colors",
+                canViewContent ? "hover:bg-slate-50" : "cursor-default",
+              )}
+              aria-label={s["follow.modal.followers"]}
+            >
+              <p className="text-h4 text-slate-900">{followerCount}</p>
+              <p className="text-xs text-slate-500">{s["profile.followers"]}</p>
+            </button>
+            <button
+              type="button"
+              disabled={!canViewContent}
+              onClick={() => setFollowsTab("following")}
+              className={cn(
+                "rounded-card p-1 transition-colors",
+                canViewContent ? "hover:bg-slate-50" : "cursor-default",
+              )}
+              aria-label={s["follow.modal.following"]}
+            >
+              <p className="text-h4 text-slate-900">{followingCount}</p>
+              <p className="text-xs text-slate-500">{s["profile.following"]}</p>
+            </button>
             <div>
               <p className="text-h4 text-slate-900">{postsCount}</p>
               <p className="text-xs text-slate-500">{s["profile.stats.posts"]}</p>
-            </div>
-            <div>
-              <p className="text-h4 text-slate-900">{followerCount}</p>
-              <p className="text-xs text-slate-500">{s["profile.followers"]}</p>
-            </div>
-            <div>
-              <p className="text-h4 text-slate-900">{followingCount}</p>
-              <p className="text-xs text-slate-500">{s["profile.following"]}</p>
             </div>
           </div>
 
@@ -239,6 +261,12 @@ export default function PublicProfilePage({
           </div>
         )}
       </div>
+      <FollowersModal
+        open={followsTab !== null}
+        onClose={() => setFollowsTab(null)}
+        userId={targetUser.id}
+        initialTab={followsTab ?? "followers"}
+      />
     </div>
   )
 }

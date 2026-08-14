@@ -218,6 +218,13 @@ const s = {
   "follow.requestRejected": "Request rejected",
   "follow.accept": "Accept",
   "follow.reject": "Reject",
+  "follow.modal.followers": "Followers",
+  "follow.modal.following": "Following",
+  "follow.modal.you": "You",
+  "follow.modal.noFollowers.title": "No followers yet",
+  "follow.modal.noFollowers.description": "People who follow this account will show up here.",
+  "follow.modal.noFollowing.title": "Not following anyone",
+  "follow.modal.noFollowing.description": "Accounts this user follows will show up here.",
 
   // ─── PostCard labels ────────────────────────────────────────────────────────
   "post.authorType.org": "Organization",

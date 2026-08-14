@@ -1,4 +1,5 @@
 export { PostCard } from "./PostCard"
+export { FollowersModal } from "./FollowersModal"
 export { MediaDisplay } from "./MediaDisplay"
 export { SupportButton } from "./SupportButton"
 export { FollowButton } from "./FollowButton"
