@@ -12,7 +12,7 @@ import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { CATEGORY_OPTIONS, STATES, MAX_POST_CHARS } from "@/constants"
-import { uploadPostMedia } from "@/lib/cloudflare/storage"
+import { uploadPostMedia } from "@/lib/supabase/storage"
 import s from "@/lib/strings"
 import type { Category } from "@/lib/types"
 
