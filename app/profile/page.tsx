@@ -10,7 +10,7 @@ import { Card, Avatar, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useUserById } from "@/hooks"
-import { PostCard, EditProfileModal, FollowersModal } from "@/components/feature"
+import { PostCard, FollowersModal, SettingsModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
 import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
@@ -296,7 +296,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <EditProfileModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <FollowersModal
         open={followsTab !== null}
         onClose={() => setFollowsTab(null)}
