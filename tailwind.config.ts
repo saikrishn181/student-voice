@@ -1,8 +1,8 @@
 import type { Config } from "tailwindcss"
 
-// Design tokens for StudentVoice.
-// Primary = deep blue (#1F4E78) for trust/authority.
-// Accent = warm orange/red for the Support button and urgent elements.
+// Design tokens for Krantind.
+// Primary = deep Indigo (sleek, professional social media feel).
+// Accent = engaging blue for interactions.
 // Keep usage consistent across ALL phases.
 
 const config: Config = {
@@ -16,38 +16,52 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary — deep blue (trust/authority). Base at 700 = #1F4E78.
+        // Primary — professional indigo/slate scheme
         primary: {
-          50: "#eef4fa",
-          100: "#dce9f5",
-          200: "#b9d3ea",
-          300: "#8cb5d8",
-          400: "#5f97c0",
-          500: "#3c7aa6",
-          600: "#2c6088",
-          700: "#1F4E78",
-          800: "#1a4063",
-          900: "#12304b",
+          50: "#eef2ff",
+          100: "#e0e7ff",
+          200: "#c7d2fe",
+          300: "#a5b4fc",
+          400: "#818cf8",
+          500: "#6366f1",
+          600: "#4f46e5",
+          700: "#4338ca", // Base trust color
+          800: "#3730a3",
+          900: "#312e81",
         },
-        // Accent — warm orange/red (Support button, urgent elements)
+        // Accent — sleek interactions
         accent: {
-          50: "#fef4ee",
-          100: "#fde6d6",
-          200: "#facdac",
-          300: "#f7a97c",
-          400: "#f37f4a",
-          500: "#ed5f2a",
-          600: "#d94a1a",
-          700: "#b63a15",
-          800: "#9a3016",
-          900: "#7d2816",
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
+        // Neutral Slate for extremely clean UI backgrounds
+        slate: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
         },
         // Success / info / neutral used by toasts & badges
-        success: "#16a34a",
-        info: "#2563eb",
+        success: "#10b981", // modern emerald
+        info: "#3b82f6",
       },
       fontFamily: {
         sans: [
+          "Inter", // Assuming Inter or system-ui for that sleek SaaS/Social look
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",

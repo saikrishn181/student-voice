@@ -62,15 +62,15 @@ export function Navbar() {
   return (
     <>
       {/* Desktop sidebar (>= 1024px) */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
-        <Link href="/feed" className="flex items-center gap-2 px-6 py-5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-card bg-primary-700 text-white">
-            <Megaphone size={20} />
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[275px] flex-col border-r border-slate-200 bg-white lg:flex xl:ml-[calc(50vw-600px)]">
+        <Link href="/feed" className="flex items-center gap-3 px-6 py-6 transition-app hover:opacity-90">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-800 text-white shadow-sm">
+            <span className="text-xl font-bold tracking-tight">K</span>
           </span>
-          <span className="text-lg font-bold text-primary-700">{s["app.name"]}</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900">{s["app.name"]}</span>
         </Link>
 
-        <nav className="flex-1 space-y-1 px-3 py-2">
+        <nav className="flex-1 space-y-2 px-4 py-2">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href
             return (
@@ -78,13 +78,13 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "transition-app flex items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium",
+                  "transition-app group flex w-fit items-center gap-4 rounded-full px-5 py-3 text-[17px] font-semibold",
                   active
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-800",
+                    ? "font-bold text-slate-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                 )}
               >
-                <item.icon size={20} aria-hidden />
+                <item.icon size={26} strokeWidth={active ? 2.5 : 2} className={active ? "text-primary-600" : ""} aria-hidden />
                 {item.label}
                 {item.href === "/notifications" ? renderUnread() : null}
               </Link>
@@ -94,27 +94,35 @@ export function Navbar() {
             <Link
               href="/admin/verifications"
               className={cn(
-                "transition-app flex items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium",
+                "transition-app group flex w-fit items-center gap-4 rounded-full px-5 py-3 text-[17px] font-semibold",
                 pathname.startsWith("/admin")
-                  ? "bg-primary-50 text-primary-700"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-800",
+                  ? "font-bold text-slate-900"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
               )}
             >
-              <ShieldCheck size={20} aria-hidden />
+              <ShieldCheck size={26} strokeWidth={pathname.startsWith("/admin") ? 2.5 : 2} className={pathname.startsWith("/admin") ? "text-primary-600" : ""} aria-hidden />
               {s["nav.admin"]}
             </Link>
           ) : null}
         </nav>
 
         {currentUser ? (
-          <div className="border-t border-slate-200 p-3">
+          <div className="p-4 mb-4">
             <button
               type="button"
               onClick={handleLogout}
-              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
+              className="transition-app flex w-full items-center gap-3 rounded-full px-4 py-3 text-[15px] font-bold text-slate-700 hover:bg-slate-100"
             >
-              <LogOut size={20} aria-hidden />
-              {s["nav.logout"]}
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200">
+                <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="sm" />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col text-left">
+                 <span className="truncate leading-tight">{currentUser.name}</span>
+                 {currentUser.username && (
+                   <span className="truncate text-[13px] font-normal text-slate-500">@{currentUser.username}</span>
+                 )}
+              </div>
+              <LogOut size={18} className="text-slate-400" aria-hidden />
             </button>
           </div>
         ) : null}

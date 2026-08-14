@@ -140,26 +140,32 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   if (isBlocked) return null
 
   return (
-    <Card className={cn("flex flex-col gap-3", className)}>
+    <div className={cn("flex flex-col gap-4 bg-white border-b border-slate-100 p-5 hover:bg-slate-50/50 transition-app", className)}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-4">
           <Link href={`/profile/${post.authorId}`} aria-label={s["post.viewProfile"]}>
-            <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
+            <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="md" />
           </Link>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+          <div className="min-w-0 pt-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <Link
                 href={`/profile/${post.authorId}`}
-                className="truncate text-sm font-semibold text-slate-900 hover:underline"
+                className="truncate text-[16px] font-bold text-slate-900 hover:underline"
               >
                 {author?.name ?? s["post.unknownName"]}
               </Link>
               {isVerifiedOrg ? <VerifiedBadge /> : null}
+              {author?.username && (
+                <span className="text-[15px] font-normal text-slate-500">@{author.username}</span>
+              )}
+              <span className="text-slate-400">·</span>
+              <span className="text-[15px] text-slate-500 hover:underline">
+                {timeAgo(post.createdAt)}
+              </span>
             </div>
-            <div className="mt-0.5 text-body-sm text-slate-500">
-              {author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]} ·{" "}
-              {timeAgo(post.createdAt)}
+            <div className="text-[13px] text-slate-400">
+              {author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]}
             </div>
           </div>
         </div>
@@ -267,35 +273,41 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
         )}
       </div>
 
-      {/* Region/Category/Time tags */}
-      {meta}
+      <div className="ml-[60px] flex flex-col gap-3">
+        {/* Region/Category/Time tags */}
+        {meta}
 
-      {/* Text */}
-      {post.text ? (
-        <p className="break-words text-body text-slate-800">{post.text}</p>
-      ) : null}
+        {/* Text */}
+        {post.text ? (
+          <p className="break-words text-[15px] leading-relaxed text-slate-900 whitespace-pre-wrap">{post.text}</p>
+        ) : null}
 
-      {/* Media */}
-      {post.mediaUrl && post.mediaType ? (
-        <Link href={`/post/${post.id}`} className="block">
-          <MediaDisplay
-            mediaUrl={post.mediaUrl}
-            mediaType={post.mediaType}
-            knownAspectRatio={post.mediaAspectRatio}
-          />
-        </Link>
-      ) : null}
+        {/* Media */}
+        {post.mediaUrl && post.mediaType ? (
+          <div className="mt-2 rounded-2xl overflow-hidden border border-slate-100">
+            <Link href={`/post/${post.id}`} className="block">
+              <MediaDisplay
+                mediaUrl={post.mediaUrl}
+                mediaType={post.mediaType}
+                knownAspectRatio={post.mediaAspectRatio}
+              />
+            </Link>
+          </div>
+        ) : null}
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 border-t border-slate-100 pt-2.5">
-        <SupportButton postId={post.id} />
-        <Link
-          href={`/post/${post.id}`}
-          className="transition-app inline-flex h-11 min-h-11 items-center gap-1.5 rounded-card px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:h-9 sm:min-h-0"
-        >
-          <MessageCircle size={18} aria-hidden />
-          {post.commentCount}
-        </Link>
+        {/* Actions */}
+        <div className="mt-2 flex items-center gap-6">
+          <SupportButton postId={post.id} />
+          <Link
+            href={`/post/${post.id}`}
+            className="transition-app group flex items-center gap-2 text-[14px] font-medium text-slate-500 hover:text-primary-600"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-full group-hover:bg-primary-50">
+               <MessageCircle size={18} className="transition-transform group-hover:scale-110" aria-hidden />
+            </div>
+            <span>{post.commentCount > 0 ? post.commentCount : ''}</span>
+          </Link>
+        </div>
       </div>
 
       {/* Delete confirmation */}
@@ -368,6 +380,6 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
           </div>
         </div>
       </Modal>
-    </Card>
+    </div>
   )
 }

@@ -4,7 +4,7 @@
 
 const s = {
   // ─── App ────────────────────────────────────────────────────────────────────
-  "app.name": "StudentVoice",
+  "app.name": "Krantind",
   "app.tagline": "Real support for students",
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -336,7 +336,7 @@ const s = {
   "hero.title": "Your voice, heard & supported —",
   "hero.titleHighlight": "region by region",
   "hero.subtitle":
-    "StudentVoice helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
+    "Krantind helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
   "hero.demoPost.title": "Mira V.",
   "hero.demoPost.location": "Mumbai, Maharashtra",
   "hero.demoPost.body":

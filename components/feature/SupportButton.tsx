@@ -39,21 +39,30 @@ export function SupportButton({ postId }: { postId: string }) {
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <button
+      type="button"
       onClick={handleClick}
       disabled={locked}
       aria-pressed={supported}
       aria-label={supported ? s["support.button.remove"] : s["support.button.support"]}
       className={cn(
-        "gap-1.5 px-3",
-        supported ? "text-accent-700" : "text-slate-500",
+        "group flex items-center gap-2 text-[14px] font-medium transition-app",
+        supported ? "text-accent-600" : "text-slate-500 hover:text-accent-600",
         bump && "scale-110",
       )}
     >
-      <Heart size={18} fill={supported ? "currentColor" : "none"} aria-hidden />
-      {compactNumber(post.supportCount)}
-    </Button>
+      <div className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+        supported ? "bg-accent-50" : "group-hover:bg-accent-50"
+      )}>
+        <Heart
+          size={18}
+          fill={supported ? "currentColor" : "none"}
+          className="transition-transform group-hover:scale-110"
+          aria-hidden
+        />
+      </div>
+      <span>{post.supportCount > 0 ? compactNumber(post.supportCount) : ''}</span>
+    </button>
   )
 }

@@ -6,24 +6,20 @@
 // EmptyState shows when the feed is exhausted. Shows a subtle divider between
 // the user's local posts and other regions. On desktop (>=1024px) a right
 // sidebar lists trending posts and suggested organizations.
-import { useEffect, useMemo, useRef, useState } from "react"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Inbox, AlertTriangle, RefreshCw } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
-import { FollowButton } from "@/components/feature/FollowButton"
-import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
+import { EmptyState, Spinner, Avatar, Button } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
-import { useUserStore } from "@/lib/store/useUserStore"
-import { FEED_PAGE_SIZE } from "@/constants"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
 
 export default function FeedPage() {
-  const { posts, status, loadErrorMessage, loadAll, loadMore, hasMore } = usePostStore()
+  const router = useRouter()
+  const { posts, status, loadAll, loadMore, hasMore } = usePostStore()
   const currentUser = useAuthStore((s) => s.currentUser)
-  const follows = usePostStore((s) => s.follows)
-  const users = useUserStore((s) => s.users)
 
   const initialLoading = status === "idle" || status === "loading"
   const loadError = status === "error"
@@ -69,31 +65,27 @@ export default function FeedPage() {
     return () => observer.disconnect()
   }, [allLoaded, loadingMore, posts.length, initialLoading, loadError, loadMore, currentUser?.id])
 
-  // Trending: top 3 by supportCount. Suggestions: orgs not yet followed.
-  const trending = useMemo(
-    () => [...posts].sort((a, b) => b.supportCount - a.supportCount).slice(0, 3),
-    [posts],
-  )
-
-  const suggestedOrgs = Object.values(users).filter(
-    (u) =>
-      u.accountType === "organization" &&
-      u.id !== currentUser?.id &&
-      !follows.some((f) => f.followerId === currentUser?.id && f.followingId === u.id),
-  ).slice(0, 3)
-
   const localState = currentUser?.state
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      {/* Main feed column */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-h2 text-slate-900">{s["feed.title"]}</h1>
-          <p className="text-body-sm text-slate-500">
-            {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
-          </p>
+    <div className="flex flex-col gap-5">
+      {/* Inline Create Post Widget */}
+      {currentUser && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-app hover:shadow-md">
+          <div className="flex gap-4">
+            <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="md" />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <input
+                type="text"
+                placeholder="What's happening on campus?"
+                onClick={() => router.push('/post/create')}
+                className="w-full cursor-text rounded-full border-none bg-slate-100 py-3 pl-4 pr-4 text-[16px] outline-none transition-app hover:bg-slate-200 focus:bg-white focus:ring-1 focus:ring-primary-500"
+                readOnly
+              />
+            </div>
+          </div>
         </div>
+      )}
 
         {/* Loading skeleton */}
         {initialLoading && !loadError ? <PostCardSkeleton count={3} /> : null}
@@ -148,58 +140,12 @@ export default function FeedPage() {
           />
         ) : null}
 
-        {/* Sentinel for infinite scroll */}
-        {!initialLoading && !loadError && !allLoaded ? (
-          <div ref={sentinelRef} className="flex justify-center py-6">
-            {loadingMore ? <Spinner size={28} /> : null}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Desktop sidebar (>= 1024px) */}
-      <aside className="hidden flex-col gap-6 lg:flex">
-        <Card className="p-4">
-          <h2 className="flex items-center gap-2 text-h4">
-            <TrendingUp className="size-5 text-accent-500" /> {s["feed.trending"]}
-          </h2>
-          <div className="mt-3 flex flex-col divide-y divide-slate-100">
-            {trending.map((p) => {
-              const author = users[p.authorId]
-              return (
-                <div key={p.id} className="flex items-center gap-3 py-3">
-                  <Avatar name={author?.name ?? "?"} src={author?.avatarUrl} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800">{p.text}</p>
-                    <p className="text-xs text-slate-400">{s["feed.supports"](p.supportCount)}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <h2 className="flex items-center gap-2 text-h4 font-bold">
-            <Building2 className="size-5 text-primary-600" /> {s["feed.suggestedOrgs"]}
-          </h2>
-          <div className="mt-3 flex flex-col gap-3">
-            {suggestedOrgs.map((org) => (
-              <div key={org.id} className="flex items-center gap-3">
-                <Avatar name={org.name} src={org.avatarUrl} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{org.name}</p>
-                  <p className="text-xs text-slate-400">{s["feed.followers"](org.followerCount)}</p>
-                </div>
-                <FollowButton
-                  followerId={currentUser?.id ?? ""}
-                  followingId={org.id}
-                  className="shrink-0"
-                />
-              </div>
-            ))}
-          </div>
-        </Card>
-      </aside>
+      {/* Sentinel for infinite scroll */}
+      {!initialLoading && !loadError && !allLoaded ? (
+        <div ref={sentinelRef} className="flex justify-center py-6">
+          {loadingMore ? <Spinner size={28} /> : null}
+        </div>
+      ) : null}
     </div>
   )
 }
