@@ -183,6 +183,13 @@ const s = {
   "onboarding.region.stateLabel": "State",
   "onboarding.region.statePlaceholder": "Select your state",
   "onboarding.region.continue": "Continue to Feed",
+  "onboarding.profile.title": "Complete your profile",
+  "onboarding.profile.description":
+    "One-time setup — pick your details and you're in. You can change everything later in Settings.",
+  "onboarding.profile.accountTypeHint": "Organizations are reviewed by admins before verification.",
+  "onboarding.profile.accountTypeFixed": (label: string) => `Account type: ${label}`,
+  "onboarding.profile.continue": "Finish setup",
+  "onboarding.profile.loading": "Setting things up…",
 
   // ─── Comment ────────────────────────────────────────────────────────────────
   "comment.placeholder": "Write a comment…",

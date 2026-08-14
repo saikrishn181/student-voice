@@ -36,6 +36,16 @@ interface AuthState {
   signup: (payload: SignupPayload) => Promise<AuthResult>
   signInWithGoogle: (next?: string) => Promise<AuthResult>
   setRegion: (state: string) => Promise<void>
+  // One-time onboarding: name, region, account type (Google users), privacy
+  // and bio. Writes the profiles row then refreshes currentUser.
+  finishOnboarding: (payload: {
+    name: string
+    state: string
+    accountType?: AccountType
+    organizationType?: OrganizationType
+    bio?: string
+    isPrivate?: boolean
+  }) => Promise<AuthResult>
   updateProfile: (patch: ProfilePatch) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -148,6 +158,53 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const supabase = createSupabaseBrowserClient()
     await supabase.from("profiles").update({ state }).eq("id", currentUser.id)
     set({ currentUser: { ...currentUser, state } })
+  },
+
+  finishOnboarding: async (payload) => {
+    const { currentUser } = get()
+    if (!currentUser) return { ok: false, error: "Not logged in." }
+
+    const supabase = createSupabaseBrowserClient()
+
+    // Resolve account-type changes: switching to organization queues the
+    // profile for admin verification (matching email signup behavior). Keep an
+    // existing verification status if the type hasn't changed.
+    let accountType = currentUser.accountType
+    let organizationType: OrganizationType | null = currentUser.organizationType ?? null
+    let verificationStatus: Profile["verification_status"] = currentUser.verificationStatus ?? null
+    if (payload.accountType && payload.accountType !== currentUser.accountType) {
+      accountType = payload.accountType
+      organizationType =
+        payload.accountType === "organization" && payload.organizationType
+          ? payload.organizationType
+          : null
+      verificationStatus = payload.accountType === "organization" ? "pending" : null
+    }
+
+    const row: Partial<Profile> = {
+      name: payload.name,
+      state: payload.state,
+      account_type: accountType,
+      organization_type: organizationType,
+      verification_status: verificationStatus,
+      bio: payload.bio ?? null,
+      is_private: payload.isPrivate,
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(row)
+      .eq("id", currentUser.id)
+      .select()
+      .maybeSingle()
+    if (error || !data) {
+      return { ok: false, error: friendlyProfileError(error?.message ?? "") }
+    }
+
+    const updated = rowToUser(data as Profile)
+    set({ currentUser: updated })
+    useUserStore.setState((s) => ({ users: { ...s.users, [currentUser.id]: updated } }))
+    return { ok: true }
   },
 
   updateProfile: async (patch) => {

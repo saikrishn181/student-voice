@@ -618,31 +618,42 @@ alter table public.conversations enable row level security;
 alter table public.conversation_participants enable row level security;
 alter table public.messages enable row level security;
 
+-- Helper: is `p_user` a participant of conversation `p_conv`? SECURITY DEFINER so
+-- policies can check membership WITHOUT re-entering conversation_participants
+-- RLS (a plain subquery in the policy recurses infinitely).
+create or replace function public.is_conversation_participant(p_conv uuid, p_user uuid)
+returns boolean
+language sql
+security definer set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.conversation_participants cp
+    where cp.conversation_id = p_conv and cp.user_id = p_user
+  );
+$$;
+
 drop policy if exists "Participants see their conversations" on public.conversations;
 create policy "Participants see their conversations"
   on public.conversations for select
-  using (exists (select 1 from public.conversation_participants cp
-                 where cp.conversation_id = conversations.id and cp.user_id = auth.uid()));
+  using (public.is_conversation_participant(conversations.id, auth.uid()));
 
 drop policy if exists "Participants see conversation members" on public.conversation_participants;
 create policy "Participants see conversation members"
   on public.conversation_participants for select
-  using (exists (select 1 from public.conversation_participants cp
-                 where cp.conversation_id = conversation_participants.conversation_id and cp.user_id = auth.uid()));
+  using (public.is_conversation_participant(conversation_id, auth.uid()));
 
 drop policy if exists "Participants see messages" on public.messages;
 create policy "Participants see messages"
   on public.messages for select
-  using (exists (select 1 from public.conversation_participants cp
-                 where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()));
+  using (public.is_conversation_participant(messages.conversation_id, auth.uid()));
 
 drop policy if exists "Participants send messages" on public.messages;
 create policy "Participants send messages"
   on public.messages for insert
   with check (
     sender_id = auth.uid()
-    and exists (select 1 from public.conversation_participants cp
-                where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid())
+    and public.is_conversation_participant(messages.conversation_id, auth.uid())
   );
 
 -- Atomically find (or create) the 1:1 conversation between the caller and

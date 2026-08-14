@@ -57,4 +57,4 @@ export const MAX_COMMENT_CHARS = 500
 export const LOGGED_IN_HOME = "/feed"
 
 // Redirect target right after a fresh signup (region not set yet).
-export const POST_SIGNUP_ROUTE = "/onboarding/region"
+export const POST_SIGNUP_ROUTE = "/onboarding/profile"
