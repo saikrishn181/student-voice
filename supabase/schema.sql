@@ -1,5 +1,13 @@
 -- StudentVoice schema for Supabase (Postgres).
--- Run this in the Supabase SQL Editor (Dashboard -> SQL Editor -> New query).
+--
+-- SINGLE-SCRIPT setup: everything the app needs lives in this file. Run it
+-- once in the Supabase SQL editor (Dashboard -> SQL Editor -> New query).
+-- The file is idempotent: safe to re-run. The other .sql files in this folder
+-- are legacy; their contents are folded in here.
+--
+-- Optional seeds (run AFTER this, in this order):
+--   1. supabase/seed-auth.sql  (demo auth users)
+--   2. supabase/seed-data.sql    (demo posts/comments/notifications)
 
 -- ============================================================
 -- EXTENSIONS
@@ -51,8 +59,19 @@ create table if not exists public.profiles (
   bio text,
   follower_count integer not null default 0,
   following_count integer not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Username is case-insensitively unique and optional (profile settings).
+  username text,
+  -- Moderators/admins can review org verification + flags. Default: everyone is 0.
+  is_admin boolean not null default false,
+  -- Private accounts (students): posts visible only to followers + self.
+  is_private boolean not null default false
 );
+
+-- Unique on lower(username) so "Jane" and "jane" can't both register.
+create unique index if not exists profiles_username_key
+  on public.profiles (lower(username))
+  where username is not null;
 
 alter table public.profiles enable row level security;
 
@@ -63,6 +82,12 @@ create policy "Profiles are viewable by everyone"
 drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update using (auth.uid() = id);
+
+-- Admins may review/verify any organization profile (moderation flow).
+drop policy if exists "Admins can update any profile" on public.profiles;
+create policy "Admins can update any profile"
+  on public.profiles for update
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
 
 -- ============================================================
 -- AUTOMATIC PROFILE CREATION ON SIGNUP
@@ -103,7 +128,7 @@ create trigger on_auth_user_created
 create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references public.profiles(id) on delete cascade,
-  text text not null check (char_length(text) > 0),
+  text text not null check (char_length(text) > 0 and char_length(text) <= 2000),
   media_url text,
   media_type text check (media_type in ('photo', 'video')),
   media_aspect_ratio numeric,
@@ -121,8 +146,16 @@ create index if not exists posts_created_at_idx on public.posts (created_at desc
 alter table public.posts enable row level security;
 
 drop policy if exists "Posts are public by everyone" on public.posts;
-create policy "Posts are public by everyone"
-  on public.posts for select using (true);
+-- Posts are visible to everyone EXCEPT private accounts (whose posts only the
+-- author, their followers, and admins can see).
+create policy "Posts visible per privacy"
+  on public.posts for select
+  using (
+    not exists (select 1 from public.profiles p where p.id = posts.author_id and p.is_private)
+    or posts.author_id = auth.uid()
+    or exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.following_id = posts.author_id)
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 
 drop policy if exists "Users can create posts" on public.posts;
 create policy "Users can create posts"
@@ -190,7 +223,7 @@ create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts(id) on delete cascade,
   author_id uuid not null references public.profiles(id) on delete cascade,
-  content text not null check (char_length(trim(content)) > 0),
+  content text not null check (char_length(trim(content)) > 0 and char_length(content) <= 500),
   is_org_help boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -204,6 +237,10 @@ create policy "Comments are public"
 drop policy if exists "Users can comment" on public.comments;
 create policy "Users can comment"
   on public.comments for insert with check (auth.uid() = author_id);
+
+drop policy if exists "Users can edit their comments" on public.comments;
+create policy "Users can edit their comments"
+  on public.comments for update using (auth.uid() = author_id);
 
 drop policy if exists "Users can delete their comments" on public.comments;
 create policy "Users can delete their comments"
@@ -231,6 +268,29 @@ create trigger comment_count_sync
   after insert or delete on public.comments
   for each row execute function public.increment_comment_count();
 
+-- Basic spam guard: reject comment bursts (more than 15 per user per minute).
+-- Client-side validation + this DB check give defense in depth; a full rate
+-- limiter would live in an Edge Function / gateway in production.
+create or replace function public.guard_comment_spam()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if (select count(*) from public.comments
+      where author_id = new.author_id
+        and created_at > now() - interval '1 minute') >= 15 then
+    raise exception 'Too many comments — slow down and try again in a moment.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists comment_spam_guard on public.comments;
+create trigger comment_spam_guard
+  before insert on public.comments
+  for each row execute function public.guard_comment_spam();
+
 -- ============================================================
 -- FOLLOWS
 -- ============================================================
@@ -254,6 +314,95 @@ create policy "Users can follow others"
 drop policy if exists "Users can unfollow others" on public.follows;
 create policy "Users can unfollow others"
   on public.follows for delete using (auth.uid() = follower_id);
+
+-- Keeps profiles.follower_count / following_count in sync automatically.
+create or replace function public.sync_follow_counts()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if (tg_op = 'INSERT') then
+    update public.profiles set follower_count = follower_count + 1 where id = new.following_id;
+    update public.profiles set following_count = following_count + 1 where id = new.follower_id;
+    return new;
+  elsif (tg_op = 'DELETE') then
+    update public.profiles set follower_count = greatest(follower_count - 1, 0) where id = old.following_id;
+    update public.profiles set following_count = greatest(following_count - 1, 0) where id = old.follower_id;
+    return old;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists sync_follow_counts on public.follows;
+create trigger sync_follow_counts
+  after insert or delete on public.follows
+  for each row execute function public.sync_follow_counts();
+
+-- ============================================================
+-- BLOCKS (mute a user so their posts disappear from your feed)
+-- ============================================================
+create table if not exists public.blocks (
+  blocker_id uuid not null references public.profiles(id) on delete cascade,
+  blocked_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+
+alter table public.blocks enable row level security;
+
+drop policy if exists "Users see their own blocks" on public.blocks;
+create policy "Users see their own blocks"
+  on public.blocks for select using (auth.uid() = blocker_id);
+
+drop policy if exists "Users can create blocks" on public.blocks;
+create policy "Users can create blocks"
+  on public.blocks for insert with check (auth.uid() = blocker_id);
+
+drop policy if exists "Users can remove blocks" on public.blocks;
+create policy "Users can remove blocks"
+  on public.blocks for delete using (auth.uid() = blocker_id);
+
+-- ============================================================
+-- REPORTS (flag a post for moderation)
+-- ============================================================
+create table if not exists public.reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete cascade,
+  reason text not null check (reason in ('spam', 'harassment', 'misinformation', 'inappropriate', 'other')),
+  details text check (char_length(details) <= 1000),
+  status text not null default 'open' check (status in ('open', 'reviewed', 'dismissed')),
+  created_at timestamptz not null default now(),
+  -- One report per post per user, so spamming "report" can't flood the queue.
+  unique (reporter_id, post_id)
+);
+
+create index if not exists reports_status_idx on public.reports (status, created_at desc);
+
+alter table public.reports enable row level security;
+
+drop policy if exists "Users can report" on public.reports;
+create policy "Users can report"
+  on public.reports for insert with check (auth.uid() = reporter_id);
+
+drop policy if exists "Users see only their own reports" on public.reports;
+create policy "Users see only their own reports"
+  on public.reports for select using (auth.uid() = reporter_id);
+
+-- Admins review the moderation queue (admin page).
+drop policy if exists "Admins see all reports" on public.reports;
+create policy "Admins see all reports"
+  on public.reports for select
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+-- Admins can resolve/review reports.
+drop policy if exists "Admins update reports" on public.reports;
+create policy "Admins update reports"
+  on public.reports for update
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
 
 -- ============================================================
 -- NOTIFICATIONS
@@ -287,8 +436,6 @@ language plpgsql
 security definer set search_path = public
 as $$
 declare
-  v_author uuid;
-  n_type text;
   v_post_owner uuid;
 begin
   if (tg_table_name = 'post_supports') then
@@ -328,9 +475,136 @@ create trigger notify_on_comment
   after insert on public.comments
   for each row execute function public.notify_on_post_interaction();
 
+-- Notify when someone starts following you.
+create or replace function public.notify_on_follow()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.following_id is distinct from new.follower_id then
+    insert into public.notifications (user_id, actor_id, type)
+    values (new.following_id, new.follower_id, 'follow');
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists notify_on_follow on public.follows;
+create trigger notify_on_follow
+  after insert on public.follows
+  for each row execute function public.notify_on_follow();
+
 -- ============================================================
--- SEED DATA
+-- CHAT (1:1 direct messages)
 -- ============================================================
--- Seed users must already exist in auth.users for the FK to pass. The app lets
--- you sign up normally; run `seed-auth.sql` afterward to add demo sign-ins, then
--- `seed-data.sql` for posts/comments/notifications.
+create table if not exists public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.conversation_participants (
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  primary key (conversation_id, user_id)
+);
+
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) > 0 and char_length(content) <= 2000),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists messages_conversation_idx on public.messages (conversation_id, created_at asc);
+create index if not exists participants_user_idx on public.conversation_participants (user_id);
+
+alter table public.conversations enable row level security;
+alter table public.conversation_participants enable row level security;
+alter table public.messages enable row level security;
+
+drop policy if exists "Participants see their conversations" on public.conversations;
+create policy "Participants see their conversations"
+  on public.conversations for select
+  using (exists (select 1 from public.conversation_participants cp
+                 where cp.conversation_id = conversations.id and cp.user_id = auth.uid()));
+
+drop policy if exists "Participants see conversation members" on public.conversation_participants;
+create policy "Participants see conversation members"
+  on public.conversation_participants for select
+  using (exists (select 1 from public.conversation_participants cp
+                 where cp.conversation_id = conversation_participants.conversation_id and cp.user_id = auth.uid()));
+
+drop policy if exists "Participants see messages" on public.messages;
+create policy "Participants see messages"
+  on public.messages for select
+  using (exists (select 1 from public.conversation_participants cp
+                 where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid()));
+
+drop policy if exists "Participants send messages" on public.messages;
+create policy "Participants send messages"
+  on public.messages for insert
+  with check (
+    sender_id = auth.uid()
+    and exists (select 1 from public.conversation_participants cp
+                where cp.conversation_id = messages.conversation_id and cp.user_id = auth.uid())
+  );
+
+-- Atomically find (or create) the 1:1 conversation between the caller and
+-- another user. Returns the conversation id.
+create or replace function public.get_or_create_conversation(p_other uuid)
+returns uuid
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_conv uuid;
+begin
+  select cp.conversation_id into v_conv
+  from public.conversation_participants cp
+  where cp.user_id = auth.uid()
+    and cp.conversation_id in (
+      select cp2.conversation_id from public.conversation_participants cp2
+      where cp2.user_id = p_other
+    )
+    and (select count(*) from public.conversation_participants cp3
+         where cp3.conversation_id = cp.conversation_id) = 2
+  limit 1;
+
+  if v_conv is null then
+    insert into public.conversations default values returning id into v_conv;
+    insert into public.conversation_participants (conversation_id, user_id)
+    values (v_conv, auth.uid()), (v_conv, p_other);
+  end if;
+
+  return v_conv;
+end;
+$$;
+
+-- ============================================================
+-- REALTIME (live feed updates)
+-- ============================================================
+-- Enables Postgres-level change events for posts so the feed can update
+-- without polling. (Optional: without this the app still works, just without
+-- live updates. Requires the Realtime feature to be enabled on the project.)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'posts'
+  ) then
+    alter publication supabase_realtime add table public.posts;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+end
+$$;

@@ -9,7 +9,7 @@ import { Camera } from "lucide-react"
 import { Avatar, Button, Input, Modal, Select, Textarea } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
-import { uploadAvatar } from "@/lib/supabase/storage"
+import { uploadAvatar } from "@/lib/cloudflare/storage"
 import { STATES } from "@/constants"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
@@ -35,6 +35,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [removeAvatar, setRemoveAvatar] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [nameError, setNameError] = useState<string | undefined>()
   const [usernameError, setUsernameError] = useState<string | undefined>()
@@ -49,6 +50,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     setAvatarUrl(currentUser.avatarUrl ?? null)
     setAvatarFile(null)
     setRemoveAvatar(false)
+    setIsPrivate(currentUser.isPrivate ?? false)
     setNameError(undefined)
     setUsernameError(undefined)
   }, [open, currentUser])
@@ -108,6 +110,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       bio,
       state: state || undefined,
       avatarUrl: nextAvatarUrl ?? undefined,
+      isPrivate,
     })
 
     setSaving(false)
@@ -235,6 +238,37 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
           />
           <p className="-mt-1 text-xs text-slate-400">{s["settings.regionHint"]}</p>
         </div>
+
+        {currentUser?.accountType === "student" ? (
+          <label className="flex cursor-pointer items-start justify-between gap-4">
+            <span>
+              <span className="block text-sm font-medium text-slate-700">
+                {s["settings.privateLabel"]}
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-400">
+                {s["settings.privateHint"]}
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPrivate}
+              aria-label={s["settings.privateLabel"]}
+              onClick={() => setIsPrivate((v) => !v)}
+              className={cn(
+                "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-app",
+                isPrivate ? "bg-primary-600" : "bg-slate-300",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-app",
+                  isPrivate ? "left-[22px]" : "left-0.5",
+                )}
+              />
+            </button>
+          </label>
+        ) : null}
 
         <div className="mt-2 flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>

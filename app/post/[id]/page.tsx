@@ -1,15 +1,19 @@
 "use client"
 
 // Post detail page: full PostCard at top, CommentInput + CommentThread below.
-// Looks up the post from the shared store; shows an EmptyState if not found.
+// Looks up the post from the shared store; if the store isn't loaded yet
+// (e.g. direct link / deep link / refresh) it fetches just what's needed for
+// this post instead of showing "not found".
+import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, SearchX } from "lucide-react"
-import { use } from "react"
 import { PostCard } from "@/components/feature"
 import { CommentInput } from "@/components/feature/CommentInput"
 import { CommentThread } from "@/components/feature/CommentThread"
-import { Button, EmptyState } from "@/components/ui"
+import { Button, EmptyState, Skeleton } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
+import { useAuthStore } from "@/lib/store/useAuthStore"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import s from "@/lib/strings"
 
 export default function PostDetailPage({
@@ -19,8 +23,79 @@ export default function PostDetailPage({
 }) {
   const params = use(paramsPromise)
   const post = usePostStore((s) => s.posts.find((p) => p.id === params.id))
+  const posts = usePostStore((s) => s.posts)
+  const [lookingUp, setLookingUp] = useState(posts.length === 0)
+  const [notFound, setNotFound] = useState(posts.length > 0 && !post)
+  const currentUser = useAuthStore((s) => s.currentUser)
 
-  if (!post) {
+  // Store memory doesn't survive a refresh — if we have nothing cached, fetch
+  // the post + comments directly instead of flashing "not found".
+  useEffect(() => {
+    if (post) {
+      setLookingUp(false)
+      setNotFound(false)
+      return
+    }
+    if (posts.length > 0) {
+      setNotFound(true)
+      setLookingUp(false)
+      return
+    }
+    setLookingUp(true)
+    let cancelled = false
+    const supabase = createSupabaseBrowserClient()
+    ;(async () => {
+      const { data: row } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", params.id)
+        .maybeSingle()
+      if (cancelled) return
+      if (!row) {
+        setLookingUp(false)
+        setNotFound(true)
+        return
+      }
+      // Hydrate the shared store so PostCard/CommentThread work normally.
+      const { data: commentRows } = await supabase
+        .from("comments")
+        .select("*")
+        .eq("post_id", params.id)
+        .order("created_at", { ascending: true })
+      usePostStore.setState((s) => ({
+        posts: s.posts.some((p) => p.id === row.id) ? s.posts : [row as any, ...s.posts],
+        comments: [
+          ...s.comments.filter((c) => c.postId !== params.id),
+          ...(commentRows ?? []).map((r) => ({
+            id: r.id,
+            postId: r.post_id,
+            authorId: r.author_id,
+            text: r.content,
+            isOrgHelp: r.is_org_help,
+            createdAt: r.created_at,
+          })),
+        ],
+      }))
+      setLookingUp(false)
+      setNotFound(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [params.id, post, posts.length])
+
+  if (lookingUp) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  if (notFound && !post) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
         <EmptyState
@@ -38,6 +113,8 @@ export default function PostDetailPage({
       </div>
     )
   }
+
+  if (!post) return null
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">

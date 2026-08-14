@@ -16,6 +16,8 @@ delete from auth.users;
 
 -- 3) Direct tables are emptied by the cascade above, but clear them anyway in
 --    case any row survived without a valid auth user.
+truncate table public.reports cascade;
+truncate table public.blocks cascade;
 truncate table public.notifications cascade;
 truncate table public.follows cascade;
 truncate table public.comments cascade;

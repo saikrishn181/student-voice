@@ -15,6 +15,8 @@ import {
   User,
   LogOut,
   Megaphone,
+  ShieldCheck,
+  MessageSquare,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -27,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
   { href: "/search", label: s["nav.search"], icon: Search },
   { href: "/post/create", label: s["nav.create"], icon: PlusSquare },
+  { href: "/messages", label: s["nav.messages"], icon: MessageSquare },
   { href: "/notifications", label: s["nav.notifications"], icon: Bell },
   { href: "/profile", label: s["nav.profile"], icon: User },
 ]
@@ -87,6 +90,20 @@ export function Navbar() {
               </Link>
             )
           })}
+          {currentUser?.isAdmin ? (
+            <Link
+              href="/admin/verifications"
+              className={cn(
+                "transition-app flex items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium",
+                pathname.startsWith("/admin")
+                  ? "bg-primary-50 text-primary-700"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-800",
+              )}
+            >
+              <ShieldCheck size={20} aria-hidden />
+              {s["nav.admin"]}
+            </Link>
+          ) : null}
         </nav>
 
         {currentUser ? (

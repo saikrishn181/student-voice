@@ -23,6 +23,8 @@ export function rowToUser(row: Profile): User {
     followerCount: row.follower_count,
     followingCount: row.following_count,
     createdAt: row.created_at,
+    isAdmin: row.is_admin,
+    isPrivate: row.is_private,
   }
 }
 

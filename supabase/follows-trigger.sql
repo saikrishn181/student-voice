@@ -1,3 +1,5 @@
+-- DEPRECATED: FOLDED INTO supabase/schema.sql (notify_on_follow). Kept only
+-- for old installs; use supabase/upgrade_schema.sql instead.
 -- Adds a notification when someone starts following you.
 -- Standalone migration — append to supabase/schema.sql or run alone in the SQL editor.
 -- The `follow` notification type is already allowed by the notifications check constraint.

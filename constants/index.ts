@@ -48,6 +48,11 @@ export function labelForCategory(category: Category): string {
 // How many posts to load per batch in the infinite-scroll feed.
 export const FEED_PAGE_SIZE = 10
 
+// Cap post / comment lengths (enforced client-side here, mirroring the DB
+// check constraints in supabase/schema.sql).
+export const MAX_POST_CHARS = 2000
+export const MAX_COMMENT_CHARS = 500
+
 // The default Redirect target after a successful login (user already has a region).
 export const LOGGED_IN_HOME = "/feed"
 

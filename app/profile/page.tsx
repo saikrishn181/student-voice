@@ -1,20 +1,59 @@
 "use client"
 
-// Profile page: shows the current user's profile with their info, stats,
-// and recent posts. Skeleton while "loading," EmptyState if no profile.
+// Profile page: shows the current user's profile with their info, stats, and
+// recent posts, plus a "Blocked users" management section (unblock). Skeleton
+// while "loading," EmptyState if no profile.
 import { useEffect, useState } from "react"
-import { User, Inbox, Settings } from "lucide-react"
+import { User, Inbox, Settings, ShieldBan } from "lucide-react"
 import Link from "next/link"
 import { Card, Avatar, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
+import { useUserById } from "@/hooks"
 import { PostCard, EditProfileModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
+import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
+
+// One blocked user row. A separate component so useUserById keeps the hook
+// order stable even though the list length is dynamic.
+function BlockedUserCard({ userId, onUnblock }: { userId: string; onUnblock: (id: string) => void }) {
+  const user = useUserById(userId)
+  const [unblocking, setUnblocking] = useState(false)
+  return (
+    <li className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar name={user?.name ?? "?"} src={user?.avatarUrl ?? null} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-body-sm font-medium text-slate-900">{user?.name ?? "…"}</p>
+          <p className="text-xs text-slate-500">{user?.username ? `@${user.username}` : ""}</p>
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        loading={unblocking}
+        onClick={async () => {
+          setUnblocking(true)
+          try {
+            await onUnblock(userId)
+          } finally {
+            setUnblocking(false)
+          }
+        }}
+      >
+        {s["block.unblock"]}
+      </Button>
+    </li>
+  )
+}
 
 export default function ProfilePage() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const posts = usePostStore((s) => s.posts)
+  const blockedUserIds = usePostStore((s) => s.blockedUserIds)
+  const unblockUser = usePostStore((s) => s.unblockUser)
+  const showToast = useToastStore((s) => s.show)
   const [loading, setLoading] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -115,6 +154,39 @@ export default function ProfilePage() {
                 <PostCard key={post.id} post={post} showFollow={false} />
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Blocked users */}
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <ShieldBan size={18} className="text-slate-400" aria-hidden />
+            <h2 className="text-h4">{s["profile.blockedUsers.title"]}</h2>
+          </div>
+          {blockedUserIds.length === 0 ? (
+            <Card className="py-6">
+              <p className="text-center text-body-sm text-slate-500">
+                {s["profile.blockedUsers.empty"]}
+              </p>
+            </Card>
+          ) : (
+            <Card className="p-4">
+              <p className="mb-3 text-body-sm text-slate-500">
+                {s["profile.blockedUsers.description"]}
+              </p>
+              <ul>
+                {blockedUserIds.map((id) => (
+                  <BlockedUserCard
+                    key={id}
+                    userId={id}
+                    onUnblock={async (userId) => {
+                      await unblockUser(userId)
+                      showToast(s["block.userUnblocked"], "success")
+                    }}
+                  />
+                ))}
+              </ul>
+            </Card>
           )}
         </div>
       </div>

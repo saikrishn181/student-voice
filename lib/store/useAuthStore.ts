@@ -48,6 +48,7 @@ export interface ProfilePatch {
   avatarUrl?: string
   state?: string
   bio?: string
+  isPrivate?: boolean
 }
 
 // Map a `profiles` row to the app's User type.
@@ -66,6 +67,8 @@ function rowToUser(row: Profile): User {
     followerCount: row.follower_count,
     followingCount: row.following_count,
     createdAt: row.created_at,
+    isAdmin: row.is_admin,
+    isPrivate: row.is_private,
   }
 }
 
@@ -161,6 +164,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       avatar_url: patch.avatarUrl ?? null,
       state: patch.state,
       bio: patch.bio ?? null,
+      is_private: patch.isPrivate,
     }
 
     const { data, error } = await supabase

@@ -3,10 +3,11 @@
 // MediaUploader: drag-and-drop / file-picker for post media.
 //  - Accepts only image/* and video/* (rejects others + max 50MB with Toast).
 //  - Shows a live preview via MediaDisplay's shared aspect-ratio logic.
-//  - Simulated upload progress bar (no real backend yet).
-//  - Allows removing the selected file.
-import { useRef, useState } from "react"
-import { ImagePlus, UploadCloud, X } from "lucide-react"
+//  - The actual upload happens on form submit (single flight, no orphans);
+//    blob URLs are strictly preview and are revoked on remove/replace/unmount.
+//  - Allows removing the selected file / picking a replacement.
+import { useEffect, useRef, useState } from "react"
+import { ImagePlus, X } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
@@ -28,13 +29,26 @@ interface MediaUploaderProps {
 
 export function MediaUploader({ value, onChange }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const lastBlobRef = useRef<string | null>(null)
   const showToast = useToastStore((s) => s.show)
   const [dragging, setDragging] = useState(false)
-  const [progress, setProgress] = useState(0)
 
-  const resetProgress = () => {
-    setProgress(0)
+  // Replaces the previous preview with a new one, revoking the old blob URL
+  // so it can never leak.
+  const replaceBlob = (url: string | null) => {
+    if (lastBlobRef.current === url) return
+    if (lastBlobRef.current) URL.revokeObjectURL(lastBlobRef.current)
+    lastBlobRef.current = url
   }
+
+  // On unmount (user navigates away) release every object URL this picker
+  // created, so memory is freed even if the form was never submitted.
+  useEffect(() => {
+    return () => {
+      if (lastBlobRef.current) URL.revokeObjectURL(lastBlobRef.current)
+      lastBlobRef.current = null
+    }
+  }, [])
 
   const handleFile = (file: File | undefined | null) => {
     if (!file) return
@@ -48,25 +62,16 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
       return
     }
 
-    resetProgress()
+    // Preview only — the real upload runs once on publish.
     const url = URL.createObjectURL(file)
+    replaceBlob(url)
     const kind = file.type.startsWith("video/") ? "video" : "photo"
     onChange({ url, type: kind, file })
-
-    // Simulate upload progress; the real upload happens on form submit via
-    // lib/supabase/storage.
-    let p = 0
-    const timer = window.setInterval(() => {
-      p += 12
-      setProgress(Math.min(p, 100))
-      if (p >= 100) window.clearInterval(timer)
-    }, 60)
   }
 
   const handleRemove = () => {
-    if (value?.url.startsWith("blob:")) URL.revokeObjectURL(value.url)
+    replaceBlob(null)
     onChange(null)
-    resetProgress()
   }
 
   return (
@@ -74,17 +79,10 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
       {value ? (
         <div className="relative overflow-hidden rounded-card border border-slate-200 bg-slate-100">
           <MediaDisplay mediaUrl={value.url} mediaType={value.type} />
-          {progress < 100 ? (
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/40 text-white">
-              <UploadCloud size={28} />
-              <div className="h-2 w-3/4 max-w-60 overflow-hidden rounded-pill bg-white/30">
-                <div
-                  className="h-full bg-white transition-all duration-fast ease-smooth"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-sm font-semibold">{progress}%</span>
-            </div>
+          {value.url.startsWith("blob:") ? (
+            <span className="absolute bottom-2 right-2 rounded-pill bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+              {s["media.uploader.previewOnly"]}
+            </span>
           ) : null}
           <button
             type="button"
@@ -141,7 +139,7 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
 
       {value ? (
         <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-          Replace file
+          {s["createPost.replaceFile"]}
         </Button>
       ) : (
         <span className="sr-only">{s["media.uploader.label"]}</span>

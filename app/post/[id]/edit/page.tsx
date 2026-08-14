@@ -9,8 +9,8 @@ import { Button, Card, Select, Textarea, EmptyState } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
-import { CATEGORY_OPTIONS, STATES } from "@/constants"
-import { uploadPostMedia } from "@/lib/supabase/storage"
+import { CATEGORY_OPTIONS, STATES, MAX_POST_CHARS } from "@/constants"
+import { uploadPostMedia } from "@/lib/cloudflare/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import s from "@/lib/strings"
 import type { Category } from "@/lib/types"
@@ -77,6 +77,10 @@ export default function EditPostPage() {
     }
     if (!text.trim()) {
       setTextError(s["validation.postEmpty"])
+      return
+    }
+    if (text.trim().length > MAX_POST_CHARS) {
+      setTextError(s["validation.postTooLong"]);
       return
     }
     if (!category) {
@@ -164,6 +168,7 @@ export default function EditPostPage() {
             placeholder={s["createPost.textPlaceholder"]}
             value={text}
             onChange={(e) => { setText(e.target.value); setTextError("") }}
+            maxLength={MAX_POST_CHARS}
             error={textError || undefined}
           />
 

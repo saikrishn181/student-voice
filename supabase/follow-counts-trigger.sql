@@ -1,3 +1,5 @@
+-- DEPRECATED: FOLDED INTO supabase/schema.sql (sync_follow_counts). Kept only
+-- for old installs; use supabase/upgrade_schema.sql instead.
 -- Keeps profiles.follower_count / following_count in sync with the follows
 -- table automatically (insert => +1, delete => -1). Run in the SQL editor.
 -- Without this, the counts shown on profiles never change.

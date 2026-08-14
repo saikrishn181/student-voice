@@ -31,6 +31,16 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  // Load once on mount; keep ears open for live updates (default-on but
+  // silently no-ops if Supabase Realtime isn't enabled for the project).
+  useEffect(() => {
+    loadAll(currentUser?.id)
+    usePostStore.getState().startRealtime(currentUser?.id)
+    return () => {
+      usePostStore.getState().stopRealtime()
+    }
+  }, [loadAll, currentUser?.id])
+
   const handleRetry = () => {
     setRetrying(true)
     loadAll(currentUser?.id).finally(() => setRetrying(false))

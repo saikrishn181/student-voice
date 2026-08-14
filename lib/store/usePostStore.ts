@@ -4,12 +4,18 @@
 // after an initial fetch; every mutation writes through to Supabase so data
 // survives reloads. RLS lets everyone read and sign in users write.
 import { create } from "zustand"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
-import type { Category, Comment, Follow, MediaType, Post } from "@/lib/types"
+import type { Category, Comment, Follow, MediaType, Post, ReportReason } from "@/lib/types"
+
+// Represents a row from the `profiles` table.
+interface BlockRow {
+  blocked_id: string
+}
 
 interface PostRow {
   id: string
@@ -73,6 +79,12 @@ interface PostState {
   comments: Comment[]
   follows: Follow[]
 
+  // Per-post in-flight guard for the optimistic support toggle.
+  supportLocks: Record<string, boolean>
+
+  // User ids the current user has blocked; their posts are hidden everywhere.
+  blockedUserIds: string[]
+
   status: "idle" | "loading" | "ready" | "error"
   loadErrorMessage: string | null
   // True when the last page returned fewer rows than the page size (no more).
@@ -102,13 +114,27 @@ interface PostState {
   deletePost: (id: string) => Promise<void>
   toggleSupport: (postId: string, currentUserId: string) => Promise<void>
   addComment: (postId: string, authorId: string, text: string, isOrgHelp?: boolean) => Promise<void>
+  updateComment: (postId: string, commentId: string, text: string) => Promise<void>
+  deleteComment: (postId: string, commentId: string) => Promise<void>
   toggleFollow: (followerId: string, followingId: string) => Promise<void>
+  blockUser: (userId: string) => Promise<void>
+  unblockUser: (userId: string) => Promise<void>
+  reportPost: (postId: string, reason: ReportReason, details?: string) => Promise<void>
+
+  // Live sync: starts/stops a Supabase Realtime channel so new posts and count
+  // changes appear without reloading. Requires realtime enabled (schema.sql).
+  startRealtime: (currentUserId?: string) => void
+  stopRealtime: () => void
+  realtimeChannel: RealtimeChannel | null
 }
 
 export const usePostStore = create<PostState>()((set, get) => ({
   posts: [],
   comments: [],
   follows: [],
+  supportLocks: {},
+  blockedUserIds: [],
+  realtimeChannel: null,
 
   status: "idle",
   loadErrorMessage: null,
@@ -145,13 +171,35 @@ export const usePostStore = create<PostState>()((set, get) => ({
       supportedIds = new Set((mySupports ?? []).map((r) => r.post_id))
     }
 
-    const posts = ((postRows ?? []) as PostRow[]).map((row) => {
-      const post = rowToPost(row)
-      post.supportedByCurrentUser = supportedIds.has(post.id)
-      return post
-    })
+    // Blocked authors are hidden from the feed, trending, and suggestions.
+    let blockedUserIds = new Set<string>()
+    if (currentUserId) {
+      const { data: myBlocks } = await supabase
+        .from("blocks")
+        .select("blocked_id")
+        .eq("blocker_id", currentUserId)
+      blockedUserIds = new Set((myBlocks ?? []).map((r) => (r as BlockRow).blocked_id))
+    }
+
+    const posts = ((postRows ?? []) as PostRow[])
+      .filter((row) => !blockedUserIds.has(row.author_id))
+      .map((row) => {
+        const post = rowToPost(row)
+        post.supportedByCurrentUser = supportedIds.has(post.id)
+        return post
+      })
+
+    // Prefetch every author up front so name/avatar fields never flash
+    // "Unknown" while useUserById lazily loads a single profile.
+    prefetchAuthors(posts.map((p) => p.authorId))
+    if (commentRows?.length) {
+      prefetchAuthors(
+        (commentRows as Parameters<typeof rowToComment>[0][]).map((r) => r.author_id),
+      )
+    }
 
     set({
+      blockedUserIds: Array.from(blockedUserIds),
       posts,
       comments: (commentRows ?? []).map((row) =>
         rowToComment(row as Parameters<typeof rowToComment>[0]),
@@ -182,9 +230,13 @@ export const usePostStore = create<PostState>()((set, get) => ({
     if (error) return false
 
     const existingIds = new Set(get().posts.map((p) => p.id))
+    const blockedIds = new Set(get().blockedUserIds)
     const newPosts = ((postRows ?? []) as PostRow[])
-      .filter((row) => !existingIds.has(row.id))
+      .filter((row) => !existingIds.has(row.id) && !blockedIds.has(row.author_id))
       .map((row) => rowToPost(row))
+
+    // Prefetch authors of the newly loaded posts as well.
+    if (newPosts.length > 0) prefetchAuthors(newPosts.map((p) => p.authorId))
 
     // Mark supportedByCurrentUser for the newly loaded posts.
     if (currentUserId && newPosts.length > 0) {
@@ -265,14 +317,18 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
   toggleSupport: async (postId, currentUserId) => {
     const supabase = createSupabaseBrowserClient()
-    const { posts } = get()
+    const { posts, supportLocks } = get()
+    // In-flight lock: ignore double-clicks while a toggle is still pending.
+    if (supportLocks[postId]) return
     const post = posts.find((p) => p.id === postId)
     if (!post) return
 
     const supported = post.supportedByCurrentUser
+    const original = { supportCount: post.supportCount, supportedByCurrentUser: supported }
 
-    // Optimistic update for snappy UI; reconciled on next load.
+    // Optimistic update for snappy UI.
     set({
+      supportLocks: { ...get().supportLocks, [postId]: true },
       posts: posts.map((p) =>
         p.id === postId
           ? {
@@ -284,10 +340,36 @@ export const usePostStore = create<PostState>()((set, get) => ({
       ),
     })
 
-    if (supported) {
-      await supabase.from("post_supports").delete().eq("post_id", postId).eq("user_id", currentUserId)
-    } else {
-      await supabase.from("post_supports").insert({ post_id: postId, user_id: currentUserId })
+    try {
+      if (supported) {
+        await supabase
+          .from("post_supports")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", currentUserId)
+      } else {
+        await supabase.from("post_supports").insert({ post_id: postId, user_id: currentUserId })
+      }
+    } catch (err) {
+      // Revert the optimistic change on failure so the UI never lies.
+      set((s) => ({
+        posts: s.posts.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                supportCount: original.supportCount,
+                supportedByCurrentUser: original.supportedByCurrentUser,
+              }
+            : p,
+        ),
+      }))
+      throw err instanceof Error ? err : new Error("Could not update support")
+    } finally {
+      set((s) => {
+        const next = { ...s.supportLocks }
+        delete next[postId]
+        return { supportLocks: next }
+      })
     }
   },
 
@@ -299,24 +381,39 @@ export const usePostStore = create<PostState>()((set, get) => ({
       content: text,
       is_org_help: isOrgHelp,
     })
-    if (insertError) throw new Error("Failed to post comment")
+    if (insertError) {
+      // Server rejection (e.g. the comment spam guard) → show its message.
+      throw new Error(
+        insertError.message?.includes("too many") ? insertError.message : "Failed to post comment",
+      )
+    }
+    await reloadComments(postId)
+  },
 
-    // Reload comments for this post so count + list stay in sync.
-    const { data: commentRows } = await supabase
+  updateComment: async (postId, commentId, text) => {
+    const supabase = createSupabaseBrowserClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You need to be logged in")
+    const { error } = await supabase
       .from("comments")
-      .select("*")
-      .eq("post_id", postId)
-      .order("created_at", { ascending: true })
-    const comments = (commentRows ?? []).map((row) =>
-      rowToComment(row as Parameters<typeof rowToComment>[0]),
-    )
+      .update({ content: text.trim() })
+      .eq("id", commentId)
+      .eq("author_id", user.id)
+    if (error) throw new Error("Failed to update comment")
+    await reloadComments(postId)
+  },
 
-    set((s) => ({
-      comments: [...s.comments.filter((c) => c.postId !== postId), ...comments],
-      posts: s.posts.map((p) =>
-        p.id === postId ? { ...p, commentCount: comments.length } : p,
-      ),
-    }))
+  deleteComment: async (postId, commentId) => {
+    const supabase = createSupabaseBrowserClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("You need to be logged in")
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId)
+      .eq("author_id", user.id)
+    if (error) throw new Error("Failed to delete comment")
+    await reloadComments(postId)
   },
 
   toggleFollow: async (followerId, followingId) => {
@@ -325,7 +422,12 @@ export const usePostStore = create<PostState>()((set, get) => ({
     const exists = follows.some((f) => f.followerId === followerId && f.followingId === followingId)
 
     if (exists) {
-      await supabase.from("follows").delete().eq("follower_id", followerId).eq("following_id", followingId)
+      const { error } = await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", followerId)
+        .eq("following_id", followingId)
+      if (error) throw new Error("Could not unfollow — please try again")
       set((s) => ({
         follows: s.follows.filter(
           (f) => !(f.followerId === followerId && f.followingId === followingId),
@@ -333,16 +435,212 @@ export const usePostStore = create<PostState>()((set, get) => ({
       }))
       adjustFollowCounts(followerId, followingId, -1)
     } else {
-      await supabase
+      const { error } = await supabase
         .from("follows")
         .upsert({ follower_id: followerId, following_id: followingId })
+      if (error) throw new Error("Could not follow — please try again")
       set((s) => ({
         follows: [...s.follows, { followerId, followingId }],
       }))
       adjustFollowCounts(followerId, followingId, +1)
     }
   },
+
+  blockUser: async (userId) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId || currentUserId === userId) return
+    const { error } = await supabase
+      .from("blocks")
+      .insert({ blocker_id: currentUserId, blocked_id: userId })
+    if (error) throw new Error("Could not block this user")
+    set((s) => ({
+      blockedUserIds: [...s.blockedUserIds, userId],
+      // Drop their posts from the feed immediately.
+      posts: s.posts.filter((p) => p.authorId !== userId),
+      // And any follows pointing at them.
+      follows: s.follows.filter((f) => f.followingId !== userId),
+    }))
+  },
+
+  unblockUser: async (userId) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId) return
+    const { error } = await supabase
+      .from("blocks")
+      .delete()
+      .eq("blocker_id", currentUserId)
+      .eq("blocked_id", userId)
+    if (error) throw new Error("Could not unblock this user")
+    set((s) => ({ blockedUserIds: s.blockedUserIds.filter((id) => id !== userId) }))
+  },
+
+  reportPost: async (postId, reason, details) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId) return
+    const { error } = await supabase.from("reports").insert({
+      reporter_id: currentUserId,
+      post_id: postId,
+      reason,
+      details: details?.trim() || null,
+    })
+    if (error) throw new Error("Could not submit the report — please try again")
+  },
+
+  startRealtime: (currentUserId) => {
+    const { realtimeChannel } = get()
+    if (realtimeChannel) return
+    const supabase = createSupabaseBrowserClient()
+
+    const channel = supabase
+      .channel("post-feed")
+      // New posts -> prepend (supabase realtime delivers them newest-first in
+      // practice; we slot them by created_at to be safe).
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "posts" },
+        async (payload) => {
+          const row = payload.new as PostRow
+          if (!row?.id) return
+          const existing = get().posts.some((p) => p.id === row.id)
+          const blocked = get().blockedUserIds.includes(row.author_id)
+          if (existing || blocked) return
+          const post = rowToPost(row)
+          // supportedByCurrentUser: fresh posts can't have my support yet.
+          post.supportedByCurrentUser = false
+          set((s) => ({
+            posts: [...s.posts, post].sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            ),
+          }))
+          prefetchAuthors([row.author_id])
+        },
+      )
+      // Counts (supports/comments) on an existing post -> patch in place.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts" },
+        (payload) => {
+          const row = payload.new as PostRow
+          if (!row?.id) return
+          set((s) => ({
+            posts: s.posts.map((p) =>
+              p.id === row.id
+                ? {
+                    ...p,
+                    supportCount: row.support_count,
+                    commentCount: row.comment_count,
+                  }
+                : p,
+            ),
+          }))
+        },
+      )
+      // Deleted post -> drop from list.
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "posts" },
+        (payload) => {
+          const old = payload.old as { id: string }
+          if (!old?.id) return
+          set((s) => ({ posts: s.posts.filter((p) => p.id !== old.id) }))
+        },
+      )
+
+    // A support toggle from *another* tab for the current user also updates
+    // supportedByCurrentUser here so the heart stays in sync.
+    if (currentUserId) {
+      channel.on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "post_supports",
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          const row = payload.new as { post_id: string }
+          if (!row?.post_id) return
+          set((s) => ({
+            posts: s.posts.map((p) =>
+              p.id === row.post_id ? { ...p, supportedByCurrentUser: true } : p,
+            ),
+          }))
+        },
+      )
+      channel.on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "post_supports",
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          const old = payload.old as { post_id: string }
+          if (!old?.post_id) return
+          set((s) => ({
+            posts: s.posts.map((p) =>
+              p.id === old.post_id ? { ...p, supportedByCurrentUser: false } : p,
+            ),
+          }))
+        },
+      )
+    }
+
+    set({ realtimeChannel: channel })
+    channel.subscribe((status) => {
+      if (status !== "SUBSCRIBED") {
+        // Real-time may be disabled in the project (no publication entry);
+        // the feed keeps working via normal fetches.
+        set({ realtimeChannel: null })
+        supabase.removeChannel(channel)
+      }
+    })
+  },
+
+  stopRealtime: () => {
+    const { realtimeChannel } = get()
+    if (!realtimeChannel) return
+    const supabase = createSupabaseBrowserClient()
+    supabase.removeChannel(realtimeChannel)
+    set({ realtimeChannel: null })
+  },
 }))
+
+// Resolve a batch of author profiles into the shared cache in parallel. Skips
+// ids already cached (or equal to the current user) and fires-and-forgets.
+function prefetchAuthors(ids: string[]) {
+  const currentUserId = useAuthStore.getState().currentUser?.id
+  const missing = Array.from(new Set(ids)).filter(
+    (id) => id !== currentUserId && !useUserStore.getState().users[id],
+  )
+  if (missing.length === 0) return
+  missing.forEach((id) => {
+    void useUserStore.getState().loadById(id)
+  })
+}
+
+// Refetch every comment for a post and sync both the list and post.commentCount
+// (the DB trigger keeps the count on the posts row; this keeps the UI honest).
+async function reloadComments(postId: string) {
+  const supabase = createSupabaseBrowserClient()
+  const { data: commentRows, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true })
+  if (error) throw new Error("Could not refresh comments")
+  const comments = (commentRows ?? []).map((row) =>
+    rowToComment(row as Parameters<typeof rowToComment>[0]),
+  )
+  usePostStore.setState((s) => ({
+    comments: [...s.comments.filter((c) => c.postId !== postId), ...comments],
+    posts: s.posts.map((p) => (p.id === postId ? { ...p, commentCount: comments.length } : p)),
+  }))
+}
 
 // Mirror a follow/unfollow into the cached follower/following counts so the
 // UI reflects the change instantly (the DB trigger keeps the source of truth).

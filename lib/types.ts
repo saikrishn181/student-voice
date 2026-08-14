@@ -28,6 +28,10 @@ export interface User {
   followerCount: number
   followingCount: number
   createdAt: string // ISO
+  // Moderators/admins can review org verification + reports (is_admin column).
+  isAdmin: boolean
+  // Private accounts (students): posts only visible to followers + self.
+  isPrivate?: boolean
 }
 
 // Profile row shape from the `public.profiles` Supabase table (snake_case).
@@ -45,6 +49,8 @@ export interface Profile {
   follower_count: number
   following_count: number
   created_at: string
+  is_admin: boolean
+  is_private: boolean
 }
 
 // Post categories (Phase 2).
@@ -109,3 +115,22 @@ export interface Follow {
 
 export type ToastTone = "success" | "error" | "info"
 export type ToastKind = "success" | "error" | "info"
+
+// Reasons a user can flag a post for moderation (mirrors reports.reason CHECK).
+export type ReportReason = "spam" | "harassment" | "misinformation" | "inappropriate" | "other"
+
+// ─── Chat ────────────────────────────────────────────────────────────────────
+export interface Conversation {
+  id: string
+  // The other participant (this user's perspective is always "me").
+  otherUserId: string
+  createdAt: string // ISO
+}
+
+export interface Message {
+  id: string
+  conversationId: string
+  senderId: string
+  content: string
+  createdAt: string // ISO
+}

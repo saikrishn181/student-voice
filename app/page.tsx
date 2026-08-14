@@ -1,7 +1,6 @@
-"use client"
-
 // Landing page: explains the mission, with a two-column hero on desktop and a
-// stacked single-column layout on mobile. Sign Up and Log In CTAs.
+// stacked single-column layout on mobile. Sign Up and Log In CTAs. Fully
+// static, so no "use client" is needed here.
 import Link from "next/link"
 import { Megaphone, ArrowRight, MapPin, HelpCircle, HeartHandshake } from "lucide-react"
 import { Button } from "@/components/ui/Button"
