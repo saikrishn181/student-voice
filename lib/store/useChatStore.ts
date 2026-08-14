@@ -160,7 +160,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { data, error } = await supabase.rpc("get_or_create_conversation", {
       p_other: otherUserId,
     })
-    if (error) return null
+    if (error) {
+      // Private accounts reject non-followers at the DB layer.
+      if (error.message.includes("PRIVATE_ACCOUNT_NOT_ALLOWED")) {
+        throw new Error("This account is private — follow them first to send a message.")
+      }
+      throw new Error("Could not start a conversation — please try again.")
+    }
 
     await get().loadConversations()
     return typeof data === "string" ? data : null

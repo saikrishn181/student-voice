@@ -64,6 +64,15 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const isBlocked = Boolean(author?.id && blockedUserIds.includes(author.id))
   const isVerifiedOrg =
     author?.accountType === "organization" && author.verificationStatus === "verified"
+  const follows = usePostStore((s) => s.follows)
+  // Messaging a PRIVATE account is only allowed once they accept your follow
+  // request. Public accounts (and admins) can always be messaged.
+  const canMessage =
+    !author ||
+    isOwnPost ||
+    currentUser?.isAdmin ||
+    !author.isPrivate ||
+    follows.some((f) => f.followerId === currentUser?.id && f.followingId === author.id)
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -135,13 +144,13 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href={`/post/${post.id}`} aria-label={s["post.viewPost"]}>
+          <Link href={`/profile/${post.authorId}`} aria-label={s["post.viewProfile"]}>
             <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <Link
-                href={`/post/${post.id}`}
+                href={`/profile/${post.authorId}`}
                 className="truncate text-sm font-semibold text-slate-900 hover:underline"
               >
                 {author?.name ?? s["post.unknownName"]}
@@ -159,6 +168,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
           <FollowButton
             followerId={currentUser?.id ?? ""}
             followingId={author.id}
+            targetIsPrivate={Boolean(author.isPrivate)}
             className="-mr-1 -mt-1 shrink-0"
           />
         ) : (
@@ -203,21 +213,29 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setMenuOpen(false)
-                          const convId = await useChatStore
-                            .getState()
-                            .getOrCreateConversation(post.authorId)
-                          if (convId) router.push(`/messages/${convId}`)
-                          else showToast(s["validation.generic"], "error")
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        <MessageSquare size={16} className="text-slate-400" />
-                        {s["post.message"]}
-                      </button>
+                      {canMessage ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setMenuOpen(false)
+                            try {
+                              const convId = await useChatStore
+                                .getState()
+                                .getOrCreateConversation(post.authorId)
+                              if (convId) router.push(`/messages/${convId}`)
+                            } catch (err) {
+                              showToast(
+                                err instanceof Error ? err.message : s["chat.cannotMessage"],
+                                "error",
+                              )
+                            }
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          <MessageSquare size={16} className="text-slate-400" />
+                          {s["post.message"]}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => {

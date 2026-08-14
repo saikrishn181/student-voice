@@ -113,10 +113,23 @@ const s = {
   "profile.empty.signup": "Sign Up",
   "profile.followers": "Followers",
   "profile.following": "Following",
-  "profile.yourPosts": "Your posts",
+  "profile.yourPosts": "Posts",
   "profile.noPosts.title": "No posts yet",
   "profile.noPosts.description": "Share a problem with your community to get started.",
   "profile.createPost": "Create a post",
+  "profile.stats.posts": "Posts",
+  "profile.private.badge": "Private account",
+  "profile.private.description":
+    "This account is private. Only approved followers can see posts and send messages.",
+  "profile.private.requestPending": "Your follow request is pending approval.",
+  "profile.private.requestHint": "Send a follow request to see posts and chat.",
+  "profile.cannotMessage": "This account is private — follow them first to send a message.",
+  "profile.notFound.title": "User not found",
+  "profile.notFound.description": "This profile doesn't exist or has been removed.",
+  "profile.notFound.backToFeed": "Back to feed",
+  "profile.followRequests.title": "Follow requests",
+  "profile.followRequests.description": "People who asked to follow you.",
+  "profile.followRequests.empty": "No follow requests right now.",
 
   // ─── Edit Profile / Settings ────────────────────────────────────────────
   "settings.title": "Edit profile",
@@ -193,6 +206,11 @@ const s = {
   "support.button.remove": "Remove support",
   "follow.button.follow": "Follow",
   "follow.button.following": "Following",
+  "follow.requestSent": "Follow request sent",
+  "follow.requestAccepted": "Request accepted",
+  "follow.requestRejected": "Request rejected",
+  "follow.accept": "Accept",
+  "follow.reject": "Reject",
 
   // ─── PostCard labels ────────────────────────────────────────────────────────
   "post.authorType.org": "Organization",
@@ -212,6 +230,7 @@ const s = {
   // ─── Report / Block ─────────────────────────────────────────────────────────
   "post.report": "Report post",
   "post.message": "Send message",
+  "post.viewProfile": "View profile",
   "post.block": "Block user",
   "report.title": "Report this post",
   "report.description": "Why are you reporting this? Your report is private and only used for moderation.",
@@ -257,6 +276,7 @@ const s = {
   "notification.type.support": "supported your post",
   "notification.type.comment": "commented on your post",
   "notification.type.follow": "started following you",
+  "notification.type.follow_request": "wants to follow you",
   "notification.type.offer_help": "offered help on your post",
   "notification.type.verification_approved": "your organization verification was approved.",
 
@@ -290,6 +310,7 @@ const s = {
   "chat.inbox.emptyDescription":
     "When someone messages you, or you start a chat from a post, it shows up here.",
   "chat.inbox.noMessages": "No messages yet — say hi!",
+  "chat.cannotMessage": "This account is private — follow them first to send a message.",
   "chat.thread.notFoundTitle": "Conversation not found",
   "chat.thread.notFoundDescription":
     "This conversation doesn't exist or you're not part of it.",

@@ -4,7 +4,7 @@
 // recent posts, plus a "Blocked users" management section (unblock). Skeleton
 // while "loading," EmptyState if no profile.
 import { useEffect, useState } from "react"
-import { User, Inbox, Settings, ShieldBan } from "lucide-react"
+import { User, Inbox, Settings, ShieldBan, Lock, UserPlus, Check, X } from "lucide-react"
 import Link from "next/link"
 import { Card, Avatar, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -14,6 +14,64 @@ import { PostCard, EditProfileModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
 import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
+
+// One incoming follow request row: shows who wants to follow you, with
+// Accept / Reject actions. Accepting creates the follow via the DB trigger.
+function FollowRequestCard({ requestId, userId }: { requestId: string; userId: string }) {
+  const user = useUserById(userId)
+  const respondToFollowRequest = usePostStore((s) => s.respondToFollowRequest)
+  const showToast = useToastStore((s) => s.show)
+  const [busy, setBusy] = useState<"accept" | "reject" | null>(null)
+
+  const handle = async (accept: boolean) => {
+    if (busy) return
+    setBusy(accept ? "accept" : "reject")
+    try {
+      await respondToFollowRequest(requestId, accept)
+      showToast(accept ? s["follow.requestAccepted"] : s["follow.requestRejected"], "success")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <li className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
+      <Link href={`/profile/${userId}`} className="flex min-w-0 items-center gap-3">
+        <Avatar name={user?.name ?? "?"} src={user?.avatarUrl ?? null} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-body-sm font-medium text-slate-900">{user?.name ?? "…"}</p>
+          <p className="text-xs text-slate-500">{user?.username ? `@${user.username}` : ""}</p>
+        </div>
+      </Link>
+      <div className="flex shrink-0 gap-2">
+        <Button
+          variant="primary"
+          size="sm"
+          loading={busy === "accept"}
+          disabled={busy === "reject"}
+          onClick={() => void handle(true)}
+          aria-label={s["follow.accept"]}
+        >
+          <Check size={16} aria-hidden />
+          {s["follow.accept"]}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          loading={busy === "reject"}
+          disabled={busy === "accept"}
+          onClick={() => void handle(false)}
+          aria-label={s["follow.reject"]}
+        >
+          <X size={16} aria-hidden />
+          {s["follow.reject"]}
+        </Button>
+      </div>
+    </li>
+  )
+}
 
 // One blocked user row. A separate component so useUserById keeps the hook
 // order stable even though the list length is dynamic.
@@ -53,9 +111,13 @@ export default function ProfilePage() {
   const posts = usePostStore((s) => s.posts)
   const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const unblockUser = usePostStore((s) => s.unblockUser)
+  const followRequests = usePostStore((s) => s.followRequests)
   const showToast = useToastStore((s) => s.show)
   const [loading, setLoading] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // Incoming follow requests (sent TO me) for the accept/reject list.
+  const myIncoming = followRequests.filter((r) => r.targetId === currentUser?.id)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 400)
@@ -118,6 +180,11 @@ export default function ProfilePage() {
               {currentUser.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]}
               {currentUser.state ? ` · ${currentUser.state}` : ""}
             </p>
+            {currentUser.isPrivate ? (
+              <p className="mt-1 flex items-center justify-center gap-1 text-xs text-slate-400">
+                <Lock size={12} aria-hidden /> {s["profile.private.badge"]}
+              </p>
+            ) : null}
           </div>
           {currentUser.bio ? (
             <p className="max-w-md text-body-sm text-slate-600">{currentUser.bio}</p>
@@ -133,6 +200,32 @@ export default function ProfilePage() {
             </div>
           </div>
         </Card>
+
+        {/* Incoming follow requests */}
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <UserPlus size={18} className="text-slate-400" aria-hidden />
+            <h2 className="text-h4">{s["profile.followRequests.title"]}</h2>
+          </div>
+          {myIncoming.length === 0 ? (
+            <Card className="py-6">
+              <p className="text-center text-body-sm text-slate-500">
+                {s["profile.followRequests.empty"]}
+              </p>
+            </Card>
+          ) : (
+            <Card className="p-4">
+              <p className="mb-3 text-body-sm text-slate-500">
+                {s["profile.followRequests.description"]}
+              </p>
+              <ul>
+                {myIncoming.map((r) => (
+                  <FollowRequestCard key={r.id} requestId={r.id} userId={r.requesterId} />
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
 
         {/* User's posts */}
         <div>

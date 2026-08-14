@@ -10,7 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
-import type { Category, Comment, Follow, MediaType, Post, ReportReason } from "@/lib/types"
+import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
 
 // Represents a row from the `profiles` table.
 interface BlockRow {
@@ -74,10 +74,28 @@ function rowToFollow(row: {
   return { followerId: row.follower_id, followingId: row.following_id }
 }
 
+function rowToFollowRequest(row: {
+  id: string
+  requester_id: string
+  target_id: string
+  status: string
+  created_at: string
+}): FollowRequest {
+  return {
+    id: row.id,
+    requesterId: row.requester_id,
+    targetId: row.target_id,
+    status: row.status as FollowRequest["status"],
+    createdAt: row.created_at,
+  }
+}
+
 interface PostState {
   posts: Post[]
   comments: Comment[]
   follows: Follow[]
+  // Follow requests involving the current user (sent to me / sent by me).
+  followRequests: FollowRequest[]
 
   // Per-post in-flight guard for the optimistic support toggle.
   supportLocks: Record<string, boolean>
@@ -94,6 +112,11 @@ interface PostState {
 
   loadAll: (currentUserId?: string) => Promise<void>
   loadMore: (currentUserId?: string) => Promise<boolean>
+  loadFollowRequests: (currentUserId?: string) => Promise<void>
+  sendFollowRequest: (targetId: string, requesterId: string) => Promise<void>
+  // Accepts or rejects an incoming request. Accepting creates the follow row
+  // via the DB trigger; we refresh follows + requests afterwards.
+  respondToFollowRequest: (requestId: string, accept: boolean) => Promise<void>
   addPost: (input: {
     authorId: string
     text: string
@@ -132,6 +155,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
   posts: [],
   comments: [],
   follows: [],
+  followRequests: [],
   supportLocks: {},
   blockedUserIds: [],
   realtimeChannel: null,
@@ -160,6 +184,16 @@ export const usePostStore = create<PostState>()((set, get) => ({
       supabase.from("comments").select("*").order("created_at", { ascending: false }),
       supabase.from("follows").select("*"),
     ])
+
+    // Follow requests involving the current user (sent by me / sent to me).
+    let requestRows: Parameters<typeof rowToFollowRequest>[0][] = []
+    if (currentUserId) {
+      const { data } = await supabase
+        .from("follow_requests")
+        .select("*")
+        .or(`requester_id.eq.${currentUserId},target_id.eq.${currentUserId}`)
+      requestRows = (data ?? []) as Parameters<typeof rowToFollowRequest>[0][]
+    }
 
     // supportedByCurrentUser requires knowing the current user's supports.
     let supportedIds = new Set<string>()
@@ -207,6 +241,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
       follows: (followRows ?? []).map((row) =>
         rowToFollow(row as Parameters<typeof rowToFollow>[0]),
       ),
+      followRequests: requestRows.map(rowToFollowRequest),
       status: "ready",
       hasMore: (postRows?.length ?? 0) >= FEED_PAGE_SIZE,
       loadedCount: posts.length,
@@ -443,6 +478,62 @@ export const usePostStore = create<PostState>()((set, get) => ({
         follows: [...s.follows, { followerId, followingId }],
       }))
       adjustFollowCounts(followerId, followingId, +1)
+    }
+  },
+
+  loadFollowRequests: async (currentUserId) => {
+    const supabase = createSupabaseBrowserClient()
+    if (!currentUserId) {
+      set({ followRequests: [] })
+      return
+    }
+    const { data } = await supabase
+      .from("follow_requests")
+      .select("*")
+      .or(`requester_id.eq.${currentUserId},target_id.eq.${currentUserId}`)
+    set({
+      followRequests: ((data ?? []) as Parameters<typeof rowToFollowRequest>[0][]).map(
+        rowToFollowRequest,
+      ),
+    })
+  },
+
+  sendFollowRequest: async (targetId, requesterId) => {
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.from("follow_requests").insert({
+      requester_id: requesterId,
+      target_id: targetId,
+    })
+    if (error) {
+      if (error.message.includes("duplicate")) {
+        // Already requested — refresh state and continue silently.
+        await get().loadFollowRequests(requesterId)
+        return
+      }
+      throw new Error("Could not send follow request — please try again")
+    }
+    // Refresh so the new request shows up in the list.
+    await get().loadFollowRequests(requesterId)
+  },
+
+  respondToFollowRequest: async (requestId, accept) => {
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase
+      .from("follow_requests")
+      .update({ status: accept ? "accepted" : "rejected" })
+      .eq("id", requestId)
+    if (error) throw new Error("Could not update the request — please try again")
+
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    // Accepting creates the follows row via DB trigger; reload both lists.
+    if (currentUserId) {
+      const { data: followRows } = await supabase.from("follows").select("*")
+      set({
+        follows: (followRows ?? []).map((row) =>
+          rowToFollow(row as Parameters<typeof rowToFollow>[0]),
+        ),
+      })
+      await get().loadFollowRequests(currentUserId)
     }
   },
 

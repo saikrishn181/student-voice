@@ -68,6 +68,7 @@ export type NotificationType =
   | "follow"
   | "offer_help"
   | "verification_approved"
+  | "follow_request"
 
 export interface Notification {
   id: string
@@ -111,6 +112,16 @@ export interface Comment {
 export interface Follow {
   followerId: string
   followingId: string
+}
+
+// A follow request sent to a private account. Accepted requests become a
+// Follow (the DB trigger inserts the follows row).
+export interface FollowRequest {
+  id: string
+  requesterId: string
+  targetId: string
+  status: "pending" | "accepted" | "rejected"
+  createdAt: string // ISO
 }
 
 export type ToastTone = "success" | "error" | "info"

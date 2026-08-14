@@ -2,6 +2,7 @@
 // choice and default detail text. Pure functions — no React hooks.
 import {
   BadgeCheck,
+  Clock,
   Heart,
   HeartHandshake,
   MessageCircle,
@@ -60,6 +61,8 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return MessageCircle
     case "follow":
       return UserPlus
+    case "follow_request":
+      return Clock
     case "offer_help":
       return HeartHandshake
     case "verification_approved":
