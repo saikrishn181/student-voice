@@ -96,7 +96,6 @@ export default function LandingPage() {
               <span className="inline-flex items-center gap-1 rounded-pill bg-accent-50 px-2.5 py-1 text-xs font-semibold text-accent-700">
                 <HeartHandshake size={14} aria-hidden /> {s["hero.demoPost.support"](42)}
               </span>
-              <span className="text-body-sm text-slate-400">2h ago</span>
             </div>
           </div>
 

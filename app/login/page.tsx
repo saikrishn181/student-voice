@@ -6,7 +6,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Megaphone } from "lucide-react"
+import { Megaphone, Mail, Lock } from "lucide-react"
 import { Button, Input } from "@/components/ui"
 import { GoogleIcon } from "@/components/feature/GoogleIcon"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -66,20 +66,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 py-8">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-10">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-700 text-white">
-            <Megaphone size={20} aria-hidden />
+        {/* Brand */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-700 text-white shadow-popover">
+            <Megaphone size={24} aria-hidden />
           </span>
-          <span className="text-xl font-bold text-primary-700">{s["app.name"]}</span>
+          <p className="text-xl font-bold text-slate-900">{s["app.name"]}</p>
         </div>
 
         <div className="surface-card p-6 sm:p-8">
           <h1 className="text-h2 text-slate-900">{s["auth.login.title"]}</h1>
-          <p className="mt-1 text-body-sm text-slate-500">
-            {s["auth.login.subtitle"]}
-          </p>
+          <p className="mt-1 text-body-sm text-slate-500">{s["auth.login.subtitle"]}</p>
 
           <Button
             type="button"
@@ -94,13 +93,13 @@ export default function LoginPage() {
             {s["auth.google.continue"]}
           </Button>
 
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-5 flex items-center gap-3">
             <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-xs text-slate-400">or</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">or</span>
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4" noValidate>
+          <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4" noValidate>
             <Input
               label="Email"
               type="email"
@@ -110,6 +109,7 @@ export default function LoginPage() {
               placeholder={s["auth.login.emailPlaceholder"]}
               autoComplete="email"
               error={emailError || undefined}
+              leftAdornment={<Mail size={18} className="text-slate-400" />}
             />
 
             <div className="flex flex-col gap-1.5">
@@ -119,8 +119,9 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 autoComplete="current-password"
+                leftAdornment={<Lock size={18} className="text-slate-400" />}
               />
               <div className="flex justify-end">
                 <Link
@@ -137,7 +138,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-5 text-center text-body-sm text-slate-500">
+          <p className="mt-6 text-center text-body-sm text-slate-500">
             {s["auth.login.noAccount"]}{" "}
             <Link href="/signup" className="font-semibold text-primary-700 hover:underline">
               {s["auth.login.signupLink"]}
