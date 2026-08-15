@@ -14,8 +14,21 @@ import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { PageShell } from "./PageShell"
 import { Spinner } from "@/components/ui/Spinner"
+import s from "@/lib/strings"
 
 const PUBLIC_ROUTES = ["/", "/forgot-password", "/login", "/signup"]
+
+// Slim copyright pill shown at the bottom of every page without its own
+// footer (the landing page has its own full footer).
+function CopyrightFooter() {
+  return (
+    <footer className="pointer-events-none fixed inset-x-0 bottom-2 z-10 flex justify-center lg:bottom-4">
+      <p className="rounded-pill bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-500 shadow-card backdrop-blur">
+        {s["footer.copyright"]}
+      </p>
+    </footer>
+  )
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -60,7 +73,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   // Landing / Login / Signup have no Navbar.
-  if (isPublic) return <>{children}</>
+  if (isPublic) {
+    return (
+      <>
+        {children}
+        {/* Landing has its own footer; the auth pages get the slim pill. */}
+        {pathname !== "/" ? <CopyrightFooter /> : null}
+      </>
+    )
+  }
 
   // Awaiting a redirect for logged-out users on protected pages.
   if (!isLoggedIn) {
@@ -72,7 +93,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   // Authenticated on-boarding page: no Navbar, but still guest-protected.
-  if (isBareAuthenticated) return <>{children}</>
+  if (isBareAuthenticated) {
+    return (
+      <>
+        {children}
+        <CopyrightFooter />
+      </>
+    )
+  }
 
   // Authenticated in-app page: wrap in the post-login shell (Navbar).
   return <PageShell>{children}</PageShell>
