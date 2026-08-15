@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Krantind — Real support for students",
   description:
     "Krantind lets students and student organizations post problems and get real support from their community, region by region.",
+  other: {
+    "strix-verification": "strix-verify-03881d93e2df7235656b66ec90d840bc",
+  },
 }
 
 export const viewport: Viewport = {
