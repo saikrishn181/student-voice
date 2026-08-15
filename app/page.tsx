@@ -2,8 +2,9 @@
 // what the app does, followed by a 3-step "How it works". Fully static, so
 // no "use client" is needed here.
 import Link from "next/link"
-import { Megaphone, ArrowRight, MapPin, HelpCircle, HeartHandshake } from "lucide-react"
+import { ArrowRight, MapPin, HelpCircle, HeartHandshake } from "lucide-react"
 import { Button } from "@/components/ui/Button"
+import { Logo } from "@/components/feature"
 import s from "@/lib/strings"
 
 const STEPS = [
@@ -33,12 +34,9 @@ export default function LandingPage() {
       {/* Top bar */}
       <header className="w-full border-b border-[#E8E1D6] bg-[#FDFBF7]/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-content items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-card">
-              <Megaphone size={20} aria-hidden />
-            </span>
-            <span className="font-display text-lg font-semibold text-primary-700">{s["app.name"]}</span>
-          </div>
+          <Link href="/" className="transition-app hover:opacity-90">
+            <Logo size="md" />
+          </Link>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm">
@@ -112,14 +110,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="w-full border-t border-[#E8E1D6]">
         <div className="mx-auto flex w-full max-w-content flex-col items-center gap-2 px-4 py-10 text-center sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-b from-primary-600 to-primary-700 text-white">
-              <Megaphone size={14} aria-hidden />
-            </span>
-            <span className="font-display text-base font-semibold text-primary-700">
-              {s["app.name"]}
-            </span>
-          </div>
+          <Logo size="sm" />
           <p className="max-w-md text-body-sm text-slate-500">{s["footer.tagline"]}</p>
           <p className="text-xs text-slate-400">{s["footer.madeBy"]}</p>
           <p className="mt-2 text-xs font-medium text-slate-500">{s["footer.copyright"]}</p>

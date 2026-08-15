@@ -7,8 +7,9 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Megaphone, KeyRound, CheckCircle2 } from "lucide-react"
+import { KeyRound, CheckCircle2 } from "lucide-react"
 import { Button, Input } from "@/components/ui"
+import { Logo } from "@/components/feature"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import s from "@/lib/strings"
@@ -127,9 +128,11 @@ function ResetPasswordInner() {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm text-center">
-        <span className="mb-4 mx-auto flex h-14 w-14 items-center justify-center rounded-card bg-primary-700 text-white">
-          <Megaphone size={28} aria-hidden />
-        </span>
+        <div className="mb-4 flex justify-center">
+          <Link href="/" className="transition-app hover:opacity-90">
+            <Logo size="lg" showWordmark={false} />
+          </Link>
+        </div>
         <h1 className="text-h2 text-slate-900">Choose a new password</h1>
         <p className="mt-2 text-body-sm text-slate-500">
           It will take effect the next time you log in.

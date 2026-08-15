@@ -6,9 +6,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Megaphone, Mail, Lock } from "lucide-react"
+import { Mail, Lock } from "lucide-react"
 import { Button, Input } from "@/components/ui"
-import { GoogleIcon } from "@/components/feature/GoogleIcon"
+import { GoogleIcon, Logo } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { LOGGED_IN_HOME } from "@/constants"
@@ -69,11 +69,10 @@ export default function LoginPage() {
     <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-paper to-paper-deep px-4 py-10">
       <div className="w-full max-w-sm">
         {/* Brand */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-700 text-white shadow-popover">
-            <Megaphone size={24} aria-hidden />
-          </span>
-          <p className="text-xl font-bold text-slate-900">{s["app.name"]}</p>
+        <div className="mb-8 flex justify-center">
+          <Link href="/" className="transition-app hover:opacity-90">
+            <Logo size="lg" />
+          </Link>
         </div>
 
         <div className="surface-card p-6 sm:p-8">

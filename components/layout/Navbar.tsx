@@ -15,7 +15,6 @@ import {
   Bell,
   User,
   LogOut,
-  Megaphone,
   ShieldCheck,
   MessageSquare,
 } from "lucide-react"
@@ -25,6 +24,7 @@ import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/components/ui/Avatar"
+import { Logo } from "@/components/feature"
 
 const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
@@ -64,11 +64,8 @@ export function Navbar() {
     <>
       {/* Desktop sidebar (>= 1024px) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-[#E8E1D6] bg-[#FDFBF7] lg:flex">
-        <Link href="/feed" className="flex items-center gap-2.5 px-6 py-5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-card">
-            <Megaphone size={20} />
-          </span>
-          <span className="font-display text-lg font-semibold text-primary-700">{s["app.name"]}</span>
+        <Link href="/feed" className="flex items-center px-6 py-5 transition-app hover:opacity-90">
+          <Logo size="md" />
         </Link>
 
         <nav className="flex-1 space-y-1 px-3 py-2">

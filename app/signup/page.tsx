@@ -5,9 +5,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Megaphone } from "lucide-react"
 import { Button, Input, Select, Tabs } from "@/components/ui"
-import { GoogleIcon } from "@/components/feature"
+import { GoogleIcon, Logo } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { ORGANIZATION_TYPES, POST_SIGNUP_ROUTE } from "@/constants"
@@ -93,11 +92,10 @@ export default function SignupPage() {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-700 text-white">
-            <Megaphone size={20} aria-hidden />
-          </span>
-          <span className="text-xl font-bold text-primary-700">{s["app.name"]}</span>
+        <div className="mb-6 flex justify-center">
+          <Link href="/" className="transition-app hover:opacity-90">
+            <Logo size="lg" />
+          </Link>
         </div>
 
         <div className="surface-card p-6 sm:p-8">

@@ -12,8 +12,9 @@
 // straight to the feed once a region is set.
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Megaphone, MapPin } from "lucide-react"
+import { MapPin } from "lucide-react"
 import { Button, Input, Select, Tabs, Textarea } from "@/components/ui"
+import { Logo } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -126,11 +127,8 @@ export default function OnboardingProfilePage() {
   return (
     <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-700 text-white">
-            <Megaphone size={20} aria-hidden />
-          </span>
-          <span className="text-xl font-bold text-primary-700">{s["app.name"]}</span>
+        <div className="mb-6 flex justify-center">
+          <Logo size="lg" />
         </div>
 
         <div className="surface-card p-6 sm:p-8">

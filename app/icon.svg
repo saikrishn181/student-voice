@@ -1,7 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#1F4E78"/>
-  <g transform="translate(20 18)" stroke="#FFFFFF" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round" fill="none">
-    <path d="m3 11 18-5v12L3 14v-3z"/>
-    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
-  </g>
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="krantind-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#1F4E78" />
+      <stop offset="100%" stopColor="#12304B" />
+    </linearGradient>
+    <linearGradient id="krantind-flame" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#ED5F2A" />
+      <stop offset="100%" stopColor="#F7A97C" />
+    </linearGradient>
+    <linearGradient id="krantind-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
+      <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="16" fill="url(#krantind-bg)" />
+  <rect width="64" height="64" rx="16" stroke="url(#krantind-glow)" strokeWidth="1.5" />
+
+  <rect x="14" y="14" width="7" height="36" rx="3.5" fill="#FFFFFF" />
+
+  <path
+    d="M21 34L37 50"
+    stroke="#FFFFFF"
+    strokeWidth="7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
+
+  <path
+    d="M21 30L38 17.5V36.5L21 30Z"
+    fill="url(#krantind-flame)"
+  />
+
+  <circle cx="27" cy="30.5" r="2" fill="#FFFFFF" />
+
+  <path
+    d="M43 21C45.5 24 45.5 30 43 33"
+    stroke="#ED5F2A"
+    strokeWidth="3"
+    strokeLinecap="round"
+  />
+
+  <path
+    d="M48.5 17C52.5 21.5 52.5 32.5 48.5 37"
+    stroke="#F7A97C"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeOpacity="0.85"
+  />
 </svg>
