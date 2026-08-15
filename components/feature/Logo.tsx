@@ -4,20 +4,20 @@ interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl"
   showWordmark?: boolean
   className?: string
-  priority?: boolean
 }
 
 const sizeMap = {
-  sm: { icon: "h-8 w-8", text: "text-base", sub: "text-[10px]" },
-  md: { icon: "h-10 w-10", text: "text-lg", sub: "text-xs" },
-  lg: { icon: "h-12 w-12", text: "text-xl", sub: "text-xs" },
-  xl: { icon: "h-16 w-16", text: "text-2xl", sub: "text-sm" },
+  sm: { icon: "h-7 w-7" },
+  md: { icon: "h-9 w-9" },
+  lg: { icon: "h-11 w-11" },
+  xl: { icon: "h-14 w-14" },
 }
 
 /**
- * Krantind custom emblem:
- * Represents "Kranti" (revolution / voice) + "Ind" (India) —
- * A bold 'K' monogram fusing a megaphone/torch with acoustic broadcast ripples.
+ * Krantind icon — "Kranti" (revolution) + voice.
+ * A rising, forward-leaning megaphone whose sound waves
+ * become a soaring bird / flame of change.
+ * Works at 16px like Instagram/Snapchat icons.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -35,65 +35,55 @@ export function LogoMark({ className }: { className?: string }) {
         </linearGradient>
         <linearGradient id="krantind-flame" x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#ED5F2A" />
-          <stop offset="100%" stopColor="#F7A97C" />
+          <stop offset="50%" stopColor="#F7A97C" />
+          <stop offset="100%" stopColor="#FFD166" />
         </linearGradient>
         <linearGradient id="krantind-glow" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.2" />
           <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Rounded tile backdrop */}
-      <rect width="64" height="64" rx="16" fill="url(#krantind-bg)" />
-      <rect width="64" height="64" rx="16" stroke="url(#krantind-glow)" strokeWidth="1.5" />
+      {/* Rounded app-icon tile */}
+      <rect width="64" height="64" rx="14" fill="url(#krantind-bg)" />
+      <rect width="64" height="64" rx="14" stroke="url(#krantind-glow)" strokeWidth="1" />
 
-      {/* 'K' Pillar (Solid student pillar) */}
-      <rect x="14" y="14" width="7" height="36" rx="3.5" fill="#FFFFFF" />
-
-      {/* Lower 'K' leg (Grounding stroke / forward action) */}
+      {/* Megaphone body — forward lean = momentum */}
       <path
-        d="M21 34L37 50"
-        stroke="#FFFFFF"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M18 28 L36 16 L36 40 L18 52 Z"
+        fill="#FFFFFF"
+        transform="translate(2, 2)"
       />
 
-      {/* Upper 'K' arm + Megaphone Horn (The voice / spark of Kranti) */}
+      {/* Megaphone horn opening — the voice */}
       <path
-        d="M21 30L38 17.5V36.5L21 30Z"
+        d="M36 16 L50 8 L50 48 L36 40 Z"
         fill="url(#krantind-flame)"
+        transform="translate(2, 2)"
       />
 
-      {/* Center flame/voice accent pip */}
-      <circle cx="27" cy="30.5" r="2" fill="#FFFFFF" />
+      {/* Sound waves becoming a rising bird/flame — the revolution */}
+      <g stroke="#ED5F2A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        {/* Wave 1 — closest */}
+        <path d="M46 20 Q54 26 46 32" transform="translate(2, 2)" />
+        {/* Wave 2 — rising */}
+        <path d="M51 16 Q61 26 51 36" stroke="#F7A97C" strokeWidth="2" transform="translate(2, 2)" />
+        {/* Wave 3 — soaring */}
+        <path d="M56 12 Q68 26 56 40" stroke="#FFD166" strokeWidth="1.5" strokeOpacity="0.8" transform="translate(2, 2)" />
+      </g>
 
-      {/* Broadcast Soundwave 1 */}
-      <path
-        d="M43 21C45.5 24 45.5 30 43 33"
-        stroke="#ED5F2A"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-
-      {/* Broadcast Soundwave 2 (Outer ripple) */}
-      <path
-        d="M48.5 17C52.5 21.5 52.5 32.5 48.5 37"
-        stroke="#F7A97C"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeOpacity="0.85"
-      />
+      {/* Tiny spark at the tip — the spark of change */}
+      <circle cx="54" cy="20" r="1.5" fill="#FFFFFF" transform="translate(2, 2)" />
     </svg>
   )
 }
 
 export function Logo({
   size = "md",
-  showWordmark = true,
+  showWordmark = false,
   className,
 }: LogoProps) {
-  const { icon, text } = sizeMap[size]
+  const { icon } = sizeMap[size]
 
   return (
     <div className={cn("inline-flex items-center gap-2.5", className)}>
@@ -101,7 +91,7 @@ export function Logo({
         <LogoMark className="h-full w-full" />
       </div>
       {showWordmark && (
-        <span className={cn("font-display font-bold leading-tight text-primary-700 tracking-tight", text)}>
+        <span className={cn("font-display font-bold leading-tight text-primary-700 tracking-tight", size === "sm" ? "text-lg" : size === "md" ? "text-xl" : size === "lg" ? "text-2xl" : "text-3xl")}>
           Krantind
         </span>
       )}
