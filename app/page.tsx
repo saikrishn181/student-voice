@@ -27,12 +27,6 @@ const FEATURES = [
   },
 ]
 
-const STATS = [
-  { valueKey: "hero.stats.students" as const, labelKey: "hero.stats.studentsLabel" as const },
-  { valueKey: "hero.stats.states" as const, labelKey: "hero.stats.statesLabel" as const },
-  { valueKey: "hero.stats.problems" as const, labelKey: "hero.stats.problemsLabel" as const },
-]
-
 export default function LandingPage() {
   return (
     <div className="min-h-dvh w-full">
@@ -87,18 +81,6 @@ export default function LandingPage() {
             </Button>
           </Link>
         </div>
-
-        {/* Social proof strip — people already use it */}
-        <dl className="animate-fade-up mt-14 grid w-full max-w-2xl grid-cols-3 gap-4 [animation-delay:240ms]">
-          {STATS.map((stat) => (
-            <div key={stat.valueKey} className="flex flex-col items-center gap-0.5">
-              <dd className="font-display text-3xl font-semibold text-primary-700 sm:text-4xl">
-                {s[stat.valueKey]}
-              </dd>
-              <dt className="text-xs text-slate-500 sm:text-sm">{s[stat.labelKey]}</dt>
-            </div>
-          ))}
-        </dl>
       </section>
 
       {/* How Krantind works — feature cards */}
