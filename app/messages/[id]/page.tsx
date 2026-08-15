@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, MessageSquare } from "lucide-react"
+import { ArrowLeft, Send, MessageSquare, Lock } from "lucide-react"
 import { Avatar, Button, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -157,12 +157,18 @@ export default function ConversationPage({
           <ArrowLeft size={20} />
         </button>
         <Avatar name={partner.name} src={partner.avatarUrl ?? null} size="md" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">{partner.name}</p>
           {partner.username ? (
             <p className="text-xs text-slate-400">@{partner.username}</p>
           ) : null}
         </div>
+        <span
+          className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+          title={s["chat.encrypted"]}
+        >
+          <Lock size={12} aria-hidden /> {s["chat.encrypted"]}
+        </span>
       </div>
 
       {/* Messages */}

@@ -15,7 +15,6 @@
     background-image:
       radial-gradient(900px 480px at 85% -5%, rgba(237, 95, 42, 0.06), transparent 65%),
       radial-gradient(700px 420px at -10% 0%, rgba(31, 78, 120, 0.05), transparent 60%);
-    background-attachment: fixed;
     color: #24201b;
   }
 

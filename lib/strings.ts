@@ -384,24 +384,27 @@ const s = {
   "chat.thread.send": "Send",
   "dismissNotification": "Dismiss notification",
   "hero.builtForIndia": "Built for students of India",
-  "hero.title": "Your voice, heard & supported —",
-  "hero.titleHighlight": "region by region",
+  "hero.title": "Post the problem.",
+  "hero.titleHighlight": "Get real support.",
   "hero.subtitle":
-    "Krantind helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
+    "Krantind shows your problem to students and organizations in your state — they back it, and together you get it fixed.",
   "hero.cta.createAccount": "Create your account",
   "hero.cta.login": "Log In",
-  "hero.features.region.title": "State by state",
+  "hero.features.region.title": "Post your problem",
   "hero.features.region.text":
-    "Problems are anchored to your state so support comes from the people closest to you.",
-  "hero.features.post.title": "Post problems",
+    "Write what's wrong on your campus in a few lines — no forms, just your words. Add a photo or video if it helps.",
+  "hero.features.post.title": "Your state reacts",
   "hero.features.post.text":
-    "Students and student organizations can share real issues — from campus facilities to fees and transport.",
-  "hero.features.support.title": "Get real support",
+    "Students and organizations near you see it and back it with support — the signal that this matters.",
+  "hero.features.support.title": "Get it solved",
   "hero.features.support.text":
-    "The community — and relevant organizations — step in to help, upvote, and act.",
+    "When enough people stand with you, organizations step in and the problem actually gets fixed.",
+  "how.title": "How it works",
   "footer.tagline":
     "Your campus, your problems, your people — one place for every voice to be heard.",
   "footer.madeBy": "Made by students, for students in India.",
+  "footer.copyright": "© 2026 Krantind. All rights reserved.",
+  "chat.encrypted": "End-to-end encrypted",
 } as const
 
 export default s

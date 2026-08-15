@@ -3,6 +3,7 @@
 // Only used on post-login pages (guest pages have no Navbar).
 import type { ReactNode } from "react"
 import { Navbar } from "./Navbar"
+import s from "@/lib/strings"
 
 interface PageShellProps {
   children: ReactNode
@@ -16,6 +17,9 @@ export function PageShell({ children }: PageShellProps) {
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-content px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-12">
           {children}
+          <footer className="mt-16 border-t border-[#E8E1D6] pt-6 text-center">
+            <p className="text-xs font-medium text-slate-400">{s["footer.copyright"]}</p>
+          </footer>
         </div>
       </main>
     </div>

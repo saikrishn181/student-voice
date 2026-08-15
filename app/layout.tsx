@@ -19,15 +19,58 @@ const manrope = Manrope({
   display: "swap",
 })
 
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://krantind.vercel.app"
+
 export const metadata: Metadata = {
-  title: "Krantind – Real support for students",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Krantind – Post the problem, get real support",
+    template: "%s | Krantind",
+  },
   description:
-    "Krantind lets students and student organizations post problems and get real support from their community, region by region.",
+    "Krantind lets students and student organizations post campus problems and get real support from people in their state — region by region, problem by problem.",
+  keywords: [
+    "Krantind",
+    "student problems",
+    "campus issues",
+    "student support",
+    "India students",
+    "student community",
+    "post problems",
+    "college help",
+  ],
+  applicationName: "Krantind",
+  authors: [{ name: "Krantind" }],
+  category: "Education",
+  creator: "Krantind",
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Krantind",
+    title: "Krantind – Post the problem, get real support",
+    description:
+      "Students and student organizations post campus problems and get real support from people in their state.",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary",
+    title: "Krantind – Post the problem, get real support",
+    description:
+      "Students and student organizations post campus problems and get real support from people in their state.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: "/",
+  },
 }
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#1F4E78",
 }
 
 export default function RootLayout({
@@ -38,6 +81,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${manrope.variable} ${fraunces.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Krantind",
+              url: SITE_URL,
+              description: metadata.description,
+            }),
+          }}
+        />
         <AppShell>{children}</AppShell>
         {/* Global toast notifications render here on every page */}
         <Toaster />

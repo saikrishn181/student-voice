@@ -1,12 +1,12 @@
-// Landing page: explains the mission, with a centered serif hero, a social
-// proof stats strip, feature cards and a footer. Fully static, so no
-// "use client" is needed here.
+// Landing page: purpose made crystal clear in seconds — hero says exactly
+// what the app does, followed by a 3-step "How it works". Fully static, so
+// no "use client" is needed here.
 import Link from "next/link"
 import { Megaphone, ArrowRight, MapPin, HelpCircle, HeartHandshake } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import s from "@/lib/strings"
 
-const FEATURES = [
+const STEPS = [
   {
     icon: MapPin,
     titleKey: "hero.features.region.title" as const,
@@ -83,23 +83,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How Krantind works — feature cards */}
+      {/* How Krantind works — 3 steps */}
       <section className="w-full border-t border-[#E8E1D6] bg-[#FDFBF7]">
-        <div className="mx-auto grid w-full max-w-content gap-5 px-4 py-14 sm:px-6 md:grid-cols-3 lg:px-8">
-          {FEATURES.map((f) => (
-            <div
-              key={f.titleKey}
-              className="surface-card transition-app flex flex-col gap-3 p-6 hover:-translate-y-1 hover:shadow-lift"
-            >
-              <span
-                className={`flex h-11 w-11 items-center justify-center rounded-xl ${f.tile}`}
+        <div className="mx-auto w-full max-w-content px-4 py-14 sm:px-6 lg:px-8">
+          <h2 className="text-center font-display text-h2 text-ink">{s["how.title"]}</h2>
+          <div className="mx-auto mt-10 grid w-full max-w-4xl gap-5 md:grid-cols-3">
+            {STEPS.map((f, i) => (
+              <div
+                key={f.titleKey}
+                className="surface-card transition-app flex flex-col gap-3 p-6 hover:-translate-y-1 hover:shadow-lift"
               >
-                <f.icon size={22} aria-hidden />
-              </span>
-              <h3 className="text-h4 text-ink">{s[f.titleKey]}</h3>
-              <p className="text-body-sm text-slate-600">{s[f.textKey]}</p>
-            </div>
-          ))}
+                <div className="flex items-center justify-between">
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${f.tile}`}>
+                    <f.icon size={22} aria-hidden />
+                  </span>
+                  <span className="font-display text-2xl font-semibold text-[#E0D6C6]">
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="text-h4 text-ink">{s[f.titleKey]}</h3>
+                <p className="text-body-sm text-slate-600">{s[f.textKey]}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -116,6 +122,7 @@ export default function LandingPage() {
           </div>
           <p className="max-w-md text-body-sm text-slate-500">{s["footer.tagline"]}</p>
           <p className="text-xs text-slate-400">{s["footer.madeBy"]}</p>
+          <p className="mt-2 text-xs font-medium text-slate-500">{s["footer.copyright"]}</p>
         </div>
       </footer>
     </div>

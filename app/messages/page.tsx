@@ -4,7 +4,7 @@
 // the other user's avatar/name plus the last message preview.
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare, Lock } from "lucide-react"
 import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -84,7 +84,15 @@ export default function MessagesPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
-      <h1 className="mb-4 text-h3 text-slate-900">{s["nav.messages"]}</h1>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-h3 text-slate-900">{s["nav.messages"]}</h1>
+        <span
+          className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+          title={s["chat.encrypted"]}
+        >
+          <Lock size={12} aria-hidden /> {s["chat.encrypted"]}
+        </span>
+      </div>
       <div className="flex flex-col gap-2">
         {conversations.map((conv) => {
           const partner = users[conv.otherUserId]
