@@ -34,10 +34,12 @@ interface ChatState {
   conversationsLoaded: boolean
   realtimeChannel: ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null
 
-  loadConversations: () => Promise<void>
+  // true = loaded OK, false = query failed (callers can show a retry UI).
+  loadConversations: () => Promise<boolean>
   // Find-or-create the 1:1 conversation with another user; returns its id.
   getOrCreateConversation: (otherUserId: string) => Promise<string | null>
-  loadMessages: (conversationId: string) => Promise<void>
+  loadMessages: (conversationId: string) => Promise<boolean>
+  // Throws an Error with a human-readable message on failure (callers toast it).
   sendMessage: (conversationId: string, content: string) => Promise<boolean>
   startRealtime: () => void
   stopRealtime: () => void
@@ -52,19 +54,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadConversations: async () => {
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
-    if (!currentUserId) return
+    if (!currentUserId) {
+      set({ conversations: [], conversationsLoaded: true })
+      return false
+    }
 
     // 1. All conversations I'm part of.
     const { data: memberships, error: mError } = await supabase
       .from("conversation_participants")
       .select("conversation_id")
       .eq("user_id", currentUserId)
-    if (mError || !memberships) return
+    if (mError || !memberships) {
+      set({ conversationsLoaded: true })
+      return false
+    }
 
     const conversationIds = memberships.map((m) => m.conversation_id)
     if (conversationIds.length === 0) {
       set({ conversations: [], conversationsLoaded: true })
-      return
+      return true
     }
 
     // 2. The other participant per conversation.
@@ -73,7 +81,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .select("conversation_id, user_id")
       .in("conversation_id", conversationIds)
       .neq("user_id", currentUserId)
-    if (pError || !participants) return
+    if (pError || !participants) {
+      set({ conversationsLoaded: true })
+      return false
+    }
 
     // 3. Most recent message per conversation (for the preview line).
     const { data: messageRows, error: msgError } = await supabase
@@ -81,7 +92,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .select("id, conversation_id, sender_id, content, created_at")
       .in("conversation_id", conversationIds)
       .order("created_at", { ascending: false })
-    if (msgError || !messageRows) return
+    if (msgError || !messageRows) {
+      set({ conversationsLoaded: true })
+      return false
+    }
 
     const lastByConv = new Map<string, MessageRow>()
     for (const row of messageRows) {
@@ -150,6 +164,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       conversationsLoaded: true,
       messagesByConversation: { ...s.messagesByConversation, ...previewMap },
     }))
+    return true
   },
 
   getOrCreateConversation: async (otherUserId) => {
@@ -180,13 +195,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(200)
-    if (error || !data) return
+    if (error || !data) return false
     set((s) => ({
       messagesByConversation: {
         ...s.messagesByConversation,
         [conversationId]: (data as MessageRow[]).map(rowToMessage),
       },
     }))
+    return true
   },
 
   sendMessage: async (conversationId, content) => {
@@ -194,14 +210,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!trimmed) return false
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
-    if (!currentUserId) return false
+    if (!currentUserId) {
+      throw new Error("You need to be logged in to send messages.")
+    }
 
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: currentUserId,
       content: trimmed,
     })
-    if (error) return false
+    if (error) {
+      throw new Error(chatErrorMessage(error.message))
+    }
 
     // Optimistic append; realtime will dedupe by id.
     const { data } = await supabase
@@ -267,3 +287,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ realtimeChannel: null })
   },
 }))
+
+// Map raw Supabase/Postgres errors from message inserts to friendly copy.
+function chatErrorMessage(message: string): string {
+  const m = message.toLowerCase()
+  if (m.includes("row-level security") || m.includes("policy")) {
+    return "You can't send messages in this conversation."
+  }
+  if (m.includes("could not find the table") || m.includes("not exist")) {
+    return "Chat isn't ready yet — re-run the upgrade SQL script."
+  }
+  if (m.includes("char_length") || m.includes("too long")) {
+    return "Message is too long (max 2000 characters)."
+  }
+  if (m.includes("connection")) {
+    return "No internet connection — check your network and try again."
+  }
+  return "Could not send the message — please try again."
+}

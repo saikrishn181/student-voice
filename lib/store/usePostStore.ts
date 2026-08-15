@@ -11,6 +11,7 @@ import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
 import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
+import { categoryFromHashtags } from "@/lib/utils"
 
 // Represents a row from the `profiles` table.
 interface BlockRow {
@@ -26,6 +27,7 @@ interface PostRow {
   media_aspect_ratio: number | null
   state: string | null
   category: Category
+  hashtags: string[] | null
   support_count: number
   comment_count: number
   created_at: string
@@ -41,6 +43,7 @@ function rowToPost(row: PostRow): Post {
     mediaAspectRatio: row.media_aspect_ratio,
     state: row.state ?? "",
     category: row.category,
+    hashtags: row.hashtags ?? [],
     supportCount: row.support_count,
     commentCount: row.comment_count,
     createdAt: row.created_at,
@@ -124,7 +127,7 @@ interface PostState {
     mediaType: MediaType
     mediaAspectRatio?: number | null
     state: string
-    category: Category
+    hashtags: string[]
   }) => Promise<Post>
   updatePost: (id: string, input: {
     text: string
@@ -132,7 +135,7 @@ interface PostState {
     mediaType: MediaType
     mediaAspectRatio?: number | null
     state: string
-    category: Category
+    hashtags: string[]
   }) => Promise<void>
   deletePost: (id: string) => Promise<void>
   toggleSupport: (postId: string, currentUserId: string) => Promise<void>
@@ -304,7 +307,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
         media_type: input.mediaType ?? null,
         media_aspect_ratio: input.mediaAspectRatio ?? null,
         state: input.state,
-        category: input.category,
+        category: categoryFromHashtags(input.hashtags),
+        hashtags: input.hashtags,
       })
       .select("*")
       .single()
@@ -326,7 +330,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
         media_type: input.mediaType ?? null,
         media_aspect_ratio: input.mediaAspectRatio ?? null,
         state: input.state,
-        category: input.category,
+        category: categoryFromHashtags(input.hashtags),
+        hashtags: input.hashtags,
       })
       .eq("id", id)
       .select("*")

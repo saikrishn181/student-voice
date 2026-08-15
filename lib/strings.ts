@@ -4,7 +4,7 @@
 
 const s = {
   // ─── App ────────────────────────────────────────────────────────────────────
-  "app.name": "StudentVoice",
+  "app.name": "Krantind",
   "app.tagline": "Real support for students",
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -33,12 +33,25 @@ const s = {
   "auth.signup.loginLink": "Log In",
 
   "auth.forgotPassword.title": "Forgot your password?",
-  "auth.forgotPassword.subtitle": "Enter your email and we'll send you a link to reset your password.",
+  "auth.forgotPassword.subtitle": "Enter your email and we'll send you a code to reset your password.",
   "auth.forgotPassword.sendLink": "Send reset link",
   "auth.forgotPassword.sentTitle": "Check your email",
   "auth.forgotPassword.sentDescription": (email: string) =>
     `If an account exists for ${email}, a reset link is on its way.`,
   "auth.forgotPassword.backToLogin": "Back to Log In",
+  "auth.forgotPassword.tabLink": "Email link",
+  "auth.forgotPassword.tabOtp": "Email code (OTP)",
+  "auth.forgotPassword.sendCode": "Send code to email",
+  "auth.forgotPassword.verifyButton": "Verify code & set password",
+  "auth.forgotPassword.codeLabel": "Code from your email",
+  "auth.forgotPassword.codePlaceholder": "123456",
+  "auth.forgotPassword.newPasswordLabel": "New password",
+  "auth.forgotPassword.newPasswordPlaceholder": "At least 6 characters",
+  "auth.forgotPassword.codeInvalid": "That code is invalid or expired. Request a new one.",
+  "auth.forgotPassword.codeRequired": "Please enter the code from your email",
+  "auth.forgotPassword.passwordTooShort": "New password must be at least 6 characters",
+  "auth.forgotPassword.passwordUpdated": "Password updated — you're logged in",
+  "auth.forgotPassword.codeSentTo": (email: string) => `Code sent to ${email}`,
 
   // ─── Validation / Toasts ────────────────────────────────────────────────────
   "validation.required": "Please fill in all required fields",
@@ -48,6 +61,9 @@ const s = {
   "validation.postEmpty": "Please write something before posting",
   "validation.categoryRequired": "Please choose a category",
   "validation.regionRequired": "Please select your state",
+  "validation.hashtagsTooMany": "You can add at most 5 hashtags",
+  "validation.hashtagTooLong": "Hashtags must be 30 characters or less",
+  "validation.hashtagInvalid": "Hashtags can only contain letters, numbers, and underscores",
   "validation.postTooLong": "This post is too long. Please shorten it.",
   "validation.commentTooLong": "This comment is too long. Please shorten it.",
   "validation.loginRequired": "Please log in to post",
@@ -91,7 +107,11 @@ const s = {
   "createPost.subtitle": "Share a problem you're facing so your community can help.",
   "createPost.textLabel": "What's going on?",
   "createPost.textPlaceholder":
-    "Describe the issue clearly… who is affected, since when, and what kind of help would help?",
+    "Describe your problem… use #tags like #academic #harassment #mentalhealth to help people find it",
+  "createPost.hashtagsLabel": "Hashtags",
+  "createPost.hashtagsPlaceholder": "e.g. #academic #hostel #fees",
+  "createPost.hashtagsHint": "Add up to 5 tags, separated by spaces or commas.",
+  "createPost.stateAuto": "Posted to users in your state: {state}",
   "createPost.categoryLabel": "Category",
   "createPost.categoryPlaceholder": "Choose a category",
   "createPost.stateLabel": "State",
@@ -154,6 +174,27 @@ const s = {
   "settings.saving": "Saving…",
   "settings.cancel": "Cancel",
   "toast.profileUpdated": "Profile updated",
+  "settings.pageTitle": "Settings",
+  "settings.editProfile.title": "Edit profile",
+  "settings.editProfile.description": "Change your name, username, photo, bio, state and privacy.",
+  "settings.editProfile.button": "Edit profile",
+  "settings.loginMethod.title": "Login method",
+  "settings.loginMethod.google": "You signed in with Google",
+  "settings.loginMethod.email": "You signed in with email & password",
+  "settings.loginMethod.unknown": "Login method unknown",
+  "settings.loginMethod.setPassword": "Create password",
+  "settings.loginMethod.changePassword": "Change password",
+  "settings.loginMethod.passwordHint":
+    "With a password you can also log in with email, or recover your account if you ever get locked out.",
+  "settings.loginMethod.passwordPlaceholder": "At least 6 characters",
+  "settings.loginMethod.passwordTooShort": "Password must be at least 6 characters",
+  "settings.loginMethod.passwordUpdated": "Password saved",
+  "settings.loginMethod.passwordError": "Could not set the password — please try again.",
+  "settings.loginMethod.sessionExpired":
+    "Your session is too old to change the password. Log out and log in again, then retry.",
+  "settings.logout.title": "Log out",
+  "settings.logout.description": "Sign out of this device.",
+  "settings.logout.button": "Log out",
   "validation.usernameInvalid": "Username can only contain letters, numbers, and underscores.",
   "validation.nameRequired": "Please enter your name",
 
@@ -190,6 +231,11 @@ const s = {
   "onboarding.profile.accountTypeFixed": (label: string) => `Account type: ${label}`,
   "onboarding.profile.continue": "Finish setup",
   "onboarding.profile.loading": "Setting things up…",
+  "onboarding.profile.passwordLabel": "Create a password",
+  "onboarding.profile.passwordPlaceholder": "At least 6 characters",
+  "onboarding.profile.passwordHint":
+    "Create a password too, so you can log in with email & password anytime.",
+  "validation.passwordTooShort": "Password must be at least 6 characters",
 
   // ─── Comment ────────────────────────────────────────────────────────────────
   "comment.placeholder": "Write a comment…",
@@ -325,6 +371,11 @@ const s = {
     "When someone messages you, or you start a chat from a post, it shows up here.",
   "chat.inbox.noMessages": "No messages yet — say hi!",
   "chat.cannotMessage": "This account is private — follow them first to send a message.",
+  "chat.inbox.loadErrorTitle": "Couldn't load messages",
+  "chat.inbox.loadError": "Something went wrong while loading your conversations.",
+  "chat.thread.loadErrorTitle": "Couldn't load conversation",
+  "chat.thread.loadError": "Couldn't load this conversation — check your connection and try again.",
+  "chat.thread.retry": "Try again",
   "chat.thread.notFoundTitle": "Conversation not found",
   "chat.thread.notFoundDescription":
     "This conversation doesn't exist or you're not part of it.",
@@ -336,7 +387,7 @@ const s = {
   "hero.title": "Your voice, heard & supported —",
   "hero.titleHighlight": "region by region",
   "hero.subtitle":
-    "StudentVoice helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
+    "Krantind helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
   "hero.demoPost.title": "Mira V.",
   "hero.demoPost.location": "Mumbai, Maharashtra",
   "hero.demoPost.body":

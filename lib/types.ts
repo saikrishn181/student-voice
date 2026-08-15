@@ -1,4 +1,4 @@
-// Shared types for StudentVoice. Reused by every phase.
+// Shared types for Krantind. Reused by every phase.
 // Types ending in a `TODO` marker correspond to fields that will be backed by
 // Supabase records in a later phase.
 
@@ -92,6 +92,8 @@ export interface Post {
   mediaAspectRatio: number | null
   state: string
   category: Category
+  // User-added hashtags (e.g. ["academic", "hostel"]), shown as chips.
+  hashtags: string[]
   supportCount: number
   commentCount: number
   createdAt: string // ISO

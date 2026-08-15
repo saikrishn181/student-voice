@@ -37,7 +37,9 @@ export default function OnboardingProfilePage() {
   const [saving, setSaving] = useState(false)
   const [checking, setChecking] = useState(true)
   const [isGoogleUser, setIsGoogleUser] = useState(false)
+  const [password, setPassword] = useState("")
   const [nameError, setNameError] = useState<string | undefined>()
+  const [passwordError, setPasswordError] = useState<string | undefined>()
 
   // Detect the sign-up origin once: Google accounts carry no `account_type`
   // in auth metadata, email sign-ups do.
@@ -88,6 +90,11 @@ export default function OnboardingProfilePage() {
       return
     }
     setNameError(undefined)
+    if (isGoogleUser && password.length < 6) {
+      setPasswordError(s["validation.passwordTooShort"])
+      return
+    }
+    setPasswordError(undefined)
     if (!state) {
       showToast(s["validation.regionRequired"], "error")
       return
@@ -106,6 +113,7 @@ export default function OnboardingProfilePage() {
       organizationType:
         accountType === "organization" && organizationType ? organizationType : undefined,
       isPrivate,
+      password: isGoogleUser && password ? password.trim() : undefined,
     })
     setSaving(false)
     if (!result.ok) {
@@ -186,6 +194,25 @@ export default function OnboardingProfilePage() {
               onChange={(e) => setState(e.target.value)}
               required
             />
+
+            {isGoogleUser ? (
+              <div className="flex flex-col gap-1">
+                <Input
+                  label={s["onboarding.profile.passwordLabel"]}
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={s["onboarding.profile.passwordPlaceholder"]}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setPasswordError(undefined)
+                  }}
+                  error={passwordError}
+                  required
+                />
+                <p className="text-xs text-slate-400">{s["onboarding.profile.passwordHint"]}</p>
+              </div>
+            ) : null}
 
             {showAccountType && accountType === "organization" ? (
               <Select

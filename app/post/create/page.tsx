@@ -1,20 +1,20 @@
 "use client"
 
-// Create post: text (required), optional media, required Category, and state
-// auto-filled from the current user (editable). On submit, adds to the post
-// store and redirects to the new post's detail page.
+// Create post: text (required), hashtags (instead of a fixed category), optional
+// media. State is auto-filled from the current user's profile (not editable) so
+// the post lands in their home state feed automatically.
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Send } from "lucide-react"
-import { Button, Card, Select, Textarea } from "@/components/ui"
+import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
-import { CATEGORY_OPTIONS, STATES, MAX_POST_CHARS } from "@/constants"
+import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
+import { parseHashtags } from "@/lib/utils"
 import s from "@/lib/strings"
-import type { Category } from "@/lib/types"
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -23,20 +23,21 @@ export default function CreatePostPage() {
   const showToast = useToastStore((s) => s.show)
 
   const [text, setText] = useState("")
-  const [category, setCategory] = useState<Category | "">("")
-  const [state, setState] = useState(currentUser?.state ?? "")
+  const [hashtagInput, setHashtagInput] = useState("")
   const [media, setMedia] = useState<PickedMedia | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [textError, setTextError] = useState("")
+  const [tagError, setTagError] = useState("")
 
-  // Keep form synchronized with the user's state if it changes elsewhere.
-  useEffect(() => {
-    if (currentUser?.state && !state) setState(currentUser.state)
-  }, [currentUser, state])
+  const state = currentUser?.state ?? ""
+
+  // Keep hashtag preview live as the user types.
+  const previewTags = parseHashtags(hashtagInput)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTextError("")
+    setTagError("")
 
     if (!currentUser) {
       showToast(s["validation.loginRequired"], "error")
@@ -48,15 +49,16 @@ export default function CreatePostPage() {
       return
     }
     if (text.trim().length > MAX_POST_CHARS) {
-      setTextError(s["validation.postTooLong"]);
-      return
-    }
-    if (!category) {
-      showToast(s["validation.categoryRequired"], "error")
+      setTextError(s["validation.postTooLong"])
       return
     }
     if (!state) {
       showToast(s["validation.regionRequired"], "error")
+      router.push("/onboarding/profile")
+      return
+    }
+    if (previewTags.error) {
+      setTagError(s[previewTags.error])
       return
     }
 
@@ -84,7 +86,7 @@ export default function CreatePostPage() {
         mediaType: media?.type ?? null,
         mediaAspectRatio,
         state,
-        category,
+        hashtags: previewTags.tags,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
@@ -117,24 +119,32 @@ export default function CreatePostPage() {
             error={textError || undefined}
           />
 
-          <Select
-            label={s["createPost.categoryLabel"]}
-            name="category"
-            options={CATEGORY_OPTIONS}
-            placeholder={s["createPost.categoryPlaceholder"]}
-            value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
-            required
+          <Input
+            label={s["createPost.hashtagsLabel"]}
+            name="hashtags"
+            placeholder={s["createPost.hashtagsPlaceholder"]}
+            value={hashtagInput}
+            onChange={(e) => { setHashtagInput(e.target.value); setTagError("") }}
+            error={tagError || undefined}
           />
+          <p className="-mt-2 text-body-sm text-slate-500">{s["createPost.hashtagsHint"]}</p>
 
-          <Select
-            label={s["createPost.stateLabel"]}
-            options={STATES.map((st) => ({ value: st, label: st }))}
-            placeholder={s["createPost.statePlaceholder"]}
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            required
-          />
+          {previewTags.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {previewTags.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="rounded-card bg-slate-50 px-3 py-2 text-body-sm text-slate-600">
+            {s["createPost.stateAuto"].replace("{state}", state)}
+          </p>
         </Card>
 
         <Card className="flex flex-col gap-3">

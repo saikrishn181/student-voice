@@ -1,6 +1,6 @@
-# Student Voice
+# Krantind
 
-StudentVoice is a community platform where students and student organizations across India post the problems that matter on campus — and get real support from the people closest to them. No noise, just genuine help where you live.
+Krantind is a community platform where students and student organizations across India post the problems that matter on campus — and get real support from the people closest to them. No noise, just genuine help where you live.
 
 ## Features
 

@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss"
 
-// Design tokens for StudentVoice.
+// Design tokens for Krantind.
 // Primary = deep blue (#1F4E78) for trust/authority.
 // Accent = warm orange/red for the Support button and urgent elements.
 // Keep usage consistent across ALL phases.

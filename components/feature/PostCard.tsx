@@ -19,7 +19,7 @@ import s from "@/lib/strings"
 import { cn, timeAgo } from "@/lib/utils"
 import type { Post, ReportReason } from "@/lib/types"
 import { MediaDisplay } from "./MediaDisplay"
-import { VerifiedBadge, RegionTag, CategoryTag } from "./Badges"
+import { VerifiedBadge, RegionTag } from "./Badges"
 import { SupportButton } from "./SupportButton"
 import { FollowButton } from "./FollowButton"
 
@@ -127,7 +127,15 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const meta = (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <RegionTag state={post.state} />
-      <CategoryTag category={post.category} />
+      {post.hashtags.length > 0 &&
+        post.hashtags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700"
+          >
+            #{tag}
+          </span>
+        ))}
       <span className="text-body-sm text-slate-400">·</span>
       <span className="text-body-sm text-slate-400" title={new Date(post.createdAt).toLocaleString()}>
         {timeAgo(post.createdAt)}

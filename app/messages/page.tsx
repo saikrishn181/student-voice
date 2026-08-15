@@ -2,10 +2,10 @@
 
 // Messages inbox: all 1:1 conversations, newest activity first. Each row shows
 // the other user's avatar/name plus the last message preview.
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { MessageSquare } from "lucide-react"
-import { Avatar, Card, EmptyState, Skeleton } from "@/components/ui"
+import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
 import { useUserStore } from "@/lib/store/useUserStore"
@@ -18,12 +18,18 @@ export default function MessagesPage() {
   const conversationsLoaded = useChatStore((s) => s.conversationsLoaded)
   const messagesByConversation = useChatStore((s) => s.messagesByConversation)
   const users = useUserStore((s) => s.users)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     if (!currentUser) return
-    useChatStore.getState().loadConversations()
+    let cancelled = false
+    ;(async () => {
+      const ok = await useChatStore.getState().loadConversations()
+      if (!cancelled) setLoadError(!ok)
+    })()
     useChatStore.getState().startRealtime()
     return () => {
+      cancelled = true
       useChatStore.getState().stopRealtime()
     }
   }, [currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -36,6 +42,30 @@ export default function MessagesPage() {
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
         </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <EmptyState
+          icon={MessageSquare}
+          title={s["chat.inbox.loadErrorTitle"]}
+          description={s["chat.inbox.loadError"]}
+          action={
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setLoadError(false)
+                const ok = await useChatStore.getState().loadConversations()
+                setLoadError(!ok)
+              }}
+            >
+              {s["chat.thread.retry"]}
+            </Button>
+          }
+        />
       </div>
     )
   }

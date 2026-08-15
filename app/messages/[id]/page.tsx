@@ -31,20 +31,39 @@ export default function ConversationPage({
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Load the conversation + messages; start realtime for the session.
   useEffect(() => {
     if (!currentUser) return
     let cancelled = false
+    let poll: number | undefined
+
+    const load = async () => {
+      const ok = await useChatStore.getState().loadConversations()
+      const okMessages = await useChatStore.getState().loadMessages(params.id)
+      if (cancelled) return
+      setLoading(false)
+      setLoadError(ok && okMessages ? null : s["chat.thread.loadError"])
+    }
+
     ;(async () => {
-      await useChatStore.getState().loadConversations()
-      await useChatStore.getState().loadMessages(params.id)
-      if (!cancelled) setLoading(false)
+      await load()
     })()
+
     useChatStore.getState().startRealtime()
+
+    // Auto-reload fallback: poll the thread every 8s so new messages appear
+    // even if realtime drops (mobile networks, background tabs). Realtime
+    // messages are deduped by id, so this never creates duplicates.
+    poll = window.setInterval(() => {
+      void useChatStore.getState().loadMessages(params.id)
+    }, 8000)
+
     return () => {
       cancelled = true
+      if (poll) window.clearInterval(poll)
       useChatStore.getState().stopRealtime()
     }
   }, [currentUser?.id, params.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -60,13 +79,14 @@ export default function ConversationPage({
     const content = draft.trim()
     if (!content || sending) return
     setSending(true)
-    const ok = await useChatStore.getState().sendMessage(params.id, content)
-    setSending(false)
-    if (!ok) {
-      showToast(s["validation.generic"], "error")
-      return
+    try {
+      await useChatStore.getState().sendMessage(params.id, content)
+      setDraft("")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+    } finally {
+      setSending(false)
     }
-    setDraft("")
   }
 
   if (loading) {
@@ -74,6 +94,33 @@ export default function ConversationPage({
       <div className="mx-auto w-full max-w-2xl px-4">
         <Skeleton className="h-16 w-full" />
         <Skeleton className="mt-4 h-64 w-full" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <EmptyState
+          icon={MessageSquare}
+          title={s["chat.thread.loadErrorTitle"]}
+          description={loadError}
+          action={
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setLoading(true)
+                setLoadError(null)
+                const ok = await useChatStore.getState().loadConversations()
+                const okMessages = await useChatStore.getState().loadMessages(params.id)
+                setLoading(false)
+                setLoadError(ok && okMessages ? null : s["chat.thread.loadError"])
+              }}
+            >
+              {s["chat.thread.retry"]}
+            </Button>
+          }
+        />
       </div>
     )
   }

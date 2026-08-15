@@ -1,8 +1,7 @@
 "use client"
 
-// Search page: text search across posts + orgs, with recent searches.
-// Filters the Supabase-backed stores in real time. Extra category/state
-// filters narrow post results.
+// Search page: text search across posts (text + hashtags) + orgs, with recent
+// searches. A state filter narrows post results.
 import { useMemo, useState } from "react"
 import { Search as SearchIcon, X } from "lucide-react"
 import { Input, Card, EmptyState } from "@/components/ui"
@@ -11,7 +10,6 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useSearchStore } from "@/lib/store/useSearchStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { useDebounce } from "@/hooks"
-import { CATEGORIES } from "@/constants"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 
@@ -23,40 +21,35 @@ export default function SearchPage() {
   const users = useUserStore((s) => s.users)
   const { recent, pushRecent, clearRecent } = useSearchStore()
   const [query, setQuery] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<"" | typeof CATEGORIES[number]["value"]>("")
   const [stateFilter, setStateFilter] = useState("")
   const debouncedQuery = useDebounce(query, 300)
 
   const results = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase()
     if (!q) return { posts: [], orgs: [] }
+    const qForTags = q.replace(/^#/, "")
     const matchedPosts = posts.filter(
       (p) =>
         p.text.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
+        p.hashtags.some((t) => t.includes(qForTags)) ||
         p.state.toLowerCase().includes(q),
     )
     return {
-      posts: matchedPosts.filter(
-        (p) =>
-          (!categoryFilter || p.category === categoryFilter) &&
-          (!stateFilter || p.state === stateFilter),
-      ),
+      posts: matchedPosts.filter((p) => !stateFilter || p.state === stateFilter),
       orgs: Object.values(users).filter(
         (u) =>
           u.accountType === "organization" &&
           (u.name.toLowerCase().includes(q) || u.bio?.toLowerCase().includes(q)),
       ),
     }
-  }, [debouncedQuery, posts, users, categoryFilter, stateFilter])
+  }, [debouncedQuery, posts, users, stateFilter])
 
   const hasQuery = debouncedQuery.trim().length > 0
   const hasResults = results.posts.length > 0 || results.orgs.length > 0
-  const hasFilters = Boolean(categoryFilter || stateFilter)
+  const hasFilters = Boolean(stateFilter)
   const hasAnyQuery = hasQuery || hasFilters
 
   const clearFilters = () => {
-    setCategoryFilter("")
     setStateFilter("")
   }
 
@@ -81,30 +74,6 @@ export default function SearchPage() {
         {/* Quick filters (visible as soon as there is any search activity) */}
         {hasAnyQuery ? (
           <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Category
-              </span>
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() =>
-                    setCategoryFilter((prev) => (prev === c.value ? "" : c.value))
-                  }
-                  aria-pressed={categoryFilter === c.value}
-                  className={cn(
-                    "rounded-pill border px-3 py-1 text-sm transition-app",
-                    categoryFilter === c.value
-                      ? "border-primary-600 bg-primary-600 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
-                  )}
-                  style={{ minHeight: 40 }}
-                >
-                  {c.emoji} {c.label}
-                </button>
-              ))}
-            </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 State

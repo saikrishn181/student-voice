@@ -4,9 +4,9 @@ import { AppShell } from "@/components/layout/AppShell"
 import { Toaster } from "@/components/ui/Toast"
 
 export const metadata: Metadata = {
-  title: "StudentVoice — Real support for students",
+  title: "Krantind – Real support for students",
   description:
-    "StudentVoice lets students and student organizations post problems and get real support from their community, region by region.",
+    "Krantind lets students and student organizations post problems and get real support from their community, region by region.",
 }
 
 export const viewport: Viewport = {

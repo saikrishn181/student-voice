@@ -45,8 +45,12 @@ interface AuthState {
     organizationType?: OrganizationType
     bio?: string
     isPrivate?: boolean
+    // Set for Google sign-ups so the account also gets a password.
+    password?: string
   }) => Promise<AuthResult>
   updateProfile: (patch: ProfilePatch) => Promise<AuthResult>
+  // Sets (or changes) the account password via Supabase auth.
+  setPassword: (password: string) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -166,6 +170,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     const supabase = createSupabaseBrowserClient()
 
+    // Google sign-ups create a password here so they can later log in with
+    // email/password or recover the account. Done first so a failure leaves
+    // the profile untouched.
+    if (payload.password) {
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: payload.password,
+      })
+      if (passwordError) return { ok: false, error: passwordError.message }
+    }
+
     // Resolve account-type changes: switching to organization queues the
     // profile for admin verification (matching email signup behavior). Keep an
     // existing verification status if the type hasn't changed.
@@ -248,6 +262,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const supabase = createSupabaseBrowserClient()
     await supabase.auth.signOut()
     set({ isLoggedIn: false, currentUser: null })
+  },
+
+  setPassword: async (password) => {
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
   },
 
   refreshProfile: async () => {

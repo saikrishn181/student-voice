@@ -5,15 +5,15 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Send } from "lucide-react"
-import { Button, Card, Select, Textarea, EmptyState } from "@/components/ui"
+import { Button, Card, Input, Textarea, EmptyState } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
-import { CATEGORY_OPTIONS, STATES, MAX_POST_CHARS } from "@/constants"
+import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
+import { parseHashtags } from "@/lib/utils"
 import s from "@/lib/strings"
-import type { Category } from "@/lib/types"
 
 export default function EditPostPage() {
   const router = useRouter()
@@ -27,14 +27,17 @@ export default function EditPostPage() {
   const post = posts.find((p) => p.id === postId)
 
   const [text, setText] = useState("")
-  const [category, setCategory] = useState<Category | "">("")
-  const [state, setState] = useState("")
+  const [hashtagInput, setHashtagInput] = useState("")
   const [media, setMedia] = useState<PickedMedia | null>(null)
   const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null)
   const [existingMediaType, setExistingMediaType] = useState<"photo" | "video" | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [textError, setTextError] = useState("")
+  const [tagError, setTagError] = useState("")
+
+  // Keep hashtag preview live as the user types.
+  const previewTags = parseHashtags(hashtagInput)
 
   // Hydrate the form once the post is available.
   useEffect(() => {
@@ -46,8 +49,7 @@ export default function EditPostPage() {
         return
       }
       setText(fresh.text)
-      setCategory(fresh.category)
-      setState(fresh.state)
+      setHashtagInput(fresh.hashtags.join(" "))
       setExistingMediaUrl(fresh.mediaUrl)
       setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
       setLoaded(true)
@@ -58,8 +60,7 @@ export default function EditPostPage() {
   useEffect(() => {
     if (post && !loaded) {
       setText(post.text)
-      setCategory(post.category)
-      setState(post.state)
+      setHashtagInput(post.hashtags.join(" "))
       setExistingMediaUrl(post.mediaUrl)
       setExistingMediaType(post.mediaType as "photo" | "video" | null)
       setLoaded(true)
@@ -69,6 +70,7 @@ export default function EditPostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTextError("")
+    setTagError("")
 
     if (!currentUser) {
       showToast(s["validation.loginRequired"], "error")
@@ -80,15 +82,11 @@ export default function EditPostPage() {
       return
     }
     if (text.trim().length > MAX_POST_CHARS) {
-      setTextError(s["validation.postTooLong"]);
+      setTextError(s["validation.postTooLong"])
       return
     }
-    if (!category) {
-      showToast(s["validation.categoryRequired"], "error")
-      return
-    }
-    if (!state) {
-      showToast(s["validation.regionRequired"], "error")
+    if (previewTags.error) {
+      setTagError(s[previewTags.error])
       return
     }
 
@@ -119,8 +117,8 @@ export default function EditPostPage() {
         mediaUrl,
         mediaType,
         mediaAspectRatio,
-        state,
-        category,
+        state: currentUser?.state ?? "",
+        hashtags: previewTags.tags,
       })
       showToast(s["toast.postUpdated"], "success")
       router.push(`/post/${postId}`)
@@ -128,10 +126,6 @@ export default function EditPostPage() {
       setSubmitting(false)
       showToast(err instanceof Error ? err.message : "Could not update post. Please try again.", "error")
     }
-  }
-
-  function setError(message: string) {
-    showToast(message, "error")
   }
 
   if (loaded && !post) {
@@ -172,24 +166,32 @@ export default function EditPostPage() {
             error={textError || undefined}
           />
 
-          <Select
-            label={s["createPost.categoryLabel"]}
-            name="category"
-            options={CATEGORY_OPTIONS}
-            placeholder={s["createPost.categoryPlaceholder"]}
-            value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
-            required
+          <Input
+            label={s["createPost.hashtagsLabel"]}
+            name="hashtags"
+            placeholder={s["createPost.hashtagsPlaceholder"]}
+            value={hashtagInput}
+            onChange={(e) => { setHashtagInput(e.target.value); setTagError("") }}
+            error={tagError || undefined}
           />
+          <p className="-mt-2 text-body-sm text-slate-500">{s["createPost.hashtagsHint"]}</p>
 
-          <Select
-            label={s["createPost.stateLabel"]}
-            options={STATES.map((st) => ({ value: st, label: st }))}
-            placeholder={s["createPost.statePlaceholder"]}
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            required
-          />
+          {previewTags.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {previewTags.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="rounded-card bg-slate-50 px-3 py-2 text-body-sm text-slate-600">
+            {s["createPost.stateAuto"].replace("{state}", currentUser?.state ?? "")}
+          </p>
         </Card>
 
         <Card className="flex flex-col gap-3">

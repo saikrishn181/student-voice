@@ -17,7 +17,7 @@ export function PhasePlaceholder({
         <EmptyState
           icon={icon}
           title={`${title} is coming in ${phase}`}
-          description={`The ${title.toLowerCase()} experience will be built in the ${phase} of StudentVoice.`}
+          description={`The ${title.toLowerCase()} experience will be built in the ${phase} of Krantind.`}
         />
       </div>
     </div>

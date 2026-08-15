@@ -43,6 +43,11 @@ alter table public.posts
 alter table public.posts
   add constraint posts_text_length check (char_length(text) > 0 and char_length(text) <= 2000);
 
+-- Hashtags (replaces the UI category picker; category column is kept and
+-- derived from hashtags client-side so existing data/policies stay valid).
+alter table public.posts
+  add column if not exists hashtags text[] not null default '{}';
+
 alter table public.comments
   drop constraint if exists comments_content_length;
 alter table public.comments

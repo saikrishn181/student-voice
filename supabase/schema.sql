@@ -135,6 +135,7 @@ create table if not exists public.posts (
   state text,
   district text,
   category text not null check (category in ('Academic', 'Harassment', 'Mental Health', 'Financial', 'Exams', 'Placements')),
+  hashtags text[] not null default '{}',
   support_count integer not null default 0,
   comment_count integer not null default 0,
   created_at timestamptz not null default now()

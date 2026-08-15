@@ -2,23 +2,27 @@
 
 // Forgot Password: two free options, both powered by Supabase's built-in
 // email (no paid SMS provider needed):
-//  1. "Reset link" — Supabase emails a link that opens /reset-password.
-//  2. "Email code (OTP)" — Supabase emails a 6-digit code; the user enters it
-//     here with a new password, we verify the OTP and set the new password.
+//  1. "Email code (OTP)" (default) — Supabase emails a 6-digit code; the user
+//     enters it here with a new password, we verify the OTP, set the new
+//     password, and log them straight in.
+//  2. "Reset link" — Supabase emails a link that opens /reset-password.
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Megaphone, MailCheck, KeyRound } from "lucide-react"
 import { Button, Input, Tabs } from "@/components/ui"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { LOGGED_IN_HOME } from "@/constants"
 import s from "@/lib/strings"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 type Method = "link" | "otp"
 
 export default function ForgotPasswordPage() {
+  const router = useRouter()
   const showToast = useToastStore((s) => s.show)
-  const [method, setMethod] = useState<Method>("link")
+  const [method, setMethod] = useState<Method>("otp")
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
   const [code, setCode] = useState("")
@@ -72,14 +76,15 @@ export default function ForgotPasswordPage() {
     setCodeSent(true)
   }
 
-  // OTP step 2: verify the code (establishes a session) then set the password.
+  // OTP step 2: verify the code (establishes a session), set the password,
+  // and log the user straight in.
   const handleVerifyCode = async () => {
     if (!code.trim()) {
-      showToast("Please enter the code from your email", "error")
+      showToast(s["auth.forgotPassword.codeRequired"], "error")
       return
     }
     if (newPassword.length < 6) {
-      showToast("New password must be at least 6 characters", "error")
+      showToast(s["auth.forgotPassword.passwordTooShort"], "error")
       return
     }
     setLoading(true)
@@ -93,7 +98,7 @@ export default function ForgotPasswordPage() {
       setLoading(false)
       showToast(
         verifyError.message?.includes("Token")
-          ? "That code is invalid or expired. Request a new one."
+          ? s["auth.forgotPassword.codeInvalid"]
           : verifyError.message,
         "error",
       )
@@ -107,8 +112,8 @@ export default function ForgotPasswordPage() {
       showToast(updateError.message || "Could not update your password", "error")
       return
     }
-    showToast("Password updated — you can now log in", "success")
-    setSent(true)
+    showToast(s["auth.forgotPassword.passwordUpdated"], "success")
+    router.push(LOGGED_IN_HOME)
   }
 
   if (sent) {
@@ -119,9 +124,7 @@ export default function ForgotPasswordPage() {
         </span>
         <h1 className="text-h2 text-slate-900">{s["auth.forgotPassword.sentTitle"]}</h1>
         <p className="mt-2 max-w-sm text-body-sm text-slate-500">
-          {method === "otp"
-            ? "Password updated successfully."
-            : s["auth.forgotPassword.sentDescription"](email.trim())}
+          {s["auth.forgotPassword.sentDescription"](email.trim())}
         </p>
         <div className="mt-6">
           <Link href="/login">
@@ -146,8 +149,8 @@ export default function ForgotPasswordPage() {
         <div className="mt-6 text-left">
           <Tabs<Method>
             tabs={[
-              { value: "link", label: "Email link" },
-              { value: "otp", label: "Email code (OTP)" },
+              { value: "otp", label: s["auth.forgotPassword.tabOtp"] },
+              { value: "link", label: s["auth.forgotPassword.tabLink"] },
             ]}
             value={method}
             onChange={setMethod}
@@ -178,23 +181,23 @@ export default function ForgotPasswordPage() {
           ) : (
             <>
               <Input
-                label="Code from your email"
+                label={s["auth.forgotPassword.codeLabel"]}
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\s/g, ""))}
-                placeholder="123456"
+                placeholder={s["auth.forgotPassword.codePlaceholder"]}
                 maxLength={6}
               />
               <Input
-                label="New password"
+                label={s["auth.forgotPassword.newPasswordLabel"]}
                 type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={s["auth.forgotPassword.newPasswordPlaceholder"]}
                 autoComplete="new-password"
               />
             </>
@@ -204,14 +207,14 @@ export default function ForgotPasswordPage() {
             {method === "link"
               ? s["auth.forgotPassword.sendLink"]
               : codeSent
-                ? "Verify code & set password"
-                : "Send code to email"}
+                ? s["auth.forgotPassword.verifyButton"]
+                : s["auth.forgotPassword.sendCode"]}
           </Button>
         </form>
 
         {codeSent ? (
           <p className="mt-4 flex items-center justify-center gap-1.5 text-body-sm text-slate-500">
-            <KeyRound size={14} aria-hidden /> Code sent to {email.trim()}
+            <KeyRound size={14} aria-hidden /> {s["auth.forgotPassword.codeSentTo"](email.trim())}
           </p>
         ) : null}
 
