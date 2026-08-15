@@ -1,5 +1,5 @@
 -- Run ONLY if schema.sql ever failed partway and left partial tables behind.
--- Drops every StudentVoice object so schema.sql can be re-run cleanly.
+-- Drops every Krantind object so schema.sql can be re-run cleanly.
 -- (This does NOT touch auth.users / auth.identities.)
 
 drop trigger if exists notify_on_support on public.post_supports;

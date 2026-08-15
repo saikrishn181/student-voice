@@ -1,4 +1,4 @@
--- StudentVoice schema for Supabase (Postgres).
+-- Krantind schema for Supabase (Postgres).
 --
 -- SINGLE-SCRIPT setup: everything the app needs lives in this file. Run it
 -- once in the Supabase SQL editor (Dashboard -> SQL Editor -> New query).
