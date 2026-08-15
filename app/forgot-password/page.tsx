@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 // Forgot Password: two free options, both powered by Supabase's built-in
 // email (no paid SMS provider needed):
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 text-center">
+      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 text-center">
         <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-primary-700 text-white">
           <MailCheck size={28} aria-hidden />
         </span>
@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm text-center">
         <span className="mb-4 mx-auto flex h-14 w-14 items-center justify-center rounded-card bg-primary-700 text-white">
           <Megaphone size={28} aria-hidden />

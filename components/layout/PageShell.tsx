@@ -10,11 +10,11 @@ interface PageShellProps {
 
 export function PageShell({ children }: PageShellProps) {
   return (
-    <div className="min-h-dvh w-full bg-slate-50">
+    <div className="min-h-dvh w-full">
       <Navbar />
       {/* Content: leaves room for the fixed sidebar on desktop and the bottom bar on mobile */}
       <main className="lg:pl-64">
-        <div className="mx-auto w-full max-w-content px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10">
+        <div className="mx-auto w-full max-w-content px-4 pb-28 pt-5 sm:px-6 lg:px-8 lg:pb-12">
           {children}
         </div>
       </main>

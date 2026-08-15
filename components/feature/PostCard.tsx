@@ -131,7 +131,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
         post.hashtags.map((tag) => (
           <span
             key={tag}
-            className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700"
+            className="rounded-pill border border-primary-100 bg-primary-50/70 px-2.5 py-0.5 text-xs font-semibold text-primary-700"
           >
             #{tag}
           </span>
@@ -148,7 +148,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   if (isBlocked) return null
 
   return (
-    <Card className={cn("flex flex-col gap-3", className)}>
+    <Card className={cn("transition-app flex flex-col gap-3 hover:shadow-lift sm:hover:-translate-y-0.5", className)}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -295,7 +295,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       ) : null}
 
       {/* Actions */}
-      <div className="flex items-center gap-1 border-t border-slate-100 pt-2.5">
+      <div className="flex items-center gap-1 border-t border-[#F0EAE0] pt-2.5">
         <SupportButton postId={post.id} />
         <Link
           href={`/post/${post.id}`}

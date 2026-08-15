@@ -142,7 +142,7 @@ export default function CreatePostPage() {
             </div>
           )}
 
-          <p className="rounded-card bg-slate-50 px-3 py-2 text-body-sm text-slate-600">
+          <p className="rounded-card bg-paper-deep px-3 py-2 text-body-sm text-slate-600">
             {s["createPost.stateAuto"].replace("{state}", state)}
           </p>
         </Card>

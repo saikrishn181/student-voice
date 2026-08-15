@@ -48,8 +48,8 @@ export function SupportButton({ postId }: { postId: string }) {
       aria-label={supported ? s["support.button.remove"] : s["support.button.support"]}
       className={cn(
         "gap-1.5 px-3",
-        supported ? "text-accent-700" : "text-slate-500",
-        bump && "scale-110",
+        supported ? "bg-accent-50 text-accent-700" : "text-slate-500",
+        bump && "animate-heart-pop",
       )}
     >
       <Heart size={18} fill={supported ? "currentColor" : "none"} aria-hidden />

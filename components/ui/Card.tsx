@@ -13,7 +13,7 @@ export function Card({ children, className, interactive = false, ...props }: Car
     <div
       className={cn(
         "surface-card p-4 sm:p-5",
-        interactive && "transition-app cursor-pointer hover:shadow-popover hover:border-slate-300",
+        interactive && "transition-app cursor-pointer hover:shadow-lift hover:-translate-y-0.5",
         className,
       )}
       {...props}

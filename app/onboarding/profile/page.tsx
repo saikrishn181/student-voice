@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 // One-time onboarding after a fresh sign-up / first Google sign-in.
 //
@@ -73,7 +73,7 @@ export default function OnboardingProfilePage() {
 
   if (checking || !currentUser) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-slate-50">
+      <div className="flex min-h-dvh w-full items-center justify-center bg-paper">
         <div className="surface-card w-full max-w-md p-6 text-center">
           <p className="text-body-sm text-slate-500">{s["onboarding.profile.loading"]}</p>
         </div>
@@ -124,7 +124,7 @@ export default function OnboardingProfilePage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 py-8">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-700 text-white">

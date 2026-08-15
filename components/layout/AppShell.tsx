@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // While restoring the session, avoid flash of the login redirect.
   if (bootstrapping) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-slate-50">
+      <div className="flex min-h-dvh w-full items-center justify-center">
         <Spinner size={28} />
       </div>
     )
@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Awaiting a redirect for logged-out users on protected pages.
   if (!isLoggedIn) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-slate-50">
+      <div className="flex min-h-dvh w-full items-center justify-center">
         <Spinner size={28} />
       </div>
     )

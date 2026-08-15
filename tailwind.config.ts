@@ -3,7 +3,10 @@ import type { Config } from "tailwindcss"
 // Design tokens for Krantind.
 // Primary = deep blue (#1F4E78) for trust/authority.
 // Accent = warm orange/red for the Support button and urgent elements.
-// Keep usage consistent across ALL phases.
+// Paper = warm off-white background (cream) — warmer than AI-grey slate,
+// reads like a student notebook page.
+// Display = Fraunces (warm editorial serif) for headlines; Sans = Manrope
+// (rounded, friendly) for body. Slight imperfections = human-made feel.
 
 const config: Config = {
   content: [
@@ -42,26 +45,23 @@ const config: Config = {
           800: "#9a3016",
           900: "#7d2816",
         },
+        // Paper — warm background (cream) and warm ink for text
+        paper: "#FAF7F2",
+        "paper-deep": "#F2ECE1",
+        ink: "#24201B",
         // Success / info / neutral used by toasts & badges
         success: "#16a34a",
         info: "#2563eb",
       },
       fontFamily: {
-        sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
+        sans: ["var(--font-sans)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
       },
       fontSize: {
         // Responsive typography scale (smaller on mobile, larger on desktop)
-        display: ["clamp(2.25rem, 6vw, 3.5rem)", { lineHeight: "1.05", fontWeight: "700" }],
-        h1: ["clamp(1.75rem, 5vw, 2.5rem)", { lineHeight: "1.15", fontWeight: "700" }],
-        h2: ["clamp(1.375rem, 4vw, 2rem)", { lineHeight: "1.2", fontWeight: "700" }],
+        display: ["clamp(2.25rem, 6vw, 3.5rem)", { lineHeight: "1.08", fontWeight: "700" }],
+        h1: ["clamp(1.75rem, 5vw, 2.5rem)", { lineHeight: "1.12", fontWeight: "700" }],
+        h2: ["clamp(1.375rem, 4vw, 1.875rem)", { lineHeight: "1.2", fontWeight: "700" }],
         h3: ["clamp(1.25rem, 3vw, 1.5rem)", { lineHeight: "1.3", fontWeight: "600" }],
         h4: ["clamp(1.125rem, 2.5vw, 1.25rem)", { lineHeight: "1.35", fontWeight: "600" }],
         // Body text sizes
@@ -71,13 +71,30 @@ const config: Config = {
       },
       borderRadius: {
         // Consistent rounded corners on all cards/buttons
-        card: "0.75rem", // rounded-xl equivalent for cards/buttons
+        card: "1rem", // rounded-2xl equivalent — friendly but not over-round
         pill: "9999px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(16, 24, 40, 0.05), 0 2px 6px rgba(16, 24, 40, 0.06)",
-        popover: "0 6px 16px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.10)",
-        modal: "0 12px 40px rgba(16, 24, 40, 0.22), 0 4px 12px rgba(16, 24, 40, 0.12)",
+        card: "0 1px 2px rgba(36, 32, 27, 0.05), 0 2px 8px rgba(36, 32, 27, 0.05)",
+        lift: "0 12px 28px -10px rgba(36, 32, 27, 0.18)",
+        popover: "0 6px 16px rgba(36, 32, 27, 0.12), 0 2px 6px rgba(36, 32, 27, 0.08)",
+        modal: "0 12px 40px rgba(36, 32, 27, 0.2), 0 4px 12px rgba(36, 32, 27, 0.1)",
+        press: "inset 0 1px 3px rgba(36, 32, 27, 0.18)",
+      },
+      keyframes: {
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "heart-pop": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.25)" },
+          "100%": { transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 400ms cubic-bezier(0.4, 0, 0.2, 1) both",
+        "heart-pop": "heart-pop 250ms ease-out",
       },
       transitionDuration: {
         // Consistent 150-200ms ease transitions on all interactive elements

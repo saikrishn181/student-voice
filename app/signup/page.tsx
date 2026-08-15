@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 // Signup: toggle Student / Organization account type, validate, then create the
 // account via Supabase (through the auth store) and go to Region Selection.
@@ -91,7 +91,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 py-8">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-700 text-white">

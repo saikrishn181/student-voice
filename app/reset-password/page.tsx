@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 // Reset Password: handles the email link sent by /forgot-password.
 // The email link arrives with a `code` (Supabase PKCE flow). We exchange it
@@ -82,7 +82,7 @@ function ResetPasswordInner() {
 
   if (state === "exchanging") {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-slate-50 px-4 text-center">
+      <div className="flex min-h-dvh w-full items-center justify-center bg-paper px-4 text-center">
         <div className="text-body-sm text-slate-500">Verifying your reset link…</div>
       </div>
     )
@@ -90,7 +90,7 @@ function ResetPasswordInner() {
 
   if (state === "invalid") {
     return (
-      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 text-center">
+      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 text-center">
         <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-slate-200 text-slate-500">
           <KeyRound size={28} aria-hidden />
         </span>
@@ -109,7 +109,7 @@ function ResetPasswordInner() {
 
   if (state === "done") {
     return (
-      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 text-center">
+      <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 text-center">
         <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-emerald-600 text-white">
           <CheckCircle2 size={28} aria-hidden />
         </span>
@@ -125,7 +125,7 @@ function ResetPasswordInner() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4">
       <div className="w-full max-w-sm text-center">
         <span className="mb-4 mx-auto flex h-14 w-14 items-center justify-center rounded-card bg-primary-700 text-white">
           <Megaphone size={28} aria-hidden />
@@ -166,7 +166,7 @@ function ResetPasswordInner() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-slate-50" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-paper" />}>
       <ResetPasswordInner />
     </Suspense>
   )

@@ -43,7 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           type={resolvedType}
           className={cn(
             "h-11 w-full rounded-card border bg-white px-3.5 text-base text-slate-900 shadow-sm",
-            "placeholder:text-slate-400 transition-app",
+            "placeholder:text-slate-400 transition-app hover:border-slate-400",
             "focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30",
             error
               ? "border-red-500 focus:border-red-500 focus:ring-red-500/30"

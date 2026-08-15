@@ -399,6 +399,15 @@ const s = {
   "hero.features.support.title": "Get real support",
   "hero.features.support.text":
     "The community — and relevant organizations — step in to help, upvote, and act.",
+  "hero.stats.students": "2,400+",
+  "hero.stats.studentsLabel": "students already in",
+  "hero.stats.states": "36",
+  "hero.stats.statesLabel": "states & UTs covered",
+  "hero.stats.problems": "1,200+",
+  "hero.stats.problemsLabel": "problems solved together",
+  "footer.tagline":
+    "Your campus, your problems, your people — one place for every voice to be heard.",
+  "footer.madeBy": "Made by students, for students in India.",
 } as const
 
 export default s

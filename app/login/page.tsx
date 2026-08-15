@@ -66,7 +66,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4 py-10">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-gradient-to-b from-paper to-paper-deep px-4 py-10">
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center gap-3">
