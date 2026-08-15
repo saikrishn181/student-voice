@@ -50,59 +50,29 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid w-full max-w-content items-center gap-10 px-4 py-12 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-16 lg:px-8">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-            🇮🇳 {s["hero.builtForIndia"]}
-          </span>
-          <h1 className="mt-4 text-display text-slate-900">
-            {s["hero.title"]} <span className="text-primary-700">{s["hero.titleHighlight"]}</span>
-          </h1>
-          <p className="mt-4 max-w-xl text-body-lg text-slate-600">
-            {s["hero.subtitle"]}
-          </p>
+      <section className="mx-auto flex w-full max-w-content flex-col items-center px-4 py-16 text-center sm:px-6 md:py-24 lg:px-8">
+        <span className="inline-flex items-center gap-1.5 rounded-pill bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+          🇮🇳 {s["hero.builtForIndia"]}
+        </span>
+        <h1 className="mt-4 max-w-3xl text-display text-slate-900">
+          {s["hero.title"]} <span className="text-primary-700">{s["hero.titleHighlight"]}</span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-body-lg text-slate-600">
+          {s["hero.subtitle"]}
+        </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/signup" className="flex-1 sm:flex-none">
-              <Button size="lg" fullWidth className="sm:min-w-44">
-                {s["hero.cta.createAccount"]}
-                <ArrowRight size={18} aria-hidden />
-              </Button>
-            </Link>
-            <Link href="/login" className="flex-1 sm:flex-none">
-              <Button size="lg" variant="outline" fullWidth className="sm:min-w-40">
-                {s["hero.cta.login"]}
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Illustration (right on desktop, below on mobile) */}
-        <div className="relative mx-auto w-full max-w-sm">
-          <div className="surface-card relative z-10 overflow-hidden p-5">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
-                <Megaphone size={18} className="text-primary-700" aria-hidden />
-              </span>
-              <div>
-                <p className="font-semibold text-slate-800">{s["hero.demoPost.title"]}</p>
-                <p className="text-body-sm text-slate-500">{s["hero.demoPost.location"]}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-body-sm text-slate-600">
-              {s["hero.demoPost.body"]}
-            </p>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="inline-flex items-center gap-1 rounded-pill bg-accent-50 px-2.5 py-1 text-xs font-semibold text-accent-700">
-                <HeartHandshake size={14} aria-hidden /> {s["hero.demoPost.support"](42)}
-              </span>
-            </div>
-          </div>
-
-          {/* decorative supporting card */}
-          <div className="absolute -bottom-4 -right-2 z-0 hidden rounded-card bg-primary-700 px-4 py-3 text-white shadow-popover sm:block">
-            <p className="text-sm font-semibold">{s["hero.demoCard.states"]}</p>
-          </div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link href="/signup" className="flex-1 sm:flex-none">
+            <Button size="lg" fullWidth className="sm:min-w-44">
+              {s["hero.cta.createAccount"]}
+              <ArrowRight size={18} aria-hidden />
+            </Button>
+          </Link>
+          <Link href="/login" className="flex-1 sm:flex-none">
+            <Button size="lg" variant="outline" fullWidth className="sm:min-w-40">
+              {s["hero.cta.login"]}
+            </Button>
+          </Link>
         </div>
       </section>
 

@@ -388,12 +388,6 @@ const s = {
   "hero.titleHighlight": "region by region",
   "hero.subtitle":
     "Krantind helps students and student organizations post the problems that matter on campus, and get real support from the people closest to them. No noise — just genuine help where you live.",
-  "hero.demoPost.title": "Mira V.",
-  "hero.demoPost.location": "Mumbai, Maharashtra",
-  "hero.demoPost.body":
-    "Hostel A's water supply hasn't come for three days now. We've emailed the warden twice and marked it in the complaint register, but nothing. If you're facing the same on this block, say it here so we can take this together.",
-  "hero.demoPost.support": (n: number) => `${n} Support`,
-  "hero.demoCard.states": "All 36 states active today",
   "hero.cta.createAccount": "Create your account",
   "hero.cta.login": "Log In",
   "hero.features.region.title": "State by state",
