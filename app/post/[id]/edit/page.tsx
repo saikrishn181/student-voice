@@ -2,8 +2,8 @@
 
 // Edit post: prefills the create form with an existing post and saves via
 // usePostStore.updatePost. Only the author can edit (RLS enforces this too).
-import { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useEffect, useState, use } from "react"
+import { useRouter } from "next/navigation"
 import { Send } from "lucide-react"
 import { Button, Card, Input, Textarea, EmptyState } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -15,9 +15,13 @@ import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploa
 import { parseHashtags } from "@/lib/utils"
 import s from "@/lib/strings"
 
-export default function EditPostPage() {
+export default function EditPostPage({
+  params: paramsPromise,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const router = useRouter()
-  const params = useParams<{ id: string }>()
+  const params = use(paramsPromise)
   const postId = params.id
   const currentUser = useAuthStore((s) => s.currentUser)
   const posts = usePostStore((s) => s.posts)
@@ -106,7 +110,9 @@ export default function EditPostPage() {
       mediaUrl = upload.url ?? null
       mediaType = media.type
       mediaAspectRatio = upload.aspectRatio ?? null
-    } else if (media === null && existingMediaUrl === null) {
+    } else if (media === null) {
+      // User removed all media.
+      mediaUrl = null
       mediaType = null
       mediaAspectRatio = null
     }

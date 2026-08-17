@@ -26,7 +26,9 @@ export const useToastStore = create<ToastState>()((set, get) => ({
     const id = `toast_${++counter}`
     set((s) => ({ toasts: [...s.toasts, { id, message, kind }] }))
     // Auto-dismiss after a few seconds.
-    window.setTimeout(() => get().dismiss(id), 3500)
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => get().dismiss(id), 3500)
+    }
   },
 
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

@@ -15,9 +15,7 @@ import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useUserStore } from "@/lib/store/useUserStore"
-import { FEED_PAGE_SIZE } from "@/constants"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
 
 export default function FeedPage() {
   const { posts, status, loadErrorMessage, loadAll, loadMore, hasMore } = usePostStore()
@@ -33,13 +31,13 @@ export default function FeedPage() {
 
   // Load once on mount; keep ears open for live updates (default-on but
   // silently no-ops if Supabase Realtime isn't enabled for the project).
+  // NOTE: AppShell already calls loadAll on login; we only need to start realtime here.
   useEffect(() => {
-    loadAll(currentUser?.id)
     usePostStore.getState().startRealtime(currentUser?.id)
     return () => {
       usePostStore.getState().stopRealtime()
     }
-  }, [loadAll, currentUser?.id])
+  }, [currentUser?.id])
 
   const handleRetry = () => {
     setRetrying(true)
@@ -120,24 +118,40 @@ export default function FeedPage() {
           </div>
         ) : null}
 
-        {/* Posts */}
+        {/* Posts — local posts first, then a single divider, then the rest */}
         {!initialLoading && !loadError
-          ? posts.map((post) => {
-              const isLocal = post.state === localState
+          ? (() => {
+              const localPosts = localState
+                ? posts.filter((p) => p.state === localState)
+                : []
+              const otherPosts = localState
+                ? posts.filter((p) => p.state !== localState)
+                : posts
+              const hasBoth = localPosts.length > 0 && otherPosts.length > 0
               return (
-                <div key={post.id} className="flex flex-col gap-1">
-                  <PostCard post={post} />
-                  {/* Subtle divider*/}
-                  <div className="my-1 flex items-center gap-3 px-1 opacity-70">
-                    <span className="h-px flex-1 bg-slate-200" />
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-                      {isLocal ? s["feed.yourRegion"] : s["feed.otherRegions"]}
-                    </span>
-                    <span className="h-px flex-1 bg-slate-200" />
-                  </div>
-                </div>
+                <>
+                  {localPosts.map((post) => (
+                    <div key={post.id}>
+                      <PostCard post={post} />
+                    </div>
+                  ))}
+                  {hasBoth && (
+                    <div className="my-1 flex items-center gap-3 px-1 opacity-70">
+                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                        {s["feed.otherRegions"]}
+                      </span>
+                      <span className="h-px flex-1 bg-slate-200" />
+                    </div>
+                  )}
+                  {otherPosts.map((post) => (
+                    <div key={post.id}>
+                      <PostCard post={post} />
+                    </div>
+                  ))}
+                </>
               )
-            })
+            })()
           : null}
 
         {!initialLoading && !loadError && allLoaded && posts.length === 0 ? (

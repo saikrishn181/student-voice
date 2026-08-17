@@ -25,6 +25,7 @@ export function CommentInput({ postId, className }: CommentInputProps) {
   const showToast = useToastStore((s) => s.show)
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
+  const [isOrgHelp, setIsOrgHelp] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,10 +40,10 @@ export function CommentInput({ postId, className }: CommentInputProps) {
     }
 
     setSending(true)
-    const isOrg = currentUser.accountType === "organization"
     try {
-      await addComment(postId, currentUser.id, text.trim(), isOrg)
+      await addComment(postId, currentUser.id, text.trim(), currentUser.accountType === "organization" && isOrgHelp)
       setText("")
+      setIsOrgHelp(false)
     } catch (err) {
       showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
     } finally {
@@ -74,6 +75,17 @@ export function CommentInput({ postId, className }: CommentInputProps) {
           <Send size={16} aria-hidden />
         </Button>
       </div>
+      {isLoggedIn && currentUser?.accountType === "organization" ? (
+        <label className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+          <input
+            type="checkbox"
+            checked={isOrgHelp}
+            onChange={(e) => setIsOrgHelp(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-slate-300"
+          />
+          {s["comment.offeringHelp"]}
+        </label>
+      ) : null}
     </form>
   )
 }

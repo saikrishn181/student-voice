@@ -90,6 +90,9 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
     setSaving(true)
 
+    // Capture the blob URL before any state updates so we can revoke it after save.
+    const previousBlobUrl = avatarUrl?.startsWith("blob:") ? avatarUrl : null
+
     // Upload a new avatar first if one was selected.
     let nextAvatarUrl = avatarUrl
     if (avatarFile) {
@@ -115,7 +118,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
     setSaving(false)
 
-    if (avatarUrl?.startsWith("blob:")) URL.revokeObjectURL(avatarUrl)
+    if (previousBlobUrl) URL.revokeObjectURL(previousBlobUrl)
 
     if (!result.ok) {
       showToast(result.error ?? s["validation.generic"], "error")

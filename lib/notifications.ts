@@ -67,5 +67,7 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return HeartHandshake
     case "verification_approved":
       return BadgeCheck
+    default:
+      return Heart
   }
 }

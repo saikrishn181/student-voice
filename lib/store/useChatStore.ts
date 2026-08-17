@@ -139,22 +139,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
         .select("id, name, avatar_url")
         .in("id", otherIds)
       if (partnerRows) {
-        const currentUser = useAuthStore.getState().currentUser
         for (const row of partnerRows) {
-          const user = {
-            id: row.id,
-            name: row.name,
-            email: row.name,
-            accountType: "student" as const,
-            followerCount: 0,
-            followingCount: 0,
-            createdAt: new Date().toISOString(),
-            isAdmin: false,
-            avatarUrl: row.avatar_url ?? undefined,
+          const existing = useUserStore.getState().users[row.id]
+          if (!existing) {
+            const user = {
+              id: row.id,
+              name: row.name,
+              email: "",
+              accountType: "student" as const,
+              followerCount: 0,
+              followingCount: 0,
+              createdAt: new Date().toISOString(),
+              isAdmin: false,
+              avatarUrl: row.avatar_url ?? undefined,
+            }
+            useUserStore.setState((s) => ({
+              users: { ...s.users, [row.id]: user },
+            }))
           }
-          useUserStore.setState((s) => ({
-            users: { ...s.users, [row.id]: user },
-          }))
         }
       }
     }

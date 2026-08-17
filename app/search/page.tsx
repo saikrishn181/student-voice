@@ -2,7 +2,7 @@
 
 // Search page: text search across posts (text + hashtags) + orgs, with recent
 // searches. A state filter narrows post results.
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Search as SearchIcon, X } from "lucide-react"
 import { Input, Card, EmptyState } from "@/components/ui"
 import { PostCard } from "@/components/feature"
@@ -23,6 +23,12 @@ export default function SearchPage() {
   const [query, setQuery] = useState("")
   const [stateFilter, setStateFilter] = useState("")
   const debouncedQuery = useDebounce(query, 300)
+
+  // Save non-empty queries to recent searches.
+  useEffect(() => {
+    const q = debouncedQuery.trim()
+    if (q) pushRecent(q)
+  }, [debouncedQuery, pushRecent])
 
   const results = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase()

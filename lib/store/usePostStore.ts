@@ -382,13 +382,15 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     try {
       if (supported) {
-        await supabase
+        const { error } = await supabase
           .from("post_supports")
           .delete()
           .eq("post_id", postId)
           .eq("user_id", currentUserId)
+        if (error) throw new Error("Could not remove support")
       } else {
-        await supabase.from("post_supports").insert({ post_id: postId, user_id: currentUserId })
+        const { error } = await supabase.from("post_supports").insert({ post_id: postId, user_id: currentUserId })
+        if (error) throw new Error("Could not add support")
       }
     } catch (err) {
       // Revert the optimistic change on failure so the UI never lies.

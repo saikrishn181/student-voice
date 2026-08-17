@@ -37,7 +37,6 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isPublicRoute = PUBLIC_ROUTES.includes(path)
-  const isOnboarding = path.startsWith("/onboarding")
 
   // Important: always call getUser() so the session cookie is refreshed.
   const { data } = await supabase.auth.getUser()
