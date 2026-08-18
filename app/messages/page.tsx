@@ -17,6 +17,7 @@ export default function MessagesPage() {
   const conversations = useChatStore((s) => s.conversations)
   const conversationsLoaded = useChatStore((s) => s.conversationsLoaded)
   const messagesByConversation = useChatStore((s) => s.messagesByConversation)
+  const unreadByConversation = useChatStore((s) => s.unreadByConversation)
   const users = useUserStore((s) => s.users)
   const [loadError, setLoadError] = useState(false)
 
@@ -97,18 +98,26 @@ export default function MessagesPage() {
         {conversations.map((conv) => {
           const partner = users[conv.otherUserId]
           const last = messagesByConversation[conv.id]?.slice(-1)[0]
+          const unread = unreadByConversation[conv.id] ?? 0
           return (
             <Link key={conv.id} href={`/messages/${conv.id}`} className="block">
               <Card className="transition-app flex items-center gap-3 p-3 hover:bg-slate-50">
-                <Avatar name={partner?.name ?? "?"} src={partner?.avatarUrl ?? null} size="md" />
+                <div className="relative shrink-0">
+                  <Avatar name={partner?.name ?? "?"} src={partner?.avatarUrl ?? null} size="md" />
+                  {unread > 0 ? (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-600 px-1 text-[11px] font-bold text-white">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
+                  <p className={unread > 0 ? "truncate text-sm font-bold text-slate-900" : "truncate text-sm font-semibold text-slate-900"}>
                     {partner?.name ?? "…"}
                     {partner?.username ? (
                       <span className="ml-1 font-normal text-slate-400">@{partner.username}</span>
                     ) : null}
                   </p>
-                  <p className="truncate text-body-sm text-slate-500">
+                  <p className={unread > 0 ? "truncate text-body-sm font-medium text-slate-800" : "truncate text-body-sm text-slate-500"}>
                     {last ? (
                       <>
                         {last.senderId === currentUser?.id ? "You: " : ""}

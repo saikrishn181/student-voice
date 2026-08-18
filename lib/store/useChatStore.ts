@@ -33,6 +33,10 @@ interface ChatState {
   messagesByConversation: Record<string, Message[]>
   conversationsLoaded: boolean
   realtimeChannel: ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null
+  // Unread incoming-message counts per conversation (0 when not tracked).
+  unreadByConversation: Record<string, number>
+  // Conversation currently open in the thread page (badges pause for it).
+  activeConversationId: string | null
 
   // true = loaded OK, false = query failed (callers can show a retry UI).
   loadConversations: () => Promise<boolean>
@@ -41,6 +45,9 @@ interface ChatState {
   loadMessages: (conversationId: string) => Promise<boolean>
   // Throws an Error with a human-readable message on failure (callers toast it).
   sendMessage: (conversationId: string, content: string) => Promise<boolean>
+  // Marks the open conversation as read (badge zeroed + last_read_at bumped).
+  markConversationRead: (conversationId: string) => Promise<void>
+  setActiveConversation: (conversationId: string | null) => void
   startRealtime: () => void
   stopRealtime: () => void
 }
@@ -50,6 +57,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messagesByConversation: {},
   conversationsLoaded: false,
   realtimeChannel: null,
+  unreadByConversation: {},
+  activeConversationId: null,
 
   loadConversations: async () => {
     const supabase = createSupabaseBrowserClient()
@@ -75,15 +84,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return true
     }
 
-    // 2. The other participant per conversation.
-    const { data: participants, error: pError } = await supabase
+    // 2. Participants + my read-state per conversation. The last_read_at column
+    // only exists after the chat-unread migration; if it's missing we retry
+    // without it so the inbox still works (badges just stay off).
+    let participantRows: { conversation_id: string; user_id: string; last_read_at: string | null }[] | null = null
+    let pError: { message?: string } | null = null
+    const participantQuery = supabase
       .from("conversation_participants")
-      .select("conversation_id, user_id")
+      .select("conversation_id, user_id, last_read_at")
       .in("conversation_id", conversationIds)
-      .neq("user_id", currentUserId)
-    if (pError || !participants) {
+    ;({ data: participantRows, error: pError } = await participantQuery)
+    if ((pError || !participantRows) && pError?.message?.toLowerCase().includes("last_read_at")) {
+      const { data, error } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id, user_id")
+        .in("conversation_id", conversationIds)
+      participantRows = (data ?? []).map((r) => ({ ...r, last_read_at: null }))
+      pError = error
+    }
+    if (pError || !participantRows) {
       set({ conversationsLoaded: true })
       return false
+    }
+
+    const myReadByConv = new Map<string, string | null>()
+    for (const p of participantRows) {
+      if (p.user_id === currentUserId) myReadByConv.set(p.conversation_id, p.last_read_at)
+    }
+    const otherByConv = new Map<string, string>()
+    for (const p of participantRows) {
+      if (p.user_id !== currentUserId) otherByConv.set(p.conversation_id, p.user_id)
     }
 
     // 3. Most recent message per conversation (for the preview line).
@@ -102,8 +132,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (!lastByConv.has(row.conversation_id)) lastByConv.set(row.conversation_id, row)
     }
 
-    const otherByConv = new Map<string, string>()
-    for (const p of participants) otherByConv.set(p.conversation_id, p.user_id)
+    // Unread = incoming messages newer than my last_read_at. A NULL last_read_at
+    // (fresh migration / never opened) counts as "all read" to avoid fake badges.
+    const unreadByConversation: Record<string, number> = {}
+    if (myReadByConv.size > 0) {
+      for (const row of messageRows) {
+        if (row.sender_id === currentUserId) continue
+        const lastRead = myReadByConv.get(row.conversation_id)
+        if (lastRead && new Date(row.created_at) > new Date(lastRead)) {
+          unreadByConversation[row.conversation_id] =
+            (unreadByConversation[row.conversation_id] ?? 0) + 1
+        }
+      }
+    }
 
     const { data: conversationRows } = await supabase
       .from("conversations")
@@ -164,6 +205,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({
       conversations,
       conversationsLoaded: true,
+      unreadByConversation,
       messagesByConversation: { ...s.messagesByConversation, ...previewMap },
     }))
     return true
@@ -244,6 +286,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return true
   },
 
+  markConversationRead: async (conversationId) => {
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId) return
+    set((s) => ({
+      activeConversationId: conversationId,
+      unreadByConversation: { ...s.unreadByConversation, [conversationId]: 0 },
+    }))
+    const supabase = createSupabaseBrowserClient()
+    // No-op until the last_read_at migration is applied (column missing).
+    await supabase
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .eq("user_id", currentUserId)
+  },
+
+  setActiveConversation: (conversationId) =>
+    set((s) => ({
+      activeConversationId: conversationId,
+      unreadByConversation: conversationId
+        ? { ...s.unreadByConversation, [conversationId]: 0 }
+        : s.unreadByConversation,
+    })),
+
   startRealtime: () => {
     const { realtimeChannel } = get()
     if (realtimeChannel) return
@@ -266,6 +332,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 [convId]: [...existing, rowToMessage(row)],
               },
             }))
+            // Unread badge: incoming messages count up unless this conversation
+            // is open right now (the thread page marks it read instead).
+            const me = useAuthStore.getState().currentUser?.id
+            if (row.sender_id !== me) {
+              if (get().activeConversationId === convId) {
+                void get().markConversationRead(convId)
+              } else {
+                set((s) => ({
+                  unreadByConversation: {
+                    ...s.unreadByConversation,
+                    [convId]: (s.unreadByConversation[convId] ?? 0) + 1,
+                  },
+                }))
+              }
+            }
             // Refresh the conversation list so ordering/preview update.
             get().loadConversations()
           }

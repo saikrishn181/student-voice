@@ -48,6 +48,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     useUserStore.getState().loadAll()
     usePostStore.getState().loadAll(currentUser?.id)
     useNotificationStore.getState().load(currentUser?.id ?? "")
+    useNotificationStore.getState().startRealtime(currentUser?.id ?? "")
+    return () => {
+      useNotificationStore.getState().stopRealtime()
+    }
   }, [isLoggedIn, currentUser?.id])
 
   const isPublic = PUBLIC_ROUTES.includes(pathname)

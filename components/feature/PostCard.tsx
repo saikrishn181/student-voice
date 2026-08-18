@@ -129,12 +129,13 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       <RegionTag state={post.state} />
       {post.hashtags.length > 0 &&
         post.hashtags.map((tag) => (
-          <span
+          <Link
             key={tag}
-            className="rounded-pill border border-primary-100 bg-primary-50/70 px-2.5 py-0.5 text-xs font-semibold text-primary-700"
+            href={`/tag/${encodeURIComponent(tag)}`}
+            className="rounded-pill border border-primary-100 bg-primary-50/70 px-2.5 py-0.5 text-xs font-semibold text-primary-700 transition-colors hover:border-primary-300 hover:bg-primary-100"
           >
             #{tag}
-          </span>
+          </Link>
         ))}
       <span className="text-body-sm text-slate-400">·</span>
       <span className="text-body-sm text-slate-400" title={new Date(post.createdAt).toLocaleString()}>

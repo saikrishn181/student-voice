@@ -6,7 +6,8 @@
 // Gate yourself as admin in the SQL editor:
 //   update public.profiles set is_admin = true where email = 'you@example.com';
 import { useEffect, useState } from "react"
-import { ShieldCheck, ShieldX, Lock, Inbox } from "lucide-react"
+import Link from "next/link"
+import { ShieldCheck, ShieldX, Lock, Inbox, ExternalLink } from "lucide-react"
 import { Button, Card, EmptyState, Badge, Avatar } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -75,11 +76,21 @@ export default function AdminVerificationsPage() {
       .from("profiles")
       .update({ verification_status: status })
       .eq("id", orgId)
-    setBusyId(null)
     if (error) {
+      setBusyId(null)
       showToast(error.message || "Could not update verification status", "error")
       return
     }
+    // Tell the org their verification was approved (no DB trigger for this one).
+    if (status === "verified" && currentUser) {
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: orgId,
+        actor_id: currentUser.id,
+        type: "verification_approved",
+      })
+      if (notifError) showToast("Verified, but the org was not notified", "error")
+    }
+    setBusyId(null)
     showToast(s["admin.orgUpdated"], "success")
     setOrgs((prev) => prev.filter((o) => o.id !== orgId))
   }
@@ -220,15 +231,25 @@ function ReportCard({
         </div>
         <span className="text-xs text-slate-400">{timeAgo(report.created_at)}</span>
       </div>
-      <p className="text-xs text-slate-400">post: {report.post_id}</p>
+      <p className="line-clamp-1 text-xs text-slate-400">post: {report.post_id}</p>
       {report.details ? <p className="text-body-sm text-slate-600">{report.details}</p> : null}
-      <div className="mt-1 flex justify-end gap-2">
-        <Button size="sm" variant="outline" loading={busy} onClick={() => onResolve(report.id, "dismissed")}>
-          {s["admin.dismiss"]}
-        </Button>
-        <Button size="sm" loading={busy} onClick={() => onResolve(report.id, "reviewed")}>
-          {s["admin.markReviewed"]}
-        </Button>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <Link
+          href={`/post/${report.post_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
+        >
+          {s["admin.viewPost"]} <ExternalLink size={12} aria-hidden />
+        </Link>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" loading={busy} onClick={() => onResolve(report.id, "dismissed")}>
+            {s["admin.dismiss"]}
+          </Button>
+          <Button size="sm" loading={busy} onClick={() => onResolve(report.id, "reviewed")}>
+            {s["admin.markReviewed"]}
+          </Button>
+        </div>
       </div>
     </Card>
   )

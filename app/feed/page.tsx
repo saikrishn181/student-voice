@@ -27,6 +27,7 @@ export default function FeedPage() {
   const loadError = status === "error"
   const [retrying, setRetrying] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [filter, setFilter] = useState<"all" | "local" | "trending">("all")
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Load once on mount; keep ears open for live updates (default-on but
@@ -93,6 +94,29 @@ export default function FeedPage() {
           </p>
         </div>
 
+        {/* Feed filters */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", s["feed.filter.all"]],
+              ["local", s["feed.filter.local"]],
+              ["trending", s["feed.filter.trending"]],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={
+                filter === key
+                  ? "rounded-pill bg-primary-700 px-3 py-1 text-xs font-semibold text-white"
+                  : "rounded-pill border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-700"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Loading skeleton */}
         {initialLoading && !loadError ? <PostCardSkeleton count={3} /> : null}
 
@@ -121,12 +145,21 @@ export default function FeedPage() {
         {/* Posts — local posts first, then a single divider, then the rest */}
         {!initialLoading && !loadError
           ? (() => {
-              const localPosts = localState
-                ? posts.filter((p) => p.state === localState)
+              const visible =
+                filter === "trending"
+                  ? [...posts].sort((a, b) => b.supportCount - a.supportCount)
+                  : posts
+              const localPosts = filter === "all" && localState
+                ? visible.filter((p) => p.state === localState)
                 : []
-              const otherPosts = localState
-                ? posts.filter((p) => p.state !== localState)
-                : posts
+              const otherPosts =
+                filter === "local"
+                  ? visible.filter((p) => p.state === localState)
+                  : filter === "all"
+                    ? localState
+                      ? visible.filter((p) => p.state !== localState)
+                      : visible
+                    : visible
               const hasBoth = localPosts.length > 0 && otherPosts.length > 0
               return (
                 <>

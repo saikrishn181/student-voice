@@ -447,3 +447,10 @@ begin
   end if;
 end
 $$;
+-- ============================================================
+-- CHAT UNREAD COUNTS
+-- ============================================================
+-- Tracks when each participant last opened a conversation so the inbox can
+-- show unread badges. Existing rows start with NULL = "all read".
+alter table public.conversation_participants
+  add column if not exists last_read_at timestamptz;

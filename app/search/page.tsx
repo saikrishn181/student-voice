@@ -1,28 +1,77 @@
 "use client"
 
-// Search page: text search across posts (text + hashtags) + orgs, with recent
-// searches. A state filter narrows post results.
-import { useEffect, useMemo, useState } from "react"
+// Search page: server-backed search straight from Supabase — posts matched on
+// text/state (or a #tag), orgs matched on name/bio. Debounced, with a state
+// filter chip bar and recent searches.
+import { useEffect, useState } from "react"
 import { Search as SearchIcon, X } from "lucide-react"
-import { Input, Card, EmptyState } from "@/components/ui"
+import { Input, Card, EmptyState, Spinner } from "@/components/ui"
 import { PostCard } from "@/components/feature"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useSearchStore } from "@/lib/store/useSearchStore"
-import { useUserStore } from "@/lib/store/useUserStore"
 import { useDebounce } from "@/hooks"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { categoryFromHashtags } from "@/lib/utils"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
+import type { Post } from "@/lib/types"
 
 // A couple of commonly filtered states to keep the chip bar short.
 const QUICK_STATES = ["Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", "Uttar Pradesh", "West Bengal"]
 
+interface PostRow {
+  id: string
+  author_id: string
+  text: string
+  media_url: string | null
+  media_type: string | null
+  media_aspect_ratio: number | null
+  state: string | null
+  hashtags: string[] | null
+  support_count: number
+  comment_count: number
+  created_at: string
+}
+
+function rowToPost(row: PostRow): Post {
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    text: row.text,
+    mediaUrl: row.media_url,
+    mediaType: (row.media_type as Post["mediaType"]) ?? null,
+    mediaAspectRatio: row.media_aspect_ratio,
+    state: row.state ?? "",
+    category: categoryFromHashtags(row.hashtags ?? []),
+    hashtags: row.hashtags ?? [],
+    supportCount: row.support_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+    supportedByCurrentUser: false,
+  }
+}
+
+interface OrgRow {
+  id: string
+  name: string
+  bio: string | null
+  state: string | null
+}
+
+interface Results {
+  posts: Post[]
+  orgs: OrgRow[]
+}
+
 export default function SearchPage() {
-  const posts = usePostStore((s) => s.posts)
-  const users = useUserStore((s) => s.users)
+  const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const { recent, pushRecent, clearRecent } = useSearchStore()
   const [query, setQuery] = useState("")
   const [stateFilter, setStateFilter] = useState("")
   const debouncedQuery = useDebounce(query, 300)
+
+  const [results, setResults] = useState<Results>({ posts: [], orgs: [] })
+  const [searching, setSearching] = useState(false)
 
   // Save non-empty queries to recent searches.
   useEffect(() => {
@@ -30,25 +79,54 @@ export default function SearchPage() {
     if (q) pushRecent(q)
   }, [debouncedQuery, pushRecent])
 
-  const results = useMemo(() => {
-    const q = debouncedQuery.trim().toLowerCase()
-    if (!q) return { posts: [], orgs: [] }
-    const qForTags = q.replace(/^#/, "")
-    const matchedPosts = posts.filter(
-      (p) =>
-        p.text.toLowerCase().includes(q) ||
-        p.hashtags.some((t) => t.includes(qForTags)) ||
-        p.state.toLowerCase().includes(q),
-    )
-    return {
-      posts: matchedPosts.filter((p) => !stateFilter || p.state === stateFilter),
-      orgs: Object.values(users).filter(
-        (u) =>
-          u.accountType === "organization" &&
-          (u.name.toLowerCase().includes(q) || u.bio?.toLowerCase().includes(q)),
-      ),
+  // Query Supabase directly so search covers the whole database, not just the
+  // posts the feed has loaded into memory.
+  useEffect(() => {
+    const q = debouncedQuery.trim()
+    if (q.length < 2) {
+      setResults({ posts: [], orgs: [] })
+      return
     }
-  }, [debouncedQuery, posts, users, stateFilter])
+    let cancelled = false
+    setSearching(true)
+
+    const supabase = createSupabaseBrowserClient()
+    const isTag = q.startsWith("#")
+    const tagName = isTag ? q.slice(1).toLowerCase() : ""
+
+    const postQuery = supabase.from("posts").select("*")
+    if (isTag) {
+      postQuery.contains("hashtags", [tagName])
+    } else {
+      postQuery.or(`text.ilike.%${q}%,state.ilike.%${q}%`)
+    }
+    if (stateFilter) postQuery.eq("state", stateFilter)
+    postQuery.limit(30)
+
+    const orgQuery = supabase
+      .from("profiles")
+      .select("id, name, bio, state")
+      .eq("account_type", "organization")
+      .or(`name.ilike.%${q}%,bio.ilike.%${q}%`)
+      .limit(10)
+
+    Promise.all([postQuery, orgQuery]).then(([postRes, orgRes]) => {
+      if (cancelled) return
+      const blocked = new Set(blockedUserIds)
+      const rows = ((postRes.data ?? []) as PostRow[]).filter(
+        (r) => !blocked.has(r.author_id),
+      )
+      setResults({
+        posts: rows.map(rowToPost),
+        orgs: (orgRes.data ?? []) as OrgRow[],
+      })
+      setSearching(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [debouncedQuery, stateFilter, blockedUserIds])
 
   const hasQuery = debouncedQuery.trim().length > 0
   const hasResults = results.posts.length > 0 || results.orgs.length > 0
@@ -75,6 +153,9 @@ export default function SearchPage() {
             onChange={(e) => setQuery(e.target.value)}
             leftAdornment={<SearchIcon size={18} className="text-slate-400" />}
           />
+          {searching ? (
+            <Spinner size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          ) : null}
         </div>
 
         {/* Quick filters (visible as soon as there is any search activity) */}
@@ -177,7 +258,7 @@ export default function SearchPage() {
           </div>
         ) : null}
 
-        {hasQuery && !hasResults ? (
+        {hasQuery && !searching && !hasResults ? (
           <EmptyState
             icon={SearchIcon}
             title={s["search.empty"]}

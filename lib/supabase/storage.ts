@@ -68,6 +68,24 @@ export async function uploadAvatar(file: File): Promise<UploadResult> {
   return { ok: true, url: data.publicUrl }
 }
 
+// Remove a previously uploaded file from storage so no orphaned media is left
+// behind when a post is edited or deleted. Accepts any public URL of the
+// `.../storage/v1/object/public/<bucket>/<path>` shape; no-ops for null/foreign
+// URLs so legacy rows never break the delete flow.
+export async function deletePostMedia(url?: string | null): Promise<void> {
+  if (!url) return
+  const marker = "/object/public/"
+  const idx = url.indexOf(marker)
+  if (idx === -1) return
+  const full = url.slice(idx + marker.length)
+  const slash = full.indexOf("/")
+  if (slash === -1) return
+  const bucket = full.slice(0, slash)
+  const path = full.slice(slash + 1)
+  const supabase = createSupabaseBrowserClient()
+  await supabase.storage.from(bucket).remove([path])
+}
+
 function friendlyUploadError(message: string): string {
   if (message.includes("bucket")) return "Media bucket not found. Run supabase/schema.sql first."
   if (message.toLowerCase().includes("permission")) return "Upload failed — you need to be signed in."

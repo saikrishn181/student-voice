@@ -7,6 +7,7 @@ import { create } from "zustand"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { deletePostMedia } from "@/lib/supabase/storage"
 import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
@@ -322,6 +323,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
   updatePost: async (id, input) => {
     const supabase = createSupabaseBrowserClient()
+    const previous = get().posts.find((p) => p.id === id)
     const { data, error } = await supabase
       .from("posts")
       .update({
@@ -337,6 +339,10 @@ export const usePostStore = create<PostState>()((set, get) => ({
       .select("*")
       .single()
     if (error || !data) throw new Error(error?.message ?? "Could not update post")
+    // Media replaced or removed → delete the old file so storage stays clean.
+    if (previous?.mediaUrl && previous.mediaUrl !== input.mediaUrl) {
+      void deletePostMedia(previous.mediaUrl)
+    }
     const post = rowToPost(data as PostRow)
     set((s) => ({
       posts: s.posts.map((p) => (p.id === id ? post : p)),
@@ -346,8 +352,10 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
   deletePost: async (id) => {
     const supabase = createSupabaseBrowserClient()
+    const post = get().posts.find((p) => p.id === id)
     const { error } = await supabase.from("posts").delete().eq("id", id)
     if (error) throw new Error(error.message ?? "Could not delete post")
+    if (post?.mediaUrl) void deletePostMedia(post.mediaUrl)
     set((s) => ({
       posts: s.posts.filter((p) => p.id !== id),
       comments: s.comments.filter((c) => c.postId !== id),

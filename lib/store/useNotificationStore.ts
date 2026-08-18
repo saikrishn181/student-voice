@@ -2,8 +2,10 @@
 
 // Notifications store backed by the Supabase `notifications` table.
 // Notifications are created by DB triggers (on support / comment / follow),
-// so this store only reads + toggles `read` state.
+// so this store only reads + toggles `read` state. A realtime subscription
+// keeps the badge fresh while the app is open, with a 60s polling fallback.
 import { create } from "zustand"
+import type { RealtimeChannel } from "@supabase/supabase-js"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Notification, NotificationType } from "@/lib/types"
@@ -37,15 +39,22 @@ interface NotificationState {
   load: (userId: string) => Promise<void>
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
+  // Live sync: realtime subscription + polling fallback so the unread badge
+  // never goes stale while the app is open.
+  startRealtime: (userId: string) => void
+  stopRealtime: () => void
+  realtimeChannel: RealtimeChannel | null
+  pollTimer: ReturnType<typeof setInterval> | null
 }
 
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
   notifications: [],
   status: "idle",
+  realtimeChannel: null,
+  pollTimer: null,
 
   load: async (userId) => {
     const supabase = createSupabaseBrowserClient()
-    set({ status: "loading" })
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
@@ -78,5 +87,59 @@ markAllAsRead: async () => {
     if (unreadIds.length === 0) return
     const supabase = createSupabaseBrowserClient()
     await supabase.from("notifications").update({ read: true }).in("id", unreadIds)
+  },
+
+  startRealtime: (userId) => {
+    const { realtimeChannel, pollTimer } = get()
+    if (realtimeChannel) return
+    const supabase = createSupabaseBrowserClient()
+
+    const channel = supabase
+      .channel("notifications-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as NotificationRow
+          if (!row?.id) return
+          set((s) => ({
+            notifications: [rowToNotification(row), ...s.notifications].slice(0, 50),
+          }))
+        },
+      )
+
+    set({ realtimeChannel: channel })
+    channel.subscribe((status) => {
+      if (status !== "SUBSCRIBED") {
+        set({ realtimeChannel: null })
+        supabase.removeChannel(channel)
+      }
+    })
+
+    // Polling fallback in case realtime is disabled on the project.
+    if (!pollTimer) {
+      const timer = setInterval(() => {
+        void get().load(userId)
+      }, 60_000)
+      set({ pollTimer: timer })
+    }
+  },
+
+  stopRealtime: () => {
+    const { realtimeChannel, pollTimer } = get()
+    const supabase = createSupabaseBrowserClient()
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel)
+      set({ realtimeChannel: null })
+    }
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      set({ pollTimer: null })
+    }
   },
 }))

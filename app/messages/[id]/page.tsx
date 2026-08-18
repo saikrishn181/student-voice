@@ -53,6 +53,8 @@ export default function ConversationPage({
     })()
 
     useChatStore.getState().startRealtime()
+    // This conversation is open → clear its unread badge.
+    useChatStore.getState().markConversationRead(params.id)
 
     // Auto-reload fallback: poll the thread every 8s so new messages appear
     // even if realtime drops (mobile networks, background tabs). Realtime
@@ -65,6 +67,7 @@ export default function ConversationPage({
       cancelled = true
       if (poll) window.clearInterval(poll)
       useChatStore.getState().stopRealtime()
+      useChatStore.getState().setActiveConversation(null)
     }
   }, [currentUser?.id, params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
