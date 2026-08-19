@@ -32,6 +32,12 @@ export interface User {
   isAdmin: boolean
   // Private accounts (students): posts only visible to followers + self.
   isPrivate?: boolean
+  // College email verification (domain-based badge).
+  collegeVerified?: boolean
+  collegeName?: string
+  collegeEmail?: string
+  // Referral invite code shown in settings.
+  inviteCode?: string
 }
 
 // Profile row shape from the `public.profiles` Supabase table (snake_case).
@@ -51,6 +57,10 @@ export interface Profile {
   created_at: string
   is_admin: boolean
   is_private: boolean
+  college_email: string | null
+  college_name: string | null
+  college_verified: boolean
+  invite_code: string | null
 }
 
 // Post categories (Phase 2).

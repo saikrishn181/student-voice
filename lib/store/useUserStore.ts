@@ -25,6 +25,10 @@ export function rowToUser(row: Profile): User {
     createdAt: row.created_at,
     isAdmin: row.is_admin,
     isPrivate: row.is_private,
+    collegeVerified: row.college_verified,
+    collegeName: row.college_name ?? undefined,
+    collegeEmail: row.college_email ?? undefined,
+    inviteCode: row.invite_code ?? undefined,
   }
 }
 

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Lock, MessageSquare, UserPlus, UserCheck, Clock, ShieldCheck, CalendarClock, MapPin } from "lucide-react"
 import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
-import { PostCard, VerifiedBadge, FollowButton, FollowersModal, RsvpButton } from "@/components/feature"
+import { PostCard, VerifiedBadge, CollegeBadge, FollowButton, FollowersModal, RsvpButton } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -249,6 +249,7 @@ export default function PublicProfilePage({
               targetUser.verificationStatus === "verified" ? (
                 <VerifiedBadge />
               ) : null}
+              {targetUser.collegeVerified ? <CollegeBadge /> : null}
             </h1>
             {targetUser.username ? (
               <p className="text-body-sm text-slate-500">@{targetUser.username}</p>

@@ -1,5 +1,5 @@
 // Small semantic tags built on the base Badge pill component.
-import { BadgeCheck, MapPin } from "lucide-react"
+import { BadgeCheck, GraduationCap, MapPin } from "lucide-react"
 import { Badge } from "@/components/ui/Badge"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +9,16 @@ export function VerifiedBadge({ className }: { className?: string }) {
     <Badge tone="primary" className={className}>
       <BadgeCheck size={14} aria-hidden />
       Verified
+    </Badge>
+  )
+}
+
+// Shown next to a user's name when they verified a college email.
+export function CollegeBadge({ className }: { className?: string }) {
+  return (
+    <Badge tone="accent" className={className}>
+      <GraduationCap size={14} aria-hidden />
+      College verified
     </Badge>
   )
 }

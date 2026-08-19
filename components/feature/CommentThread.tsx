@@ -15,6 +15,7 @@ import { timeAgo } from "@/lib/utils"
 import type { Comment } from "@/lib/types"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { MAX_COMMENT_CHARS } from "@/constants"
+import { MentionText } from "./MentionText"
 
 interface CommentThreadProps {
   postId: string
@@ -115,7 +116,7 @@ function CommentItem({ comment }: { comment: Comment }) {
           </div>
         </div>
       ) : (
-        <p className="mt-2 break-words text-body-sm text-slate-700">{comment.text}</p>
+        <MentionText text={comment.text} className="mt-2 break-words text-body-sm text-slate-700" />
       )}
 
       <div className="mt-1 flex items-center justify-between gap-2">

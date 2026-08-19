@@ -38,11 +38,12 @@ import s from "@/lib/strings"
 import { cn, timeAgo } from "@/lib/utils"
 import type { Post, ReportReason } from "@/lib/types"
 import { MediaDisplay } from "./MediaDisplay"
-import { VerifiedBadge, RegionTag } from "./Badges"
+import { VerifiedBadge, RegionTag, CollegeBadge } from "./Badges"
 import { SupportButton } from "./SupportButton"
 import { FollowButton } from "./FollowButton"
 import { PollDisplay } from "./PollDisplay"
 import { RsvpButton } from "./RsvpButton"
+import { MentionText } from "./MentionText"
 
 const REPORT_OPTIONS: { value: ReportReason; label: string }[] = [
   { value: "spam", label: "Spam or scam" },
@@ -280,6 +281,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
                 {author?.name ?? s["post.unknownName"]}
               </Link>
               {isVerifiedOrg ? <VerifiedBadge /> : null}
+              {author?.collegeVerified ? <CollegeBadge /> : null}
             </div>
             <div className="mt-0.5 text-body-sm text-slate-500">
               {author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]} ·{" "}
@@ -453,9 +455,10 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
 
       {/* Text */}
       {post.text ? (
-        <p className={cn("break-words text-body text-slate-800", concealed && "blur-md select-none")}>
-          {post.text}
-        </p>
+        <MentionText
+          text={post.text}
+          className={cn("break-words text-body text-slate-800", concealed && "blur-md select-none")}
+        />
       ) : null}
 
       {/* Event card */}

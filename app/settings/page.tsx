@@ -16,9 +16,13 @@ import {
   X,
   ChevronRight,
   Bell,
+  GraduationCap,
+  Ticket,
+  Copy,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, Avatar, EmptyState, Skeleton, Button, Input, Modal } from "@/components/ui"
+import { CollegeBadge } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useNotificationStore } from "@/lib/store/useNotificationStore"
@@ -193,6 +197,9 @@ export default function SettingsPage() {
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [provider, setProvider] = useState<"google" | "email" | null>(null)
+  const [collegeEmail, setCollegeEmail] = useState("")
+  const [verifying, setVerifying] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const notificationTypes: { type: string; label: string }[] = [
     { type: "support", label: s["notification.type.support"] },
@@ -212,6 +219,47 @@ export default function SettingsPage() {
 
   const setDigestFrequency = (freq: "instant" | "daily" | "never") => {
     void updateNotificationPrefs(currentUser.id, { digestFrequency: freq })
+  }
+
+  const handleVerifyCollege = async () => {
+    const email = collegeEmail.trim()
+    if (!email) return
+    setVerifying(true)
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { data, error } = await supabase.rpc("verify_college_email", {
+        p_email: email,
+      })
+      if (error) {
+        showToast(error.message ?? s["validation.generic"], "error")
+        return
+      }
+      if (data === "ok") {
+        await useAuthStore.getState().refreshProfile()
+        const fresh = useAuthStore.getState().currentUser
+        if (fresh) showToast(s["settings.college.verified"], "success")
+        setCollegeEmail("")
+      } else if (data === "not_college") {
+        showToast(s["settings.college.notCollege"], "error")
+      } else {
+        showToast(s["settings.college.invalid"], "error")
+      }
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const handleCopyInvite = async () => {
+    const code = currentUser.inviteCode
+    if (!code) return
+    const link = `${window.location.origin}/signup?invite=${encodeURIComponent(code)}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      showToast(s["settings.invite.copyFailed"], "error")
+    }
   }
 
   useEffect(() => {
@@ -403,6 +451,71 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+        </Card>
+
+        {/* College email verification */}
+        <Card className="flex flex-col gap-3 p-4">
+          <div className="flex items-center gap-2">
+            <GraduationCap size={18} className="text-slate-400" aria-hidden />
+            <h2 className="text-h4">{s["settings.college.title"]}</h2>
+            {currentUser.collegeVerified ? (
+              <CollegeBadge />
+            ) : null}
+          </div>
+          {currentUser.collegeVerified ? (
+            <div className="flex flex-col gap-1">
+              <p className="text-body-sm text-slate-700">
+                {s["settings.college.verifiedAs"](currentUser.collegeName ?? "")}
+              </p>
+              <p className="text-body-sm text-slate-500">
+                {s["settings.college.verifiedEmail"](currentUser.college_email ?? "")}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-body-sm text-slate-600">{s["settings.college.description"]}</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  label={s["settings.college.emailLabel"]}
+                  name="college-email"
+                  type="email"
+                  value={collegeEmail}
+                  onChange={(e) => setCollegeEmail(e.target.value)}
+                  placeholder="you@college.edu.in"
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  className="sm:self-end"
+                  loading={verifying}
+                  disabled={!collegeEmail.trim()}
+                  onClick={handleVerifyCollege}
+                >
+                  <Check size={16} aria-hidden /> {s["settings.college.verifyButton"]}
+                </Button>
+              </div>
+            </>
+          )}
+        </Card>
+
+        {/* Referral invite */}
+        <Card className="flex flex-col gap-3 p-4">
+          <div className="flex items-center gap-2">
+            <Ticket size={18} className="text-slate-400" aria-hidden />
+            <h2 className="text-h4">{s["settings.invite.title"]}</h2>
+          </div>
+          <p className="text-body-sm text-slate-600">{s["settings.invite.description"]}</p>
+          {currentUser.inviteCode ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code className="flex-1 truncate rounded-card border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm font-semibold text-slate-800">
+                {currentUser.inviteCode}
+              </code>
+              <Button variant="outline" onClick={handleCopyInvite}>
+                {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
+                {copied ? s["settings.invite.copied"] : s["settings.invite.copy"]}
+              </Button>
+            </div>
+          ) : null}
         </Card>
 
         {/* Incoming follow requests */}

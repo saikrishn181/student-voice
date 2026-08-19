@@ -18,6 +18,7 @@ export interface SignupPayload {
   password: string
   accountType: AccountType
   organizationType?: OrganizationType
+  inviteCode?: string
 }
 
 export interface AuthResult {
@@ -83,6 +84,10 @@ function rowToUser(row: Profile): User {
     createdAt: row.created_at,
     isAdmin: row.is_admin,
     isPrivate: row.is_private,
+    collegeVerified: row.college_verified,
+    collegeName: row.college_name ?? undefined,
+    collegeEmail: row.college_email ?? undefined,
+    inviteCode: row.invite_code ?? undefined,
   }
 }
 
@@ -121,6 +126,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const meta: Record<string, string> = {
       name: payload.name,
       account_type: payload.accountType,
+    }
+    if (payload.inviteCode?.trim()) {
+      meta.invite_code = payload.inviteCode.trim()
     }
     if (payload.accountType === "organization" && payload.organizationType) {
       meta.organization_type = payload.organizationType

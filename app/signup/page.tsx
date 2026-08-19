@@ -2,7 +2,7 @@
 
 // Signup: toggle Student / Organization account type, validate, then create the
 // account via Supabase (through the auth store) and go to Region Selection.
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button, Input, Select, Tabs } from "@/components/ui"
@@ -30,6 +30,13 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [nameError, setNameError] = useState("")
   const [emailError, setEmailError] = useState("")
+  const [inviteCode, setInviteCode] = useState("")
+
+  // Prefill from an invite link like /signup?invite=ABC12345.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("invite")
+    if (code) setInviteCode(code.trim())
+  }, [])
 
   const clearErrors = () => { setNameError(""); setEmailError("") }
 
@@ -78,6 +85,7 @@ export default function SignupPage() {
       password,
       accountType,
       organizationType: resolvedOrgType,
+      inviteCode: inviteCode.trim() || undefined,
     })
     setLoading(false)
 
@@ -164,6 +172,15 @@ export default function SignupPage() {
               placeholder={s["auth.signup.passwordPlaceholder"]}
               autoComplete="new-password"
             />
+
+<Input
+              label={s["auth.signup.inviteLabel"]}
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder={s["auth.signup.invitePlaceholder"]}
+            />
+            <p className="-mt-3 text-body-sm text-slate-500">{s["auth.signup.inviteHint"]}</p>
 
             {accountType === "organization" ? (
               <Select

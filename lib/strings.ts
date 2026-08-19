@@ -253,6 +253,30 @@ const s = {
   "settings.notifications.digest.instant": "No digest — notifications stay in-app",
   "settings.notifications.digest.daily": "Daily summary email",
   "settings.notifications.digest.never": "No notifications at all",
+
+  // ─── Settings: college verification + referral invites ─────────────────────
+  "settings.college.title": "College verification",
+  "settings.college.description":
+    "Verify with a college email to get the College Verified badge next to your name. We accept *.edu.in / *.ac.in domains and major institutes.",
+  "settings.college.emailLabel": "College email",
+  "settings.college.verifyButton": "Verify",
+  "settings.college.verified": "College email verified — your badge is live!",
+  "settings.college.notCollege": "That doesn't look like a college email. Use your institute email (e.g. name@college.ac.in).",
+  "settings.college.invalid": "Please enter a valid email address.",
+  "settings.college.verifiedAs": (name: string) => `Verified with ${name}`,
+  "settings.college.verifiedEmail": (email: string) => `Using ${email}`,
+  "settings.invite.title": "Invite friends",
+  "settings.invite.description":
+    "Share your invite link — friends who sign up with it get a head start and you'll be credited as their referrer.",
+  "settings.invite.copy": "Copy link",
+  "settings.invite.copied": "Copied!",
+  "settings.invite.copyFailed": "Couldn't copy the link. Please copy it manually.",
+  "mention.notFound": "Couldn't find that person.",
+
+  // ─── Signup: referral invites ────────────────────────────────────────────────
+  "auth.signup.inviteLabel": "Invite code (optional)",
+  "auth.signup.invitePlaceholder": "Have an invite code? Enter it here",
+  "auth.signup.inviteHint": "Used a friend's invite code? Enter it to get credited to their referrals.",
   "validation.usernameInvalid": "Username can only contain letters, numbers, and underscores.",
   "validation.nameRequired": "Please enter your name",
 
