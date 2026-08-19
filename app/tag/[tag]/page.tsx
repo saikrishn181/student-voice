@@ -10,9 +10,11 @@ import { PostCard } from "@/components/feature"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { EmptyState, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
+import { usePostStore } from "@/lib/store/usePostStore"
 import { useUserStore } from "@/lib/store/useUserStore"
+import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { categoryFromHashtags } from "@/lib/utils"
+import { categoryFromHashtags, cn } from "@/lib/utils"
 import s from "@/lib/strings"
 import type { Post } from "@/lib/types"
 
@@ -75,10 +77,37 @@ export default function TagPage() {
   const params = useParams<{ tag: string }>()
   const tag = decodeURIComponent(params.tag)
   const currentUser = useAuthStore((s) => s.currentUser)
+  const followedTopics = usePostStore((s) => s.followedTopics)
+  const toggleFollowTopic = usePostStore((s) => s.toggleFollowTopic)
+  const loadFollowedTopics = usePostStore((s) => s.loadFollowedTopics)
+  const showToast = useToastStore((s) => s.show)
 
   const [posts, setPosts] = useState<Post[]>([])
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
   const [retrying, setRetrying] = useState(false)
+  const [topicBusy, setTopicBusy] = useState(false)
+
+  useEffect(() => {
+    if (currentUser) void loadFollowedTopics(currentUser.id)
+  }, [currentUser, loadFollowedTopics])
+
+  const following = followedTopics.includes(tag)
+
+  const handleToggleTopic = async () => {
+    if (!currentUser) {
+      showToast(s["validation.loginRequired"], "error")
+      return
+    }
+    if (topicBusy) return
+    setTopicBusy(true)
+    try {
+      await toggleFollowTopic(tag, currentUser.id)
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+    } finally {
+      setTopicBusy(false)
+    }
+  }
 
   const load = () => {
     const supabase = createSupabaseBrowserClient()
@@ -133,6 +162,20 @@ export default function TagPage() {
           <Hash className="size-6 text-primary-600" aria-hidden /> {tag}
         </h1>
         <p className="text-body-sm text-slate-500">{s["tag.subtitle"](count)}</p>
+        <button
+          type="button"
+          onClick={handleToggleTopic}
+          disabled={topicBusy}
+          aria-pressed={following}
+          className={cn(
+            "mt-3 rounded-pill px-4 py-1.5 text-sm font-semibold transition-app",
+            following
+              ? "bg-primary-600 text-white hover:bg-primary-700"
+              : "border border-primary-200 bg-white text-primary-700 hover:bg-primary-50",
+          )}
+        >
+          {following ? s["explore.following"] : s["explore.follow"]}
+        </button>
       </div>
 
       {status === "loading" ? <PostCardSkeleton count={3} /> : null}

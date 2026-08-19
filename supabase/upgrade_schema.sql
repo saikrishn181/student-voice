@@ -514,3 +514,20 @@ drop policy if exists "Users manage their RSVPs" on public.post_rsvps;
 create policy "Users manage their RSVPs" on public.post_rsvps for insert with check (auth.uid() = user_id);
 drop policy if exists "Users delete their RSVPs" on public.post_rsvps;
 create policy "Users delete their RSVPs" on public.post_rsvps for delete using (auth.uid() = user_id);
+
+-- ============================================================
+-- DISCOVERY: followed hashtag topics
+-- ============================================================
+create table if not exists public.followed_topics (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  tag text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, tag)
+);
+alter table public.followed_topics enable row level security;
+drop policy if exists "Users read their topics" on public.followed_topics;
+create policy "Users read their topics" on public.followed_topics for select using (auth.uid() = user_id);
+drop policy if exists "Users add their topics" on public.followed_topics;
+create policy "Users add their topics" on public.followed_topics for insert with check (auth.uid() = user_id);
+drop policy if exists "Users delete their topics" on public.followed_topics;
+create policy "Users delete their topics" on public.followed_topics for delete using (auth.uid() = user_id);

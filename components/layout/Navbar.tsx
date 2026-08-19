@@ -17,6 +17,7 @@ import {
   LogOut,
   ShieldCheck,
   MessageSquare,
+  Compass,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -28,6 +29,7 @@ import { Logo } from "@/components/feature"
 
 const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
+  { href: "/explore", label: s["nav.explore"], icon: Compass },
   { href: "/search", label: s["nav.search"], icon: Search },
   { href: "/post/create", label: s["nav.create"], icon: PlusSquare },
   { href: "/messages", label: s["nav.messages"], icon: MessageSquare },

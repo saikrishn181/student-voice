@@ -7,6 +7,7 @@
 // the user's local posts and other regions. On desktop (>=1024px) a right
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
@@ -18,7 +19,7 @@ import { useUserStore } from "@/lib/store/useUserStore"
 import s from "@/lib/strings"
 
 export default function FeedPage() {
-  const { posts, status, loadErrorMessage, loadAll, loadMore, hasMore } = usePostStore()
+  const { posts, status, loadErrorMessage, loadAll, loadMore, hasMore, followedTopics } = usePostStore()
   const currentUser = useAuthStore((s) => s.currentUser)
   const follows = usePostStore((s) => s.follows)
   const users = useUserStore((s) => s.users)
@@ -27,7 +28,7 @@ export default function FeedPage() {
   const loadError = status === "error"
   const [retrying, setRetrying] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [filter, setFilter] = useState<"all" | "local" | "trending">("all")
+  const [filter, setFilter] = useState<"all" | "local" | "trending" | "topics">("all")
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Load once on mount; keep ears open for live updates (default-on but
@@ -101,6 +102,7 @@ export default function FeedPage() {
               ["all", s["feed.filter.all"]],
               ["local", s["feed.filter.local"]],
               ["trending", s["feed.filter.trending"]],
+              ["topics", s["feed.filter.topics"]],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -148,7 +150,9 @@ export default function FeedPage() {
               const visible =
                 filter === "trending"
                   ? [...posts].sort((a, b) => b.supportCount - a.supportCount)
-                  : posts
+                  : filter === "topics"
+                    ? posts.filter((p) => p.hashtags.some((t) => followedTopics.includes(t)))
+                    : posts
               const localPosts = filter === "all" && localState
                 ? visible.filter((p) => p.state === localState)
                 : []
@@ -192,6 +196,22 @@ export default function FeedPage() {
             icon={Inbox}
             title={s["feed.empty.title"]}
             description={s["feed.empty.description"]}
+          />
+        ) : null}
+
+        {/* Following-topics filter with nothing followed yet */}
+        {!initialLoading && !loadError && filter === "topics" && followedTopics.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title={s["feed.topicsEmpty.title"]}
+            description={s["feed.topicsEmpty.description"]}
+            action={
+              <Link href="/explore">
+                <Button variant="outline" size="sm">
+                  {s["feed.topicsEmpty.explore"]}
+                </Button>
+              </Link>
+            }
           />
         ) : null}
 

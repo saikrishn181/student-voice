@@ -91,6 +91,25 @@ const s = {
   "feed.filter.all": "All posts",
   "feed.filter.local": "My state",
   "feed.filter.trending": "Trending",
+  "feed.filter.topics": "Following topics",
+  "feed.topicsEmpty.title": "No topics followed yet",
+  "feed.topicsEmpty.description": "Follow hashtags from Explore to fill this tab with posts you care about.",
+  "feed.topicsEmpty.explore": "Explore topics",
+
+  // ─── Explore ────────────────────────────────────────────────────────────────
+  "explore.title": "Explore",
+  "explore.subtitle": "Trending topics, active regions, and organizations near you.",
+  "explore.trendingTags": "Trending hashtags",
+  "explore.trendingRegions": "Active regions",
+  "explore.recommendedOrgs": "Recommended organizations",
+  "explore.topicMeta": (posts: number, supports: number) =>
+    `${posts} post${posts === 1 ? "" : "s"} · ${supports} supports`,
+  "explore.noTags": "No hashtags trending yet — be the first to post one.",
+  "explore.noRegions": "No regions active yet.",
+  "explore.follow": "Follow",
+  "explore.following": "Following",
+  "explore.verified": "Verified",
+  "explore.noState": "No region set",
   "feed.suggestedOrgs": "Suggested organizations",
   "feed.followers": (n: number) => `${n} followers`,
   "feed.supports": (n: number) => `${n} supports`,
@@ -164,6 +183,7 @@ const s = {
   "profile.noSaved.title": "Nothing saved yet",
   "profile.noSaved.description": "Tap the bookmark icon on any post to keep it here.",
   "profile.noSaved.browse": "Browse the feed",
+  "profile.upcomingEvents": "Upcoming events",
   "profile.createPost": "Create a post",
   "profile.stats.posts": "Posts",
   "profile.private.badge": "Private account",
@@ -432,6 +452,7 @@ const s = {
 
   // ─── Misc ───────────────────────────────────────────────────────────────────
   "nav.feed": "Feed",
+  "nav.explore": "Explore",
   "nav.search": "Search",
   "nav.create": "Create",
   "nav.messages": "Messages",

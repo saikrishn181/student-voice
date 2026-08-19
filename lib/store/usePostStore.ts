@@ -133,6 +133,9 @@ interface PostState {
   // Follow requests involving the current user (sent to me / sent by me).
   followRequests: FollowRequest[]
 
+  // Hashtag topics the current user follows (explore + feed "Following" tab).
+  followedTopics: string[]
+
   // Per-post in-flight guard for the optimistic support toggle.
   supportLocks: Record<string, boolean>
 
@@ -150,6 +153,8 @@ interface PostState {
   loadMore: (currentUserId?: string) => Promise<boolean>
   loadFollowRequests: (currentUserId?: string) => Promise<void>
   sendFollowRequest: (targetId: string, requesterId: string) => Promise<void>
+  loadFollowedTopics: (currentUserId?: string) => Promise<void>
+  toggleFollowTopic: (tag: string, currentUserId: string) => Promise<void>
   // Accepts or rejects an incoming request. Accepting creates the follow row
   // via the DB trigger; we refresh follows + requests afterwards.
   respondToFollowRequest: (requestId: string, accept: boolean) => Promise<void>
@@ -201,6 +206,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
   comments: [],
   follows: [],
   followRequests: [],
+  followedTopics: [],
   supportLocks: {},
   blockedUserIds: [],
   realtimeChannel: null,
@@ -297,6 +303,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
       hasMore: (postRows?.length ?? 0) >= FEED_PAGE_SIZE,
       loadedCount: posts.length,
     })
+    if (currentUserId) void get().loadFollowedTopics(currentUserId)
   },
 
   loadMore: async (currentUserId) => {
@@ -624,6 +631,52 @@ export const usePostStore = create<PostState>()((set, get) => ({
         rowToFollowRequest,
       ),
     })
+  },
+
+  loadFollowedTopics: async (currentUserId) => {
+    const supabase = createSupabaseBrowserClient()
+    if (!currentUserId) {
+      set({ followedTopics: [] })
+      return
+    }
+    const { data } = await supabase
+      .from("followed_topics")
+      .select("tag")
+      .eq("user_id", currentUserId)
+    set({ followedTopics: ((data ?? []) as { tag: string }[]).map((r) => r.tag) })
+  },
+
+  toggleFollowTopic: async (tag, currentUserId) => {
+    const supabase = createSupabaseBrowserClient()
+    const followed = get().followedTopics.includes(tag)
+    // Optimistic toggle; reverted on failure.
+    set((s) => ({
+      followedTopics: followed
+        ? s.followedTopics.filter((t) => t !== tag)
+        : [...s.followedTopics, tag],
+    }))
+    try {
+      if (followed) {
+        const { error } = await supabase
+          .from("followed_topics")
+          .delete()
+          .eq("user_id", currentUserId)
+          .eq("tag", tag)
+        if (error) throw new Error(error.message)
+      } else {
+        const { error } = await supabase
+          .from("followed_topics")
+          .insert({ user_id: currentUserId, tag })
+        if (error) throw new Error(error.message)
+      }
+    } catch (err) {
+      set((s) => ({
+        followedTopics: followed
+          ? [...s.followedTopics, tag]
+          : s.followedTopics.filter((t) => t !== tag),
+      }))
+      throw err instanceof Error ? err : new Error("Could not update topic")
+    }
   },
 
   sendFollowRequest: async (targetId, requesterId) => {

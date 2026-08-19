@@ -10,9 +10,9 @@
 import { useEffect, useMemo, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Lock, MessageSquare, UserPlus, UserCheck, Clock, ShieldCheck } from "lucide-react"
+import { Lock, MessageSquare, UserPlus, UserCheck, Clock, ShieldCheck, CalendarClock, MapPin } from "lucide-react"
 import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
-import { PostCard, VerifiedBadge, FollowButton, FollowersModal } from "@/components/feature"
+import { PostCard, VerifiedBadge, FollowButton, FollowersModal, RsvpButton } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -22,6 +22,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useUserById } from "@/hooks"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
+import { categoryFromHashtags } from "@/lib/utils"
 import type { Post, User } from "@/lib/types"
 import type { FollowsTab } from "@/components/feature/FollowersModal"
 
@@ -29,6 +30,61 @@ interface ProfileStats {
   posts_count: number
   follower_count: number
   following_count: number
+}
+
+interface PostRow {
+  id: string
+  author_id: string
+  text: string
+  media_url: string | null
+  media_type: string | null
+  media_aspect_ratio: number | null
+  state: string | null
+  hashtags: string[] | null
+  support_count: number
+  comment_count: number
+  is_pinned: boolean
+  updated_at: string | null
+  view_count: number
+  scheduled_for: string | null
+  event_at: string | null
+  event_location: string | null
+  poll_json: unknown | null
+  created_at: string
+}
+
+function rowToPost(row: PostRow): Post {
+  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    text: row.text,
+    mediaUrl: row.media_url,
+    mediaType: (row.media_type as Post["mediaType"]) ?? null,
+    mediaAspectRatio: row.media_aspect_ratio,
+    state: row.state ?? "",
+    category: categoryFromHashtags(row.hashtags ?? []),
+    hashtags: row.hashtags ?? [],
+    supportCount: row.support_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+    supportedByCurrentUser: false,
+    isPinned: row.is_pinned,
+    editedAt: row.updated_at ?? undefined,
+    viewCount: row.view_count,
+    scheduledFor: row.scheduled_for ?? undefined,
+    eventAt: row.event_at ?? undefined,
+    eventLocation: row.event_location ?? undefined,
+    poll:
+      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
+        ? {
+            question: rawPoll.question ?? "",
+            options: rawPoll.options,
+            endsAt: rawPoll.ends_at ?? undefined,
+          }
+        : null,
+    savedByCurrentUser: false,
+  }
 }
 
 export default function PublicProfilePage({
@@ -96,9 +152,42 @@ export default function PublicProfilePage({
   }, [params.id, currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const theirPosts = useMemo(
-    () => posts.filter((p) => p.authorId === params.id),
+    () =>
+      posts
+        .filter((p) => p.authorId === params.id)
+        // Pinned posts first, then newest.
+        .sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || b.createdAt.localeCompare(a.createdAt)),
     [posts, params.id],
   )
+
+  // Upcoming events from this org (only org profiles).
+  const [upcomingEvents, setUpcomingEvents] = useState<Post[]>([])
+  const isOrg = targetUser?.accountType === "organization"
+
+  useEffect(() => {
+    if (!isOrg) {
+      setUpcomingEvents([])
+      return
+    }
+    let cancelled = false
+    const supabase = createSupabaseBrowserClient()
+    supabase
+      .from("posts")
+      .select("*")
+      .eq("author_id", params.id)
+      .not("event_at", "is", null)
+      .gte("event_at", new Date().toISOString())
+      .order("event_at", { ascending: true })
+      .limit(10)
+      .then(({ data }) => {
+        if (cancelled) return
+        const rows = (data ?? []) as unknown as PostRow[]
+        setUpcomingEvents(rows.map(rowToPost))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [params.id, isOrg])
 
   const handleMessage = async () => {
     if (!currentUser) {
@@ -243,22 +332,64 @@ export default function PublicProfilePage({
             </p>
           </Card>
         ) : (
-          <div>
-            <h2 className="mb-3 text-h4">{s["profile.yourPosts"]}</h2>
-            {theirPosts.length === 0 ? (
-              <EmptyState
-                icon={ShieldCheck}
-                title={s["profile.noPosts.title"]}
-                description={s["profile.noPosts.description"]}
-              />
-            ) : (
-              <div className="flex flex-col gap-4">
-                {theirPosts.map((post) => (
-                  <PostCard key={post.id} post={post} showFollow={false} />
-                ))}
+          <>
+            {/* Upcoming events — organizations only */}
+            {isOrg && upcomingEvents.length > 0 ? (
+              <div>
+                <h2 className="mb-3 flex items-center gap-1.5 text-h4">
+                  <CalendarClock size={18} className="text-accent-500" aria-hidden />
+                  {s["profile.upcomingEvents"]}
+                </h2>
+                <div className="flex flex-col gap-4">
+                  {upcomingEvents.map((event) => (
+                    <Card key={event.id} className="flex flex-col gap-3">
+                      <Link
+                        href={`/post/${event.id}`}
+                        className="break-words text-body font-medium text-slate-800 hover:underline"
+                      >
+                        {event.text}
+                      </Link>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarClock size={14} className="text-amber-600" aria-hidden />
+                          {new Date(event.eventAt!).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                        {event.eventLocation ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin size={14} className="text-amber-600" aria-hidden />
+                            {event.eventLocation}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div>
+                        <RsvpButton postId={event.id} />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+            ) : null}
+
+            <div>
+              <h2 className="mb-3 text-h4">{s["profile.yourPosts"]}</h2>
+              {theirPosts.length === 0 ? (
+                <EmptyState
+                  icon={ShieldCheck}
+                  title={s["profile.noPosts.title"]}
+                  description={s["profile.noPosts.description"]}
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {theirPosts.map((post) => (
+                    <PostCard key={post.id} post={post} showFollow={false} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
       <FollowersModal

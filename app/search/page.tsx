@@ -3,7 +3,8 @@
 // Search page: server-backed search straight from Supabase — posts matched on
 // text/state (or a #tag), orgs matched on name/bio. Debounced, with a state
 // filter chip bar and recent searches.
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Search as SearchIcon, X } from "lucide-react"
 import { Input, Card, EmptyState, Spinner } from "@/components/ui"
 import { PostCard } from "@/components/feature"
@@ -86,10 +87,11 @@ interface Results {
   orgs: OrgRow[]
 }
 
-export default function SearchPage() {
+function SearchPage() {
+  const searchParams = useSearchParams()
   const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const { recent, pushRecent, clearRecent } = useSearchStore()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(searchParams.get("q") ?? "")
   const [stateFilter, setStateFilter] = useState("")
   const debouncedQuery = useDebounce(query, 300)
 
@@ -293,5 +295,13 @@ export default function SearchPage() {
         ) : null}
       </div>
     </div>
+  )
+}
+// useSearchParams requires a Suspense boundary during static generation.
+export default function SearchPageBoundary() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPage />
+    </Suspense>
   )
 }
