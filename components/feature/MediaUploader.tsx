@@ -2,10 +2,10 @@
 
 // MediaUploader: drag-and-drop / file-picker for post media.
 //  - Accepts only image/* and video/* (rejects others + max 50MB with Toast).
-//  - Shows a live preview via MediaDisplay's shared aspect-ratio logic.
+//  - Up to 4 photos OR a single video can be selected (never mixed).
+//  - Shows live previews via MediaDisplay's shared aspect-ratio logic.
 //  - The actual upload happens on form submit (single flight, no orphans);
 //    blob URLs are strictly preview and are revoked on remove/replace/unmount.
-//  - Allows removing the selected file / picking a replacement.
 import { useEffect, useRef, useState } from "react"
 import { ImagePlus, X } from "lucide-react"
 import { Button } from "@/components/ui/Button"
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { MediaDisplay } from "./MediaDisplay"
 
 const MAX_FILE_SIZE_MB = 50
+const MAX_PHOTOS = 4
 
 export interface PickedMedia {
   url: string
@@ -23,75 +24,102 @@ export interface PickedMedia {
 }
 
 interface MediaUploaderProps {
-  value: PickedMedia | null
-  onChange: (media: PickedMedia | null) => void
+  value: PickedMedia[]
+  onChange: (media: PickedMedia[]) => void
 }
 
 export function MediaUploader({ value, onChange }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const lastBlobRef = useRef<string | null>(null)
+  const blobRefs = useRef<string[]>([])
   const showToast = useToastStore((s) => s.show)
   const [dragging, setDragging] = useState(false)
 
-  // Replaces the previous preview with a new one, revoking the old blob URL
-  // so it can never leak.
-  const replaceBlob = (url: string | null) => {
-    if (lastBlobRef.current === url) return
-    if (lastBlobRef.current) URL.revokeObjectURL(lastBlobRef.current)
-    lastBlobRef.current = url
+  // Tracks every blob URL this picker created so they can all be revoked.
+  const rememberBlob = (url: string) => {
+    if (!blobRefs.current.includes(url)) blobRefs.current.push(url)
   }
 
   // On unmount (user navigates away) release every object URL this picker
   // created, so memory is freed even if the form was never submitted.
   useEffect(() => {
     return () => {
-      if (lastBlobRef.current) URL.revokeObjectURL(lastBlobRef.current)
-      lastBlobRef.current = null
+      blobRefs.current.forEach((u) => URL.revokeObjectURL(u))
+      blobRefs.current = []
     }
   }, [])
 
-  const handleFile = (file: File | undefined | null) => {
-    if (!file) return
+  const addFiles = (files: File[]) => {
+    const picked: PickedMedia[] = []
+    for (const file of files) {
+      if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+        showToast(s["validation.fileType"], "error")
+        return
+      }
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        showToast(s["validation.fileSize"], "error")
+        return
+      }
+      picked.push({
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith("video/") ? "video" : "photo",
+        file,
+      })
+    }
+    if (picked.length === 0) return
 
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      showToast(s["validation.fileType"], "error")
+    const hasVideo = value.some((m) => m.type === "video") || picked.some((m) => m.type === "video")
+    if (hasVideo) {
+      // Video is always single. Replacing it clears the rest.
+      picked.forEach((m) => URL.revokeObjectURL(m.url))
+      onChange(picked.slice(0, 1))
+      picked.slice(0, 1).forEach(rememberBlob)
       return
     }
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      showToast(s["validation.fileSize"], "error")
-      return
+    const combined = [...value, ...picked].slice(0, MAX_PHOTOS)
+    if (combined.length < value.length + picked.length) {
+      showToast(s["media.uploader.maxPhotos"](MAX_PHOTOS), "error")
     }
-
-    // Preview only — the real upload runs once on publish.
-    const url = URL.createObjectURL(file)
-    replaceBlob(url)
-    const kind = file.type.startsWith("video/") ? "video" : "photo"
-    onChange({ url, type: kind, file })
+    picked.forEach(rememberBlob)
+    onChange(combined)
   }
 
-  const handleRemove = () => {
-    replaceBlob(null)
-    onChange(null)
+  const handleRemove = (index: number) => {
+    const next = value.filter((_, i) => i !== index)
+    onChange(next)
   }
+
+  const hasVideo = value.some((m) => m.type === "video")
 
   return (
-    <div className="flex flex-col gap-2">
-      {value ? (
-        <div className="relative overflow-hidden rounded-card border border-slate-200 bg-slate-100">
-          <MediaDisplay mediaUrl={value.url} mediaType={value.type} />
-          {value.url.startsWith("blob:") ? (
-            <span className="absolute bottom-2 right-2 rounded-pill bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
-              {s["media.uploader.previewOnly"]}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={handleRemove}
-            aria-label={s["media.uploader.remove"]}
-            className="transition-app absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900"
-          >
-            <X size={18} />
-          </button>
+    <div className="flex flex-col gap-3">
+      {value.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3">
+          {value.map((media, index) => (
+            <div
+              key={media.url}
+              className="relative overflow-hidden rounded-card border border-slate-200 bg-slate-100"
+            >
+              <MediaDisplay
+                mediaUrl={media.url}
+                mediaType={media.type}
+                knownAspectRatio={value.length === 1 ? undefined : 4 / 3}
+                className={value.length > 1 ? "max-h-60" : undefined}
+              />
+              {media.url.startsWith("blob:") ? (
+                <span className="absolute bottom-2 right-2 rounded-pill bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+                  {s["media.uploader.previewOnly"]}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => handleRemove(index)}
+                aria-label={s["media.uploader.remove"]}
+                className="transition-app absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ))}
         </div>
       ) : (
         <button
@@ -105,7 +133,7 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
           onDrop={(e) => {
             e.preventDefault()
             setDragging(false)
-            handleFile(e.dataTransfer.files?.[0])
+            addFiles(Array.from(e.dataTransfer.files ?? []))
           }}
           className={cn(
             "flex min-h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center",
@@ -129,18 +157,26 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
         ref={inputRef}
         type="file"
         accept="image/*,video/*"
+        multiple={!hasVideo}
         className="hidden"
         aria-hidden
         onChange={(e) => {
-          handleFile(e.target.files?.[0])
+          addFiles(Array.from(e.target.files ?? []))
           e.target.value = ""
         }}
       />
 
-      {value ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-          {s["createPost.replaceFile"]}
-        </Button>
+      {value.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+          >
+            {hasVideo ? s["createPost.replaceFile"] : s["media.uploader.addMore"](MAX_PHOTOS - value.length)}
+          </Button>
+        </div>
       ) : (
         <span className="sr-only">{s["media.uploader.label"]}</span>
       )}

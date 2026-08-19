@@ -454,3 +454,63 @@ $$;
 -- show unread badges. Existing rows start with NULL = "all read".
 alter table public.conversation_participants
   add column if not exists last_read_at timestamptz;
+
+-- ============================================================
+-- POST FEATURES: pinning, edit tracking, views, scheduling,
+-- events, polls, bookmarks, RSVPs
+-- ============================================================
+alter table public.posts
+  add column if not exists is_pinned boolean not null default false;
+alter table public.posts
+  add column if not exists updated_at timestamptz;
+alter table public.posts
+  add column if not exists view_count integer not null default 0;
+alter table public.posts
+  add column if not exists scheduled_for timestamptz;
+alter table public.posts
+  add column if not exists event_at timestamptz;
+alter table public.posts
+  add column if not exists event_location text;
+alter table public.posts
+  add column if not exists poll_json jsonb;
+
+create table if not exists public.poll_votes (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  option_index integer not null check (option_index >= 0),
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+alter table public.poll_votes enable row level security;
+drop policy if exists "Poll votes are readable" on public.poll_votes;
+create policy "Poll votes are readable" on public.poll_votes for select using (true);
+drop policy if exists "Users vote on polls" on public.poll_votes;
+create policy "Users vote on polls" on public.poll_votes for insert with check (auth.uid() = user_id);
+
+create table if not exists public.post_saves (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+alter table public.post_saves enable row level security;
+drop policy if exists "Saves are readable" on public.post_saves;
+create policy "Saves are readable" on public.post_saves for select using (true);
+drop policy if exists "Users manage their saves" on public.post_saves;
+create policy "Users manage their saves" on public.post_saves for insert with check (auth.uid() = user_id);
+drop policy if exists "Users delete their saves" on public.post_saves;
+create policy "Users delete their saves" on public.post_saves for delete using (auth.uid() = user_id);
+
+create table if not exists public.post_rsvps (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+alter table public.post_rsvps enable row level security;
+drop policy if exists "RSVPs are readable" on public.post_rsvps;
+create policy "RSVPs are readable" on public.post_rsvps for select using (true);
+drop policy if exists "Users manage their RSVPs" on public.post_rsvps;
+create policy "Users manage their RSVPs" on public.post_rsvps for insert with check (auth.uid() = user_id);
+drop policy if exists "Users delete their RSVPs" on public.post_rsvps;
+create policy "Users delete their RSVPs" on public.post_rsvps for delete using (auth.uid() = user_id);

@@ -8,7 +8,25 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Flag, ShieldOff, MessageCircle, MoreHorizontal, Pencil, Trash2, MessageSquare } from "lucide-react"
+import {
+  Flag,
+  ShieldOff,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  MessageSquare,
+  Pin,
+  PinOff,
+  Bookmark,
+  BookmarkCheck,
+  Share2,
+  Eye,
+  MapPin,
+  CalendarClock,
+  CalendarCheck,
+  CalendarX,
+} from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
@@ -22,6 +40,8 @@ import { MediaDisplay } from "./MediaDisplay"
 import { VerifiedBadge, RegionTag } from "./Badges"
 import { SupportButton } from "./SupportButton"
 import { FollowButton } from "./FollowButton"
+import { PollDisplay } from "./PollDisplay"
+import { RsvpButton } from "./RsvpButton"
 
 const REPORT_OPTIONS: { value: ReportReason; label: string }[] = [
   { value: "spam", label: "Spam or scam" },
@@ -47,6 +67,8 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const deletePost = usePostStore((s) => s.deletePost)
   const blockUser = usePostStore((s) => s.blockUser)
   const reportPost = usePostStore((s) => s.reportPost)
+  const toggleSave = usePostStore((s) => s.toggleSave)
+  const setPostPinned = usePostStore((s) => s.setPostPinned)
   const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const showToast = useToastStore((s) => s.show)
 
@@ -59,6 +81,8 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const [reporting, setReporting] = useState(false)
   const [blockOpen, setBlockOpen] = useState(false)
   const [blocking, setBlocking] = useState(false)
+  const [pinning, setPinning] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const isOwnPost = currentUser?.id === post.authorId
   const isBlocked = Boolean(author?.id && blockedUserIds.includes(author.id))
@@ -124,8 +148,75 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     }
   }
 
+  const isOrgAuthor = author?.accountType === "organization"
+  const isEvent = Boolean(post.eventAt)
+
+  // Share via the native share sheet when available, else copy the link.
+  const handleShare = async () => {
+    setMenuOpen(false)
+    const url = `${window.location.origin}/post/${post.id}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: s["share.title"], text: post.text.slice(0, 140), url })
+        return
+      } catch {
+        // User cancelled the sheet — fall through to copy.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast(s["share.copied"], "success")
+    } catch {
+      showToast(s["share.error"], "error")
+    }
+  }
+
+  const handleToggleSave = async () => {
+    if (!currentUser) {
+      showToast(s["validation.loginRequired"], "error")
+      return
+    }
+    if (saving) return
+    setSaving(true)
+    try {
+      await toggleSave(post.id, currentUser.id)
+      showToast(
+        post.savedByCurrentUser ? s["post.savedRemoved"] : s["post.savedAdded"],
+        "success",
+      )
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleTogglePin = async () => {
+    if (pinning) return
+    setPinning(true)
+    setMenuOpen(false)
+    try {
+      await setPostPinned(post.id, !post.isPinned)
+      showToast(post.isPinned ? s["post.unpinned"] : s["post.pinned"], "success")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+    } finally {
+      setPinning(false)
+    }
+  }
+
   const meta = (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {post.isPinned ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-accent-200 bg-accent-50 px-2.5 py-0.5 text-xs font-semibold text-accent-700">
+          <Pin size={11} aria-hidden /> {s["post.pinnedBadge"]}
+        </span>
+      ) : null}
+      {isEvent ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+          <CalendarClock size={11} aria-hidden /> {s["post.eventBadge"]}
+        </span>
+      ) : null}
       <RegionTag state={post.state} />
       {post.hashtags.length > 0 &&
         post.hashtags.map((tag) => (
@@ -141,6 +232,20 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       <span className="text-body-sm text-slate-400" title={new Date(post.createdAt).toLocaleString()}>
         {timeAgo(post.createdAt)}
       </span>
+      {post.editedAt ? (
+        <>
+          <span className="text-body-sm text-slate-400">·</span>
+          <span className="text-body-sm text-slate-400">{s["post.edited"]}</span>
+        </>
+      ) : null}
+      {post.viewCount > 0 ? (
+        <>
+          <span className="text-body-sm text-slate-400">·</span>
+          <span className="inline-flex items-center gap-1 text-body-sm text-slate-400">
+            <Eye size={13} aria-hidden /> {post.viewCount}
+          </span>
+        </>
+      ) : null}
     </div>
   )
 
@@ -208,6 +313,28 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
                         <Pencil size={16} className="text-slate-400" />
                         {s["post.edit"]}
                       </button>
+                      {isOrgAuthor ? (
+                        <button
+                          type="button"
+                          onClick={handleTogglePin}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          {post.isPinned ? (
+                            <PinOff size={16} className="text-slate-400" />
+                          ) : (
+                            <Pin size={16} className="text-slate-400" />
+                          )}
+                          {post.isPinned ? s["post.unpin"] : s["post.pin"]}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Share2 size={16} className="text-slate-400" />
+                        {s["post.share"]}
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -247,6 +374,14 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
                       ) : null}
                       <button
                         type="button"
+                        onClick={handleShare}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Share2 size={16} className="text-slate-400" />
+                        {s["post.share"]}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setMenuOpen(false)
                           setReportOpen(true)
@@ -284,6 +419,31 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
         <p className="break-words text-body text-slate-800">{post.text}</p>
       ) : null}
 
+      {/* Event card */}
+      {isEvent ? (
+        <div className="flex flex-col gap-2 rounded-card border border-amber-200 bg-amber-50/60 p-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-slate-800">
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarClock size={15} className="text-amber-600" aria-hidden />
+              {new Date(post.eventAt!).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </span>
+            {post.eventLocation ? (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin size={15} className="text-amber-600" aria-hidden />
+                {post.eventLocation}
+              </span>
+            ) : null}
+          </div>
+          <RsvpButton postId={post.id} />
+        </div>
+      ) : null}
+
+      {/* Poll */}
+      {post.poll ? <PollDisplay postId={post.id} poll={post.poll} /> : null}
+
       {/* Media */}
       {post.mediaUrl && post.mediaType ? (
         <Link href={`/post/${post.id}`} className="block">
@@ -305,6 +465,32 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
           <MessageCircle size={18} aria-hidden />
           {post.commentCount}
         </Link>
+        <button
+          type="button"
+          onClick={handleToggleSave}
+          aria-pressed={post.savedByCurrentUser}
+          aria-label={post.savedByCurrentUser ? s["post.unsave"] : s["post.save"]}
+          className={cn(
+            "transition-app inline-flex h-11 min-h-11 items-center gap-1.5 rounded-card px-3 text-sm font-medium sm:h-9 sm:min-h-0",
+            post.savedByCurrentUser
+              ? "text-primary-600 hover:bg-primary-50"
+              : "text-slate-500 hover:bg-slate-100 hover:text-slate-800",
+          )}
+        >
+          {post.savedByCurrentUser ? (
+            <BookmarkCheck size={18} aria-hidden />
+          ) : (
+            <Bookmark size={18} aria-hidden />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label={s["post.share"]}
+          className="transition-app inline-flex h-11 min-h-11 items-center gap-1.5 rounded-card px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:h-9 sm:min-h-0"
+        >
+          <Share2 size={18} aria-hidden />
+        </button>
       </div>
 
       {/* Delete confirmation */}

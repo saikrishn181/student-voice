@@ -82,6 +82,13 @@ export interface Notification {
 
 export type MediaType = "photo" | "video" | null
 
+// Embedded poll on a post (defined in posts.poll_json).
+export interface Poll {
+  question: string
+  options: string[]
+  endsAt?: string // ISO
+}
+
 export interface Post {
   id: string
   authorId: string
@@ -98,6 +105,20 @@ export interface Post {
   commentCount: number
   createdAt: string // ISO
   supportedByCurrentUser: boolean
+  // Organizations pin their own posts; shows a badge.
+  isPinned: boolean
+  // Set when the post was edited (posts.updated_at).
+  editedAt?: string
+  // Total views; incremented once per post detail visit.
+  viewCount: number
+  // Future publish time for scheduled posts (orgs).
+  scheduledFor?: string
+  // Event posts: start time + location (orgs).
+  eventAt?: string
+  eventLocation?: string
+  // Embedded poll (question + options). Votes live in poll_votes.
+  poll?: Poll | null
+  savedByCurrentUser: boolean
 }
 
 export interface Comment {

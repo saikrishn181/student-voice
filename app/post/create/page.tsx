@@ -1,11 +1,12 @@
 "use client"
 
 // Create post: text (required), hashtags (instead of a fixed category), optional
-// media. State is auto-filled from the current user's profile (not editable) so
-// the post lands in their home state feed automatically.
+// media (up to 4 photos or 1 video). Organizations additionally get event
+// fields, scheduling, and embedded polls. State is auto-filled from the current
+// user's profile (not editable) so the post lands in their home state feed.
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Send } from "lucide-react"
+import { BarChart3, CalendarClock, Send, Trash2, X } from "lucide-react"
 import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -13,8 +14,11 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
-import { parseHashtags } from "@/lib/utils"
+import { cn, parseHashtags } from "@/lib/utils"
 import s from "@/lib/strings"
+import type { Poll } from "@/lib/types"
+
+const MAX_IMAGES = 4
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -24,20 +28,46 @@ export default function CreatePostPage() {
 
   const [text, setText] = useState("")
   const [hashtagInput, setHashtagInput] = useState("")
-  const [media, setMedia] = useState<PickedMedia | null>(null)
+  const [media, setMedia] = useState<PickedMedia[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [textError, setTextError] = useState("")
   const [tagError, setTagError] = useState("")
 
+  // Poll editor (orgs only).
+  const [pollEnabled, setPollEnabled] = useState(false)
+  const [pollQuestion, setPollQuestion] = useState("")
+  const [pollOptions, setPollOptions] = useState(["", ""])
+  const [pollError, setPollError] = useState("")
+
+  // Event fields (orgs only).
+  const [eventEnabled, setEventEnabled] = useState(false)
+  const [eventAt, setEventAt] = useState("")
+  const [eventLocation, setEventLocation] = useState("")
+
+  // Scheduling (orgs only).
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduledFor, setScheduledFor] = useState("")
+
   const state = currentUser?.state ?? ""
+  const isOrg = currentUser?.accountType === "organization"
 
   // Keep hashtag preview live as the user types.
   const previewTags = parseHashtags(hashtagInput)
+
+  useEffect(() => {
+    if (!currentUser) return
+    if (currentUser.accountType === "organization") return
+    // Students never see the poll/event/schedule panels.
+    setPollEnabled(false)
+    setEventEnabled(false)
+    setScheduleEnabled(false)
+  }, [currentUser])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setTextError("")
     setTagError("")
+    setPollError("")
 
     if (!currentUser) {
       showToast(s["validation.loginRequired"], "error")
@@ -62,20 +92,69 @@ export default function CreatePostPage() {
       return
     }
 
-    setSubmitting(true)
-    let mediaUrl: string | null = null
-    let mediaAspectRatio: number | null = null
-    if (media) {
-      const upload = await uploadPostMedia(media.file)
-      if (!upload.ok) {
-        setSubmitting(false)
-        showToast(upload.error ?? "Could not upload media. Please try again.", "error")
+    let poll: Poll | null = null
+    if (pollEnabled) {
+      const options = pollOptions.map((o) => o.trim()).filter(Boolean)
+      if (!pollQuestion.trim() || options.length < 2) {
+        setPollError(s["createPost.pollError"])
         return
       }
-      mediaUrl = upload.url ?? null
-      mediaAspectRatio = upload.aspectRatio ?? null
-      // Blob URLs are only for preview — release ours once the file is stored.
-      if (media.url.startsWith("blob:")) URL.revokeObjectURL(media.url)
+      poll = { question: pollQuestion.trim(), options }
+    }
+
+    let eventAtISO: string | null = null
+    if (eventEnabled) {
+      if (!eventAt) {
+        showToast(s["createPost.eventError"], "error")
+        return
+      }
+      eventAtISO = new Date(eventAt).toISOString()
+    }
+
+    let scheduledForISO: string | null = null
+    if (scheduleEnabled) {
+      if (!scheduledFor) {
+        showToast(s["createPost.scheduleError"], "error")
+        return
+      }
+      const when = new Date(scheduledFor)
+      if (when.getTime() <= Date.now()) {
+        showToast(s["createPost.schedulePast"], "error")
+        return
+      }
+      scheduledForISO = when.toISOString()
+    }
+
+    setSubmitting(true)
+
+    // Upload every picked file; join image URLs with a space (video is single).
+    let mediaUrl: string | null = null
+    let mediaType: PickedMedia["type"] | null = null
+    let mediaAspectRatio: number | null = null
+    try {
+      const uploads: string[] = []
+      for (const picked of media) {
+        const upload = await uploadPostMedia(picked.file)
+        if (!upload.ok) {
+          showToast(upload.error ?? "Could not upload media. Please try again.", "error")
+          setSubmitting(false)
+          return
+        }
+        uploads.push(upload.url ?? "")
+        mediaType = picked.type
+        if (!mediaAspectRatio && upload.aspectRatio) mediaAspectRatio = upload.aspectRatio
+        if (picked.url.startsWith("blob:")) URL.revokeObjectURL(picked.url)
+      }
+      if (uploads.length > 0) {
+        mediaUrl = uploads.filter(Boolean).join(" ")
+        if (uploads.length > MAX_IMAGES) {
+          showToast(s["media.uploader.maxPhotos"](MAX_IMAGES), "error")
+        }
+      }
+    } catch (err) {
+      setSubmitting(false)
+      showToast(err instanceof Error ? err.message : "Could not upload media. Please try again.", "error")
+      return
     }
 
     try {
@@ -83,10 +162,14 @@ export default function CreatePostPage() {
         authorId: currentUser.id,
         text: text.trim(),
         mediaUrl,
-        mediaType: media?.type ?? null,
+        mediaType: mediaType ?? null,
         mediaAspectRatio,
         state,
         hashtags: previewTags.tags,
+        scheduledFor: scheduledForISO,
+        eventAt: eventAtISO,
+        eventLocation: eventLocation.trim() || null,
+        poll,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
@@ -94,6 +177,25 @@ export default function CreatePostPage() {
       setSubmitting(false)
       showToast(err instanceof Error ? err.message : "Could not publish post. Please try again.", "error")
     }
+  }
+
+  const updatePollOption = (index: number, value: string) => {
+    setPollOptions((prev) => prev.map((o, i) => (i === index ? value : o)))
+  }
+
+  const addPollOption = () => {
+    if (pollOptions.length >= 4) return
+    setPollOptions((prev) => [...prev, ""])
+  }
+
+  const removePollOption = (index: number) => {
+    if (pollOptions.length <= 2) return
+    setPollOptions((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const toggleSection = (setter: (v: boolean) => void, current: boolean) => {
+    setter(!current)
+    setPollError("")
   }
 
   return (
@@ -150,7 +252,154 @@ export default function CreatePostPage() {
         <Card className="flex flex-col gap-3">
           <h2 className="text-h4">{s["createPost.mediaHeading"]}</h2>
           <MediaUploader value={media} onChange={setMedia} />
+          {!media.some((m) => m.type === "video") ? (
+            <p className="text-body-sm text-slate-500">{s["createPost.multiImageHint"](MAX_IMAGES)}</p>
+          ) : null}
         </Card>
+
+        {isOrg ? (
+          <>
+            <Card className="flex flex-col gap-4">
+              <h2 className="text-h4">{s["createPost.advancedHeading"]}</h2>
+
+              {/* Poll */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(setPollEnabled, pollEnabled)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-800"
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded border transition-app",
+                      pollEnabled ? "border-primary-600 bg-primary-600" : "border-slate-300 bg-white",
+                    )}
+                  >
+                    {pollEnabled ? <X size={12} className="text-white" /> : <BarChart3 size={12} className="text-slate-400" />}
+                  </span>
+                  {s["createPost.pollToggle"]}
+                </button>
+                {pollEnabled ? (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <Input
+                      label={s["createPost.pollQuestion"]}
+                      name="poll-question"
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      maxLength={200}
+                      placeholder={s["createPost.pollQuestionPlaceholder"]}
+                      error={pollError || undefined}
+                    />
+                    <div className="flex flex-col gap-2">
+                      {pollOptions.map((option, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Input
+                            label={s["createPost.pollOption"](i + 1)}
+                            name={`poll-option-${i}`}
+                            value={option}
+                            onChange={(e) => updatePollOption(i, e.target.value)}
+                            maxLength={120}
+                            placeholder={s["createPost.pollOptionPlaceholder"](i + 1)}
+                          />
+                          {pollOptions.length > 2 ? (
+                            <button
+                              type="button"
+                              onClick={() => removePollOption(i)}
+                              aria-label={s["createPost.pollRemoveOption"]}
+                              className="mt-6 shrink-0 rounded-card p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                    {pollOptions.length < 4 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="self-start"
+                        onClick={addPollOption}
+                      >
+                        {s["createPost.pollAddOption"]}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Event */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(setEventEnabled, eventEnabled)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-800"
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded border transition-app",
+                      eventEnabled ? "border-primary-600 bg-primary-600" : "border-slate-300 bg-white",
+                    )}
+                  >
+                    <CalendarClock size={12} className={eventEnabled ? "text-white" : "text-slate-400"} />
+                  </span>
+                  {s["createPost.eventToggle"]}
+                </button>
+                {eventEnabled ? (
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Input
+                      label={s["createPost.eventAt"]}
+                      name="event-at"
+                      type="datetime-local"
+                      value={eventAt}
+                      onChange={(e) => setEventAt(e.target.value)}
+                    />
+                    <Input
+                      label={s["createPost.eventLocation"]}
+                      name="event-location"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      maxLength={200}
+                      placeholder={s["createPost.eventLocationPlaceholder"]}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Schedule */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(setScheduleEnabled, scheduleEnabled)}
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-800"
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded border transition-app",
+                      scheduleEnabled ? "border-primary-600 bg-primary-600" : "border-slate-300 bg-white",
+                    )}
+                  >
+                    <CalendarClock size={12} className={scheduleEnabled ? "text-white" : "text-slate-400"} />
+                  </span>
+                  {s["createPost.scheduleToggle"]}
+                </button>
+                {scheduleEnabled ? (
+                  <div className="mt-3">
+                    <Input
+                      label={s["createPost.scheduleAt"]}
+                      name="scheduled-for"
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                    />
+                    <p className="mt-1 text-body-sm text-slate-500">{s["createPost.scheduleHint"]}</p>
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          </>
+        ) : null}
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
           <Send size={18} aria-hidden />

@@ -138,11 +138,19 @@ create table if not exists public.posts (
   hashtags text[] not null default '{}',
   support_count integer not null default 0,
   comment_count integer not null default 0,
+  is_pinned boolean not null default false,
+  updated_at timestamptz,
+  view_count integer not null default 0,
+  scheduled_for timestamptz,
+  event_at timestamptz,
+  event_location text,
+  poll_json jsonb,
   created_at timestamptz not null default now()
 );
 
 create index if not exists posts_author_id_idx on public.posts (author_id);
 create index if not exists posts_created_at_idx on public.posts (created_at desc);
+create index if not exists posts_scheduled_for_idx on public.posts (scheduled_for);
 
 alter table public.posts enable row level security;
 
@@ -169,6 +177,69 @@ create policy "Users can update their own posts"
 drop policy if exists "Users can delete their own posts" on public.posts;
 create policy "Users can delete their own posts"
   on public.posts for delete using (auth.uid() = author_id);
+
+-- ============================================================
+-- POST ENGAGEMENT: poll votes, bookmarks, event RSVPs
+-- ============================================================
+create table if not exists public.poll_votes (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  option_index integer not null check (option_index >= 0),
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+
+alter table public.poll_votes enable row level security;
+
+drop policy if exists "Poll votes are readable" on public.poll_votes;
+create policy "Poll votes are readable"
+  on public.poll_votes for select using (true);
+
+drop policy if exists "Users vote on polls" on public.poll_votes;
+create policy "Users vote on polls"
+  on public.poll_votes for insert with check (auth.uid() = user_id);
+
+create table if not exists public.post_saves (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+
+alter table public.post_saves enable row level security;
+
+drop policy if exists "Saves are readable" on public.post_saves;
+create policy "Saves are readable"
+  on public.post_saves for select using (true);
+
+drop policy if exists "Users manage their saves" on public.post_saves;
+create policy "Users manage their saves"
+  on public.post_saves for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users delete their saves" on public.post_saves;
+create policy "Users delete their saves"
+  on public.post_saves for delete using (auth.uid() = user_id);
+
+create table if not exists public.post_rsvps (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  post_id uuid not null references public.posts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, post_id)
+);
+
+alter table public.post_rsvps enable row level security;
+
+drop policy if exists "RSVPs are readable" on public.post_rsvps;
+create policy "RSVPs are readable"
+  on public.post_rsvps for select using (true);
+
+drop policy if exists "Users manage their RSVPs" on public.post_rsvps;
+create policy "Users manage their RSVPs"
+  on public.post_rsvps for insert with check (auth.uid() = user_id);
+
+drop policy if exists "Users delete their RSVPs" on public.post_rsvps;
+create policy "Users delete their RSVPs"
+  on public.post_rsvps for delete using (auth.uid() = user_id);
 
 -- ============================================================
 -- SUPPORTS (heart toggles)

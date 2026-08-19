@@ -84,6 +84,33 @@ export default function PostDetailPage({
     }
   }, [params.id, post, posts.length])
 
+  // Count this visit: bump view_count once per mount (RLS requires a signed-in
+  // user to update, so anonymous visits simply don't count).
+  useEffect(() => {
+    if (!post || !currentUser) return
+    let cancelled = false
+    const supabase = createSupabaseBrowserClient()
+    ;(async () => {
+      const { data: row } = await supabase
+        .from("posts")
+        .select("view_count")
+        .eq("id", post.id)
+        .maybeSingle()
+      if (cancelled || !row) return
+      const next = ((row as { view_count?: number }).view_count ?? 0) + 1
+      await supabase.from("posts").update({ view_count: next }).eq("id", post.id)
+      if (!cancelled) {
+        usePostStore.setState((s) => ({
+          posts: s.posts.map((p) => (p.id === post.id ? { ...p, viewCount: next } : p)),
+        }))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id])
+
   if (lookingUp) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">

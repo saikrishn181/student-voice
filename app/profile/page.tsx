@@ -1,29 +1,125 @@
 "use client"
 
 // Profile page: shows the current user's profile with their info, stats, and
-// recent posts. Account management (edit profile, follow requests, blocked
-// users, login method, log out) lives on the /settings page.
-import { useEffect, useState } from "react"
-import { User, Inbox, Settings, Lock } from "lucide-react"
+// recent posts. A "Saved" tab lists bookmarked posts. Account management (edit
+// profile, follow requests, blocked users, login method, log out) lives on the
+// /settings page.
+import { useCallback, useEffect, useState } from "react"
+import { User, Inbox, Settings, Lock, Bookmark } from "lucide-react"
 import Link from "next/link"
-import { Card, Avatar, EmptyState, Skeleton } from "@/components/ui"
+import { Card, Avatar, EmptyState, Skeleton, Spinner } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { PostCard, FollowersModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
 import s from "@/lib/strings"
+import { cn } from "@/lib/utils"
+import { categoryFromHashtags } from "@/lib/utils"
 import type { FollowsTab } from "@/components/feature/FollowersModal"
+import type { Post } from "@/lib/types"
+
+type FeedTab = "posts" | "saved"
+
+interface PostRow {
+  id: string
+  author_id: string
+  text: string
+  media_url: string | null
+  media_type: string | null
+  media_aspect_ratio: number | null
+  state: string | null
+  hashtags: string[] | null
+  support_count: number
+  comment_count: number
+  is_pinned: boolean
+  updated_at: string | null
+  view_count: number
+  scheduled_for: string | null
+  event_at: string | null
+  event_location: string | null
+  poll_json: unknown | null
+  created_at: string
+}
+
+function rowToPost(row: PostRow): Post {
+  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    text: row.text,
+    mediaUrl: row.media_url,
+    mediaType: (row.media_type as Post["mediaType"]) ?? null,
+    mediaAspectRatio: row.media_aspect_ratio,
+    state: row.state ?? "",
+    category: categoryFromHashtags(row.hashtags ?? []),
+    hashtags: row.hashtags ?? [],
+    supportCount: row.support_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at,
+    supportedByCurrentUser: false,
+    isPinned: row.is_pinned,
+    editedAt: row.updated_at ?? undefined,
+    viewCount: row.view_count,
+    scheduledFor: row.scheduled_for ?? undefined,
+    eventAt: row.event_at ?? undefined,
+    eventLocation: row.event_location ?? undefined,
+    poll:
+      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
+        ? {
+            question: rawPoll.question ?? "",
+            options: rawPoll.options,
+            endsAt: rawPoll.ends_at ?? undefined,
+          }
+        : null,
+    savedByCurrentUser: true,
+  }
+}
 
 export default function ProfilePage() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const posts = usePostStore((s) => s.posts)
   const [loading, setLoading] = useState(true)
   const [followsTab, setFollowsTab] = useState<FollowsTab | null>(null)
+  const [tab, setTab] = useState<FeedTab>("posts")
+  const [savedPosts, setSavedPosts] = useState<Post[]>([])
+  const [savedLoading, setSavedLoading] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 400)
     return () => window.clearTimeout(timer)
   }, [])
+
+  // Bookmarked posts, fetched straight from Supabase (all of them, newest save
+  // first) so the tab works even if the feed store hasn't loaded everything.
+  const loadSaved = useCallback(async () => {
+    if (!currentUser) return
+    setSavedLoading(true)
+    const supabase = createSupabaseBrowserClient()
+    const { data: saves } = await supabase
+      .from("post_saves")
+      .select("post_id")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false })
+      .limit(100)
+    const ids = (saves ?? []).map((r) => r.post_id)
+    if (ids.length === 0) {
+      setSavedPosts([])
+      setSavedLoading(false)
+      return
+    }
+    const { data: rows } = await supabase
+      .from("posts")
+      .select("*")
+      .in("id", ids)
+      .or("scheduled_for.is.null,scheduled_for.lte.now")
+    setSavedPosts(((rows ?? []) as PostRow[]).map(rowToPost))
+    setSavedLoading(false)
+  }, [currentUser])
+
+  useEffect(() => {
+    if (tab === "saved") void loadSaved()
+  }, [tab, loadSaved])
 
   const myPosts = posts.filter((p) => p.authorId === currentUser?.id)
 
@@ -112,23 +208,77 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        {/* User's posts */}
+        {/* User's posts / saved */}
         <div>
-          <h2 className="mb-3 text-h4">{s["profile.yourPosts"]}</h2>
-          {myPosts.length === 0 ? (
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTab("posts")}
+              aria-pressed={tab === "posts"}
+              className={cn(
+                "rounded-pill px-4 py-1.5 text-sm font-semibold transition-app",
+                tab === "posts"
+                  ? "bg-primary-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              {s["profile.tab.posts"]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("saved")}
+              aria-pressed={tab === "saved"}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-pill px-4 py-1.5 text-sm font-semibold transition-app",
+                tab === "saved"
+                  ? "bg-primary-600 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              <Bookmark size={14} aria-hidden />
+              {s["profile.tab.saved"]}
+            </button>
+          </div>
+
+          {tab === "posts" ? (
+            <>
+              {myPosts.length === 0 ? (
+                <EmptyState
+                  icon={Inbox}
+                  title={s["profile.noPosts.title"]}
+                  description={s["profile.noPosts.description"]}
+                  action={
+                    <Link href="/post/create">
+                      <Button>{s["profile.createPost"]}</Button>
+                    </Link>
+                  }
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {myPosts.map((post) => (
+                    <PostCard key={post.id} post={post} showFollow={false} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : savedLoading ? (
+            <div className="flex justify-center py-10">
+              <Spinner />
+            </div>
+          ) : savedPosts.length === 0 ? (
             <EmptyState
-              icon={Inbox}
-              title={s["profile.noPosts.title"]}
-              description={s["profile.noPosts.description"]}
+              icon={Bookmark}
+              title={s["profile.noSaved.title"]}
+              description={s["profile.noSaved.description"]}
               action={
-                <Link href="/post/create">
-                  <Button>{s["profile.createPost"]}</Button>
+                <Link href="/feed">
+                  <Button variant="outline">{s["profile.noSaved.browse"]}</Button>
                 </Link>
               }
             />
           ) : (
             <div className="flex flex-col gap-4">
-              {myPosts.map((post) => (
+              {savedPosts.map((post) => (
                 <PostCard key={post.id} post={post} showFollow={false} />
               ))}
             </div>

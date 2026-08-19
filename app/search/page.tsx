@@ -30,10 +30,18 @@ interface PostRow {
   hashtags: string[] | null
   support_count: number
   comment_count: number
+  is_pinned: boolean
+  updated_at: string | null
+  view_count: number
+  scheduled_for: string | null
+  event_at: string | null
+  event_location: string | null
+  poll_json: unknown | null
   created_at: string
 }
 
 function rowToPost(row: PostRow): Post {
+  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
   return {
     id: row.id,
     authorId: row.author_id,
@@ -48,6 +56,21 @@ function rowToPost(row: PostRow): Post {
     commentCount: row.comment_count,
     createdAt: row.created_at,
     supportedByCurrentUser: false,
+    isPinned: row.is_pinned,
+    editedAt: row.updated_at ?? undefined,
+    viewCount: row.view_count,
+    scheduledFor: row.scheduled_for ?? undefined,
+    eventAt: row.event_at ?? undefined,
+    eventLocation: row.event_location ?? undefined,
+    poll:
+      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
+        ? {
+            question: rawPoll.question ?? "",
+            options: rawPoll.options,
+            endsAt: rawPoll.ends_at ?? undefined,
+          }
+        : null,
+    savedByCurrentUser: false,
   }
 }
 
@@ -94,7 +117,10 @@ export default function SearchPage() {
     const isTag = q.startsWith("#")
     const tagName = isTag ? q.slice(1).toLowerCase() : ""
 
-    const postQuery = supabase.from("posts").select("*")
+    const postQuery = supabase
+      .from("posts")
+      .select("*")
+      .or("scheduled_for.is.null,scheduled_for.lte.now")
     if (isTag) {
       postQuery.contains("hashtags", [tagName])
     } else {

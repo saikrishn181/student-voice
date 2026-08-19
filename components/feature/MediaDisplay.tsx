@@ -5,10 +5,13 @@
 //   - Photos: next/image with fill inside a container whose aspect-ratio is set
 //     from naturalWidth/naturalHeight read on `onLoad`.
 //   - Videos: videoWidth/videoHeight read via `onLoadedMetadata`.
+// mediaUrl may contain multiple space-separated image URLs (multi-image posts);
+// those render as a swipeable carousel with dots + arrows.
 // A Skeleton shows until dimensions are known. Displayed height is capped at
 // 500px mobile / 600px desktop regardless of ratio, using `object-fit: contain`.
 import Image from "next/image"
 import { useCallback, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Skeleton } from "@/components/ui/Skeleton"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
@@ -24,12 +27,23 @@ interface MediaDisplayProps {
 
 const FALLBACK_RATIO = 16 / 9
 
+function splitMediaUrls(mediaUrl: string): string[] {
+  return mediaUrl
+    .split(" ")
+    .map((u) => u.trim())
+    .filter(Boolean)
+}
+
 export function MediaDisplay({
   mediaUrl,
   mediaType,
   knownAspectRatio,
   className,
 }: MediaDisplayProps) {
+  const urls = splitMediaUrls(mediaUrl)
+  // Videos are always single-item; only photos can be multi.
+  const isCarousel = mediaType === "photo" && urls.length > 1
+  const [index, setIndex] = useState(0)
   const [aspect, setAspect] = useState<number | null>(
     knownAspectRatio && knownAspectRatio > 0 ? knownAspectRatio : null,
   )
@@ -57,8 +71,13 @@ export function MediaDisplay({
     [],
   )
 
+  const go = (dir: 1 | -1) => {
+    setIndex((i) => (i + dir + urls.length) % urls.length)
+  }
+
   const ratio = aspect ?? FALLBACK_RATIO
   const revealed = aspect !== null
+  const current = urls[Math.min(index, urls.length - 1)] ?? urls[0]
 
   return (
     <div
@@ -75,7 +94,8 @@ export function MediaDisplay({
 
         {mediaType === "photo" ? (
           <Image
-            src={mediaUrl}
+            key={current}
+            src={current}
             alt={s["media.alt"]}
             fill
             sizes="(max-width: 1024px) 100vw, 720px"
@@ -85,7 +105,7 @@ export function MediaDisplay({
           />
         ) : (
           <video
-            src={mediaUrl}
+            src={current}
             controls
             preload="metadata"
             muted
@@ -95,6 +115,44 @@ export function MediaDisplay({
             onLoadedMetadata={handleVideoMetadata}
           />
         )}
+
+        {isCarousel ? (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label={s["media.previous"]}
+              className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-slate-900/60 text-white transition-app hover:bg-slate-900"
+            >
+              <ChevronLeft size={18} aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label={s["media.next"]}
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-slate-900/60 text-white transition-app hover:bg-slate-900"
+            >
+              <ChevronRight size={18} aria-hidden />
+            </button>
+            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+              {urls.map((url, i) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setIndex(i)}
+                  aria-label={s["media.thumbnail"](i + 1)}
+                  className={cn(
+                    "h-2 w-2 rounded-full transition-app",
+                    i === index ? "bg-white" : "bg-white/50 hover:bg-white/80",
+                  )}
+                />
+              ))}
+            </div>
+            <span className="absolute bottom-2 right-2 rounded-pill bg-slate-900/70 px-2 py-0.5 text-xs font-medium text-white">
+              {index + 1}/{urls.length}
+            </span>
+          </>
+        ) : null}
       </div>
     </div>
   )

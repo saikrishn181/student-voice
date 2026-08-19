@@ -32,8 +32,8 @@ export default function EditPostPage({
 
   const [text, setText] = useState("")
   const [hashtagInput, setHashtagInput] = useState("")
-  const [media, setMedia] = useState<PickedMedia | null>(null)
-  const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null)
+  const [media, setMedia] = useState<PickedMedia[]>([])
+  const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([])
   const [existingMediaType, setExistingMediaType] = useState<"photo" | "video" | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -54,7 +54,7 @@ export default function EditPostPage({
       }
       setText(fresh.text)
       setHashtagInput(fresh.hashtags.join(" "))
-      setExistingMediaUrl(fresh.mediaUrl)
+      setExistingMediaUrls((fresh.mediaUrl ?? "").split(" ").filter(Boolean))
       setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
       setLoaded(true)
     })
@@ -65,7 +65,7 @@ export default function EditPostPage({
     if (post && !loaded) {
       setText(post.text)
       setHashtagInput(post.hashtags.join(" "))
-      setExistingMediaUrl(post.mediaUrl)
+      setExistingMediaUrls((post.mediaUrl ?? "").split(" ").filter(Boolean))
       setExistingMediaType(post.mediaType as "photo" | "video" | null)
       setLoaded(true)
     }
@@ -95,33 +95,29 @@ export default function EditPostPage({
     }
 
     setSubmitting(true)
-    let mediaUrl = existingMediaUrl
+
+    // Existing media survives unless replaced/removed; new picks upload.
+    const finalUrls: string[] = [...existingMediaUrls]
     let mediaType = existingMediaType
     let mediaAspectRatio: number | null = null
-
-    // If a new file was picked, upload it (replacing the old media).
-    if (media?.file) {
-      const upload = await uploadPostMedia(media.file)
+    for (const picked of media) {
+      const upload = await uploadPostMedia(picked.file)
       if (!upload.ok) {
         setSubmitting(false)
         showToast(upload.error ?? "Could not upload media. Please try again.", "error")
         return
       }
-      mediaUrl = upload.url ?? null
-      mediaType = media.type
-      mediaAspectRatio = upload.aspectRatio ?? null
-    } else if (media === null) {
-      // User removed all media.
-      mediaUrl = null
-      mediaType = null
-      mediaAspectRatio = null
+      finalUrls.push(upload.url ?? "")
+      mediaType = picked.type
+      if (!mediaAspectRatio && upload.aspectRatio) mediaAspectRatio = upload.aspectRatio
+      if (picked.url.startsWith("blob:")) URL.revokeObjectURL(picked.url)
     }
 
     try {
       await updatePost(postId, {
         text: text.trim(),
-        mediaUrl,
-        mediaType,
+        mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
+        mediaType: finalUrls.length > 0 ? mediaType : null,
         mediaAspectRatio,
         state: currentUser?.state ?? "",
         hashtags: previewTags.tags,

@@ -31,10 +31,18 @@ interface PostRow {
   hashtags: string[] | null
   support_count: number
   comment_count: number
+  is_pinned: boolean
+  updated_at: string | null
+  view_count: number
+  scheduled_for: string | null
+  event_at: string | null
+  event_location: string | null
+  poll_json: unknown | null
   created_at: string
 }
 
 function rowToPost(row: PostRow): Post {
+  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
   return {
     id: row.id,
     authorId: row.author_id,
@@ -49,7 +57,31 @@ function rowToPost(row: PostRow): Post {
     commentCount: row.comment_count,
     createdAt: row.created_at,
     supportedByCurrentUser: false,
+    isPinned: row.is_pinned,
+    editedAt: row.updated_at ?? undefined,
+    viewCount: row.view_count,
+    scheduledFor: row.scheduled_for ?? undefined,
+    eventAt: row.event_at ?? undefined,
+    eventLocation: row.event_location ?? undefined,
+    poll:
+      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
+        ? {
+            question: rawPoll.question ?? "",
+            options: rawPoll.options,
+            endsAt: rawPoll.ends_at ?? undefined,
+          }
+        : null,
+    savedByCurrentUser: false,
   }
+}
+
+// Visible posts: not scheduled for the future. PostgREST `now` is UTC.
+function visiblePostsQuery() {
+  const supabase = createSupabaseBrowserClient()
+  return supabase
+    .from("posts")
+    .select("*")
+    .or("scheduled_for.is.null,scheduled_for.lte.now")
 }
 
 function rowToComment(row: {
@@ -129,6 +161,10 @@ interface PostState {
     mediaAspectRatio?: number | null
     state: string
     hashtags: string[]
+    scheduledFor?: string | null
+    eventAt?: string | null
+    eventLocation?: string | null
+    poll?: Post["poll"]
   }) => Promise<Post>
   updatePost: (id: string, input: {
     text: string
@@ -137,8 +173,13 @@ interface PostState {
     mediaAspectRatio?: number | null
     state: string
     hashtags: string[]
+    eventAt?: string | null
+    eventLocation?: string | null
+    poll?: Post["poll"]
   }) => Promise<void>
   deletePost: (id: string) => Promise<void>
+  toggleSave: (postId: string, currentUserId: string) => Promise<void>
+  setPostPinned: (postId: string, pinned: boolean) => Promise<void>
   toggleSupport: (postId: string, currentUserId: string) => Promise<void>
   addComment: (postId: string, authorId: string, text: string, isOrgHelp?: boolean) => Promise<void>
   updateComment: (postId: string, commentId: string, text: string) => Promise<void>
@@ -173,9 +214,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
     const supabase = createSupabaseBrowserClient()
     set({ status: "loading", loadErrorMessage: null, hasMore: false, loadedCount: 0 })
 
-    const { data: postRows, error: postsError } = await supabase
-      .from("posts")
-      .select("*")
+    const { data: postRows, error: postsError } = await visiblePostsQuery()
       .order("created_at", { ascending: false })
       .range(0, FEED_PAGE_SIZE - 1)
 
@@ -201,12 +240,19 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     // supportedByCurrentUser requires knowing the current user's supports.
     let supportedIds = new Set<string>()
+    // Same for bookmarks: savedByCurrentUser comes from post_saves.
+    let savedIds = new Set<string>()
     if (currentUserId) {
       const { data: mySupports } = await supabase
         .from("post_supports")
         .select("post_id")
         .eq("user_id", currentUserId)
       supportedIds = new Set((mySupports ?? []).map((r) => r.post_id))
+      const { data: mySaves } = await supabase
+        .from("post_saves")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+      savedIds = new Set((mySaves ?? []).map((r) => r.post_id))
     }
 
     // Blocked authors are hidden from the feed, trending, and suggestions.
@@ -224,6 +270,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
       .map((row) => {
         const post = rowToPost(row)
         post.supportedByCurrentUser = supportedIds.has(post.id)
+        post.savedByCurrentUser = savedIds.has(post.id)
         return post
       })
 
@@ -260,9 +307,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
     const from = loadedCount
     const to = loadedCount + FEED_PAGE_SIZE - 1
 
-    const { data: postRows, error } = await supabase
-      .from("posts")
-      .select("*")
+    const { data: postRows, error } = await visiblePostsQuery()
       .order("created_at", { ascending: false })
       .range(from, to)
 
@@ -284,8 +329,14 @@ export const usePostStore = create<PostState>()((set, get) => ({
         .select("post_id")
         .eq("user_id", currentUserId)
       const supportedIds = new Set((mySupports ?? []).map((r) => r.post_id))
+      const { data: mySaves } = await supabase
+        .from("post_saves")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+      const savedIds = new Set((mySaves ?? []).map((r) => r.post_id))
       newPosts.forEach((p) => {
         p.supportedByCurrentUser = supportedIds.has(p.id)
+        p.savedByCurrentUser = savedIds.has(p.id)
       })
     }
 
@@ -310,6 +361,16 @@ export const usePostStore = create<PostState>()((set, get) => ({
         state: input.state,
         category: categoryFromHashtags(input.hashtags),
         hashtags: input.hashtags,
+        scheduled_for: input.scheduledFor ?? null,
+        event_at: input.eventAt ?? null,
+        event_location: input.eventLocation ?? null,
+        poll_json: input.poll
+          ? {
+              question: input.poll.question,
+              options: input.poll.options,
+              ends_at: input.poll.endsAt ?? null,
+            }
+          : null,
       })
       .select("*")
       .single()
@@ -334,6 +395,16 @@ export const usePostStore = create<PostState>()((set, get) => ({
         state: input.state,
         category: categoryFromHashtags(input.hashtags),
         hashtags: input.hashtags,
+        updated_at: new Date().toISOString(),
+        event_at: input.eventAt ?? null,
+        event_location: input.eventLocation ?? null,
+        poll_json: input.poll
+          ? {
+              question: input.poll.question,
+              options: input.poll.options,
+              ends_at: input.poll.endsAt ?? null,
+            }
+          : null,
       })
       .eq("id", id)
       .select("*")
@@ -360,6 +431,48 @@ export const usePostStore = create<PostState>()((set, get) => ({
       posts: s.posts.filter((p) => p.id !== id),
       comments: s.comments.filter((c) => c.postId !== id),
       follows: s.follows,
+    }))
+  },
+
+  toggleSave: async (postId, currentUserId) => {
+    const supabase = createSupabaseBrowserClient()
+    const post = get().posts.find((p) => p.id === postId)
+    if (!post) return
+
+    const saved = post.savedByCurrentUser
+    // Optimistic toggle for snappy UI; reverted on failure.
+    set((s) => ({
+      posts: s.posts.map((p) => (p.id === postId ? { ...p, savedByCurrentUser: !saved } : p)),
+    }))
+    try {
+      if (saved) {
+        const { error } = await supabase
+          .from("post_saves")
+          .delete()
+          .eq("user_id", currentUserId)
+          .eq("post_id", postId)
+        if (error) throw new Error(error.message)
+      } else {
+        const { error } = await supabase.from("post_saves").insert({ user_id: currentUserId, post_id: postId })
+        if (error) throw new Error(error.message)
+      }
+    } catch (err) {
+      set((s) => ({
+        posts: s.posts.map((p) => (p.id === postId ? { ...p, savedByCurrentUser: saved } : p)),
+      }))
+      throw err instanceof Error ? err : new Error("Could not update bookmark")
+    }
+  },
+
+  setPostPinned: async (postId, pinned) => {
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase
+      .from("posts")
+      .update({ is_pinned: pinned })
+      .eq("id", postId)
+    if (error) throw new Error("Could not update pin — please try again")
+    set((s) => ({
+      posts: s.posts.map((p) => (p.id === postId ? { ...p, isPinned: pinned } : p)),
     }))
   },
 
@@ -612,7 +725,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
           if (!row?.id) return
           const existing = get().posts.some((p) => p.id === row.id)
           const blocked = get().blockedUserIds.includes(row.author_id)
+          // Scheduled posts only appear in feeds once their time arrives.
           if (existing || blocked) return
+          if (row.scheduled_for && new Date(row.scheduled_for).getTime() > Date.now()) return
           const post = rowToPost(row)
           // supportedByCurrentUser: fresh posts can't have my support yet.
           post.supportedByCurrentUser = false
@@ -638,6 +753,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
                     ...p,
                     supportCount: row.support_count,
                     commentCount: row.comment_count,
+                    viewCount: row.view_count,
+                    isPinned: row.is_pinned,
+                    editedAt: row.updated_at ?? undefined,
                   }
                 : p,
             ),
