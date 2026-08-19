@@ -15,14 +15,17 @@ import {
   Check,
   X,
   ChevronRight,
+  Bell,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, Avatar, EmptyState, Skeleton, Button, Input, Modal } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
+import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { useUserById } from "@/hooks"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 import { EditProfileModal } from "@/components/feature"
 import s from "@/lib/strings"
 
@@ -183,19 +186,44 @@ export default function SettingsPage() {
   const unblockUser = usePostStore((s) => s.unblockUser)
   const followRequests = usePostStore((s) => s.followRequests)
   const showToast = useToastStore((s) => s.show)
+  const notificationPrefs = useNotificationStore((s) => s.preferences)
+  const updateNotificationPrefs = useNotificationStore((s) => s.updatePreferences)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [provider, setProvider] = useState<"google" | "email" | null>(null)
 
-  // Incoming follow requests (sent TO me) for the accept/reject list.
-  const myIncoming = followRequests.filter((r) => r.targetId === currentUser?.id)
+  const notificationTypes: { type: string; label: string }[] = [
+    { type: "support", label: s["notification.type.support"] },
+    { type: "comment", label: s["notification.type.comment"] },
+    { type: "follow", label: s["notification.type.follow"] },
+    { type: "follow_request", label: s["notification.type.follow_request"] },
+    { type: "offer_help", label: s["notification.type.offer_help"] },
+    { type: "verification_approved", label: s["notification.type.verification_approved"] },
+  ]
+
+  const toggleMutedType = (type: string) => {
+    const muted = new Set(notificationPrefs?.mutedTypes ?? [])
+    if (muted.has(type)) muted.delete(type)
+    else muted.add(type)
+    void updateNotificationPrefs(currentUser.id, { mutedTypes: Array.from(muted) })
+  }
+
+  const setDigestFrequency = (freq: "instant" | "daily" | "never") => {
+    void updateNotificationPrefs(currentUser.id, { digestFrequency: freq })
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 400)
     return () => window.clearTimeout(timer)
   }, [])
+
+  // Notification preferences (per-type mute + email digest frequency).
+  useEffect(() => {
+    if (!currentUser) return
+    void useNotificationStore.getState().loadPreferences(currentUser.id)
+  }, [currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect the login provider from auth metadata (google OAuth vs email).
   useEffect(() => {
@@ -289,6 +317,91 @@ export default function SettingsPage() {
                 : s["settings.loginMethod.changePassword"]}
               <ChevronRight size={16} aria-hidden />
             </Button>
+          </div>
+        </Card>
+
+        {/* Notification preferences */}
+        <Card className="flex flex-col gap-4 p-4">
+          <div className="flex items-center gap-2">
+            <Bell size={18} className="text-slate-400" aria-hidden />
+            <h2 className="text-h4">{s["settings.notifications.title"]}</h2>
+          </div>
+
+          <div>
+            <p className="mb-2 text-body-sm font-semibold text-slate-700">
+              {s["settings.notifications.typesTitle"]}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {notificationTypes.map(({ type, label }) => {
+                const muted = (notificationPrefs?.mutedTypes ?? []).includes(type)
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => toggleMutedType(type)}
+                    aria-pressed={!muted}
+                    className="flex items-center justify-between gap-3 rounded-card px-2 py-1.5 text-left transition-app hover:bg-slate-50"
+                  >
+                    <span className="text-body-sm text-slate-700">{label}</span>
+                    <span
+                      className={cn(
+                        "relative h-6 w-10 shrink-0 rounded-pill transition-colors",
+                        muted ? "bg-slate-200" : "bg-primary-500",
+                      )}
+                      aria-hidden
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                          muted ? "left-0.5" : "left-[18px]",
+                        )}
+                      />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-body-sm font-semibold text-slate-700">
+              {s["settings.notifications.digestTitle"]}
+            </p>
+            <p className="mb-2 text-body-sm text-slate-500">
+              {s["settings.notifications.digestHint"]}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {(
+                [
+                  ["instant", s["settings.notifications.digest.instant"]],
+                  ["daily", s["settings.notifications.digest.daily"]],
+                  ["never", s["settings.notifications.digest.never"]],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setDigestFrequency(value)}
+                  aria-pressed={notificationPrefs?.digestFrequency === value}
+                  className="flex items-center gap-2.5 rounded-card px-2 py-1.5 text-left transition-app hover:bg-slate-50"
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                      notificationPrefs?.digestFrequency === value
+                        ? "border-primary-500 bg-primary-500"
+                        : "border-slate-300 bg-white",
+                    )}
+                    aria-hidden
+                  >
+                    {notificationPrefs?.digestFrequency === value ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                    ) : null}
+                  </span>
+                  <span className="text-body-sm text-slate-700">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 

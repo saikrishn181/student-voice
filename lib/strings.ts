@@ -243,6 +243,16 @@ const s = {
   "settings.logout.title": "Log out",
   "settings.logout.description": "Sign out of this device.",
   "settings.logout.button": "Log out",
+
+  // ─── Settings: notification preferences ────────────────────────────────────
+  "settings.notifications.title": "Notifications",
+  "settings.notifications.typesTitle": "Show notifications for",
+  "settings.notifications.digestTitle": "Email digest",
+  "settings.notifications.digestHint":
+    "A daily summary of everything you missed, sent when unread notifications pile up.",
+  "settings.notifications.digest.instant": "No digest — notifications stay in-app",
+  "settings.notifications.digest.daily": "Daily summary email",
+  "settings.notifications.digest.never": "No notifications at all",
   "validation.usernameInvalid": "Username can only contain letters, numbers, and underscores.",
   "validation.nameRequired": "Please enter your name",
 

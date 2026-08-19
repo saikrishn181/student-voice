@@ -969,3 +969,79 @@ begin
   end if;
 end
 $$;
+-- ============================================================
+-- Notification preferences + email digest queue
+-- ============================================================
+create table if not exists public.notification_preferences (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  muted_types text[] not null default '{}',
+  digest_frequency text not null default 'daily'
+    check (digest_frequency in ('instant', 'daily', 'never')),
+  updated_at timestamptz not null default now()
+);
+alter table public.notification_preferences enable row level security;
+drop policy if exists "Users read their notification preferences" on public.notification_preferences;
+create policy "Users read their notification preferences"
+  on public.notification_preferences for select using (auth.uid() = user_id);
+drop policy if exists "Users upsert their notification preferences" on public.notification_preferences;
+create policy "Users upsert their notification preferences"
+  on public.notification_preferences for insert with check (auth.uid() = user_id);
+drop policy if exists "Users update their notification preferences" on public.notification_preferences;
+create policy "Users update their notification preferences"
+  on public.notification_preferences for update using (auth.uid() = user_id);
+
+create table if not exists public.email_digests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  content jsonb not null,
+  scheduled_for timestamptz not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
+  created_at timestamptz not null default now()
+);
+alter table public.email_digests enable row level security;
+drop policy if exists "Users read their email digests" on public.email_digests;
+create policy "Users read their email digests"
+  on public.email_digests for select using (auth.uid() = user_id);
+
+-- Queue one digest per user with unread notifications + 'daily' preference.
+-- Safe to run repeatedly (skips users who already have a pending digest).
+create or replace function public.queue_daily_digests()
+returns integer
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_count integer := 0;
+  v_user uuid;
+  v_unread bigint;
+  v_types text[];
+  v_last_digest timestamptz;
+begin
+  for v_user in
+    select np.user_id from public.notification_preferences np
+    where np.digest_frequency = 'daily'
+  loop
+    select count(*) into v_unread
+      from public.notifications n
+      where n.user_id = v_user and not n.read;
+    if v_unread > 0 then
+      select max(d.scheduled_for) into v_last_digest
+        from public.email_digests d
+        where d.user_id = v_user and d.status = 'pending';
+      if v_last_digest is null or v_last_digest < now() then
+        select array_agg(distinct n.type) into v_types
+          from public.notifications n
+          where n.user_id = v_user and not n.read;
+        insert into public.email_digests (user_id, content, scheduled_for)
+        values (
+          v_user,
+          jsonb_build_object('unread_count', v_unread, 'types', v_types),
+          now() + interval '1 day'
+        );
+        v_count := v_count + 1;
+      end if;
+    end if;
+  end loop;
+  return v_count;
+end;
+$$;

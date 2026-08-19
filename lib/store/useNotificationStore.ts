@@ -35,8 +35,19 @@ function rowToNotification(row: NotificationRow): Notification {
 interface NotificationState {
   notifications: Notification[]
   status: "idle" | "loading" | "ready" | "error"
+  // Per-type mute + digest frequency, stored in `notification_preferences`.
+  // Muted types are filtered client-side on load and on live inserts.
+  preferences: { mutedTypes: string[]; digestFrequency: "instant" | "daily" | "never" } | null
 
   load: (userId: string) => Promise<void>
+  loadPreferences: (userId: string) => Promise<void>
+  updatePreferences: (
+    userId: string,
+    patch: {
+      mutedTypes?: string[]
+      digestFrequency?: "instant" | "daily" | "never"
+    },
+  ) => Promise<void>
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
   // Live sync: realtime subscription + polling fallback so the unread badge
@@ -50,6 +61,7 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
   notifications: [],
   status: "idle",
+  preferences: null,
   realtimeChannel: null,
   pollTimer: null,
 
@@ -65,12 +77,43 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       set({ status: "error" })
       return
     }
+    const muted = new Set(get().preferences?.mutedTypes ?? [])
+    const notifications = (data ?? [])
+      .filter((row) => !muted.has((row as NotificationRow).type))
+      .map((row) => rowToNotification(row as Parameters<typeof rowToNotification>[0]))
+    set({ notifications, status: "ready" })
+  },
+
+  loadPreferences: async (userId) => {
+    const supabase = createSupabaseBrowserClient()
+    const { data, error } = await supabase
+      .from("notification_preferences")
+      .select("muted_types, digest_frequency")
+      .eq("user_id", userId)
+      .maybeSingle()
+    if (error) return
     set({
-      notifications: (data ?? []).map((row) =>
-        rowToNotification(row as Parameters<typeof rowToNotification>[0]),
-      ),
-      status: "ready",
+      preferences: {
+        mutedTypes: (data?.muted_types as string[] | null) ?? [],
+        digestFrequency: (data?.digest_frequency as "instant" | "daily" | "never" | null) ?? "daily",
+      },
     })
+  },
+
+  updatePreferences: async (userId, patch) => {
+    const prev = get().preferences
+    const next = {
+      mutedTypes: patch.mutedTypes ?? prev?.mutedTypes ?? [],
+      digestFrequency: patch.digestFrequency ?? prev?.digestFrequency ?? "daily",
+    }
+    // Optimistic.
+    set({ preferences: next })
+    const supabase = createSupabaseBrowserClient()
+    await supabase
+      .from("notification_preferences")
+      .upsert({ user_id: userId, ...patch }, { onConflict: "user_id" })
+    // Reload so the badge/list reflect the new mute set immediately.
+    if (userId) void get().load(userId)
   },
 
   markAsRead: async (id) => {
@@ -107,6 +150,8 @@ markAllAsRead: async () => {
         (payload) => {
           const row = payload.new as NotificationRow
           if (!row?.id) return
+          const muted = new Set(get().preferences?.mutedTypes ?? [])
+          if (muted.has(row.type)) return
           set((s) => ({
             notifications: [rowToNotification(row), ...s.notifications].slice(0, 50),
           }))
