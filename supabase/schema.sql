@@ -686,10 +686,12 @@ create trigger notify_on_follow
   for each row execute function public.notify_on_follow();
 
 -- ============================================================
--- CHAT (1:1 direct messages)
+-- CHAT (1:1 direct messages + groups)
 -- ============================================================
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
+  title text,
+  is_group boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -705,6 +707,9 @@ create table if not exists public.messages (
   conversation_id uuid not null references public.conversations(id) on delete cascade,
   sender_id uuid not null references public.profiles(id) on delete cascade,
   content text not null check (char_length(trim(content)) > 0 and char_length(content) <= 2000),
+  read_at timestamptz,
+  attachment_url text,
+  attachment_type text check (attachment_type in ('photo', 'video')),
   created_at timestamptz not null default now()
 );
 
@@ -815,6 +820,114 @@ end;
 $$;
 
 -- ============================================================
+-- CHAT V2: typing, read receipts, groups
+-- ============================================================
+create table if not exists public.chat_typing (
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  updated_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+
+alter table public.chat_typing enable row level security;
+
+drop policy if exists "Participants see typing" on public.chat_typing;
+create policy "Participants see typing"
+  on public.chat_typing for select
+  using (public.is_conversation_participant(conversation_id, auth.uid()));
+
+drop policy if exists "Users update their typing state" on public.chat_typing;
+create policy "Users update their typing state"
+  on public.chat_typing for insert
+  with check (auth.uid() = user_id and public.is_conversation_participant(conversation_id, auth.uid()));
+
+drop policy if exists "Users clear their typing state" on public.chat_typing;
+create policy "Users clear their typing state"
+  on public.chat_typing for update using (auth.uid() = user_id);
+
+drop policy if exists "Users delete their typing state" on public.chat_typing;
+create policy "Users delete their typing state"
+  on public.chat_typing for delete using (auth.uid() = user_id);
+
+-- Mark incoming messages read + bump my last_read_at (SECURITY DEFINER bypasses
+-- RLS so the UPDATE policy on messages doesn't need widening).
+create or replace function public.mark_messages_read(p_conversation uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if not public.is_conversation_participant(p_conversation, auth.uid()) then
+    raise exception 'NOT_A_PARTICIPANT';
+  end if;
+  update public.messages
+    set read_at = now()
+    where conversation_id = p_conversation and sender_id <> auth.uid() and read_at is null;
+  update public.conversation_participants
+    set last_read_at = now()
+    where conversation_id = p_conversation and user_id = auth.uid();
+end;
+$$;
+
+-- Create a group conversation. Creator + at least one other member.
+create or replace function public.create_group_conversation(p_title text, p_member_ids uuid[])
+returns uuid
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_conv uuid;
+  v_member uuid;
+begin
+  if p_title is null or char_length(trim(p_title)) = 0 then
+    raise exception 'EMPTY_TITLE';
+  end if;
+  if p_member_ids is null or array_length(p_member_ids, 1) is null or array_length(p_member_ids, 1) < 1 then
+    raise exception 'NO_MEMBERS';
+  end if;
+  insert into public.conversations (title, is_group)
+    values (trim(p_title), true) returning id into v_conv;
+  insert into public.conversation_participants (conversation_id, user_id)
+    values (v_conv, auth.uid());
+  foreach v_member in array p_member_ids loop
+    if v_member <> auth.uid() then
+      insert into public.conversation_participants (conversation_id, user_id)
+        values (v_conv, v_member);
+    end if;
+  end loop;
+  return v_conv;
+end;
+$$;
+
+-- Add members to an existing group (any participant can add; PK upserts skip
+-- duplicates silently).
+create or replace function public.add_group_members(p_conversation uuid, p_member_ids uuid[])
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_member uuid;
+  v_is_group boolean;
+begin
+  if not public.is_conversation_participant(p_conversation, auth.uid()) then
+    raise exception 'NOT_A_PARTICIPANT';
+  end if;
+  select is_group into v_is_group from public.conversations where id = p_conversation;
+  if not coalesce(v_is_group, false) then
+    raise exception 'NOT_A_GROUP';
+  end if;
+  foreach v_member in array p_member_ids loop
+    if v_member <> auth.uid() then
+      insert into public.conversation_participants (conversation_id, user_id)
+        values (p_conversation, v_member)
+        on conflict do nothing;
+    end if;
+  end loop;
+end;
+$$;
+
+-- ============================================================
 -- REALTIME (live feed updates)
 -- ============================================================
 -- Enables Postgres-level change events for posts so the feed can update
@@ -837,6 +950,22 @@ begin
       and tablename = 'messages'
   ) then
     alter publication supabase_realtime add table public.messages;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'chat_typing'
+  ) then
+    alter publication supabase_realtime add table public.chat_typing;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'conversation_participants'
+  ) then
+    alter publication supabase_realtime add table public.conversation_participants;
   end if;
 end
 $$;

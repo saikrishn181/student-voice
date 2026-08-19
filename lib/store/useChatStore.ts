@@ -15,6 +15,9 @@ interface MessageRow {
   conversation_id: string
   sender_id: string
   content: string
+  read_at: string | null
+  attachment_url: string | null
+  attachment_type: "photo" | "video" | null
   created_at: string
 }
 
@@ -25,7 +28,16 @@ function rowToMessage(row: MessageRow): Message {
     senderId: row.sender_id,
     content: row.content,
     createdAt: row.created_at,
+    readAt: row.read_at ?? undefined,
+    attachmentUrl: row.attachment_url ?? undefined,
+    attachmentType: row.attachment_type ?? undefined,
   }
+}
+
+interface TypingRow {
+  conversation_id: string
+  user_id: string
+  updated_at: string
 }
 
 interface ChatState {
@@ -37,17 +49,27 @@ interface ChatState {
   unreadByConversation: Record<string, number>
   // Conversation currently open in the thread page (badges pause for it).
   activeConversationId: string | null
+  // Who is typing per conversation: user_id -> when they last pinged.
+  typingByConversation: Record<string, Record<string, number>>
+  // Other participants' latest read timestamp per conversation (receipts).
+  otherLastReadByConversation: Record<string, string>
+  // Group member count per conversation (for headers/labels).
+  memberCountByConversation: Record<string, number>
 
   // true = loaded OK, false = query failed (callers can show a retry UI).
   loadConversations: () => Promise<boolean>
   // Find-or-create the 1:1 conversation with another user; returns its id.
   getOrCreateConversation: (otherUserId: string) => Promise<string | null>
+  // Create a group conversation; returns its id.
+  createGroupConversation: (title: string, memberIds: string[]) => Promise<string | null>
   loadMessages: (conversationId: string) => Promise<boolean>
   // Throws an Error with a human-readable message on failure (callers toast it).
-  sendMessage: (conversationId: string, content: string) => Promise<boolean>
-  // Marks the open conversation as read (badge zeroed + last_read_at bumped).
+  sendMessage: (conversationId: string, content: string, attachment?: { url: string; type: "photo" | "video" }) => Promise<boolean>
+  // Marks the open conversation as read (badge zeroed + DB read receipts).
   markConversationRead: (conversationId: string) => Promise<void>
   setActiveConversation: (conversationId: string | null) => void
+  // Announce "currently typing" (throttled server-side by the caller) or clear it.
+  setTyping: (conversationId: string, typing: boolean) => void
   startRealtime: () => void
   stopRealtime: () => void
 }
@@ -59,6 +81,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   realtimeChannel: null,
   unreadByConversation: {},
   activeConversationId: null,
+  typingByConversation: {},
+  otherLastReadByConversation: {},
+  memberCountByConversation: {},
 
   loadConversations: async () => {
     const supabase = createSupabaseBrowserClient()
@@ -108,12 +133,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     const myReadByConv = new Map<string, string | null>()
+    const otherReadByConv = new Map<string, string>()
+    const memberCountByConv = new Map<string, number>()
     for (const p of participantRows) {
+      const count = (memberCountByConv.get(p.conversation_id) ?? 0) + 1
+      memberCountByConv.set(p.conversation_id, count)
       if (p.user_id === currentUserId) myReadByConv.set(p.conversation_id, p.last_read_at)
     }
-    const otherByConv = new Map<string, string>()
     for (const p of participantRows) {
-      if (p.user_id !== currentUserId) otherByConv.set(p.conversation_id, p.user_id)
+      if (p.user_id === currentUserId) continue
+      if (!otherByConv.has(p.conversation_id)) otherByConv.set(p.conversation_id, p.user_id)
+      const existing = otherReadByConv.get(p.conversation_id)
+      if (p.last_read_at && (!existing || new Date(p.last_read_at) > new Date(existing))) {
+        otherReadByConv.set(p.conversation_id, p.last_read_at)
+      }
     }
 
     // 3. Most recent message per conversation (for the preview line).
@@ -148,7 +181,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const { data: conversationRows } = await supabase
       .from("conversations")
-      .select("id, created_at")
+      .select("id, title, is_group, created_at")
       .in("id", conversationIds)
 
     const conversations: Conversation[] = (conversationRows ?? [])
@@ -156,8 +189,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         id: c.id,
         otherUserId: otherByConv.get(c.id) ?? "",
         createdAt: c.created_at,
+        title: c.title ?? undefined,
+        isGroup: c.is_group ?? false,
       }))
-      .filter((c) => c.otherUserId)
+      .filter((c) => c.isGroup || c.otherUserId)
 
     conversations.sort((a, b) => {
       const aLast = lastByConv.get(a.id)?.created_at ?? a.createdAt
@@ -206,9 +241,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
       conversations,
       conversationsLoaded: true,
       unreadByConversation,
+      otherLastReadByConversation: Object.fromEntries(otherReadByConv),
+      memberCountByConversation: Object.fromEntries(memberCountByConv),
       messagesByConversation: { ...s.messagesByConversation, ...previewMap },
     }))
     return true
+  },
+
+  createGroupConversation: async (title, memberIds) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId || memberIds.length === 0) return null
+    const { data, error } = await supabase.rpc("create_group_conversation", {
+      p_title: title.trim(),
+      p_member_ids: memberIds,
+    })
+    if (error) {
+      if (error.message.includes("EMPTY_TITLE")) {
+        throw new Error("Give the group a name.")
+      }
+      if (error.message.includes("NO_MEMBERS")) {
+        throw new Error("Pick at least one member for the group.")
+      }
+      throw new Error("Could not create the group — please try again.")
+    }
+    await get().loadConversations()
+    return typeof data === "string" ? data : null
   },
 
   getOrCreateConversation: async (otherUserId) => {
@@ -249,9 +307,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return true
   },
 
-  sendMessage: async (conversationId, content) => {
+  sendMessage: async (conversationId, content, attachment) => {
     const trimmed = content.trim()
-    if (!trimmed) return false
+    if (!trimmed && !attachment) return false
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
     if (!currentUserId) {
@@ -262,6 +320,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       conversation_id: conversationId,
       sender_id: currentUserId,
       content: trimmed,
+      attachment_url: attachment?.url ?? null,
+      attachment_type: attachment?.type ?? null,
     })
     if (error) {
       throw new Error(chatErrorMessage(error.message))
@@ -294,12 +354,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
       unreadByConversation: { ...s.unreadByConversation, [conversationId]: 0 },
     }))
     const supabase = createSupabaseBrowserClient()
-    // No-op until the last_read_at migration is applied (column missing).
-    await supabase
-      .from("conversation_participants")
-      .update({ last_read_at: new Date().toISOString() })
-      .eq("conversation_id", conversationId)
-      .eq("user_id", currentUserId)
+    // DB marks incoming messages read + bumps last_read_at (chat-v2 RPC).
+    // No-op until the chat-v2 migration is applied.
+    const { error } = await supabase.rpc("mark_messages_read", {
+      p_conversation: conversationId,
+    })
+    if (!error) {
+      // Read receipts: my sent messages are now "read" for the other side too —
+      // mark them locally so the UI reflects it without waiting for realtime.
+      const me = useAuthStore.getState().currentUser?.id
+      set((s) => ({
+        messagesByConversation: {
+          ...s.messagesByConversation,
+          [conversationId]: (s.messagesByConversation[conversationId] ?? []).map((m) =>
+            m.senderId === me ? { ...m, readAt: new Date().toISOString() } : m,
+          ),
+        },
+      }))
+    }
+  },
+
+  setTyping: (conversationId, typing) => {
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId) return
+    const supabase = createSupabaseBrowserClient()
+    if (typing) {
+      void supabase.from("chat_typing").upsert(
+        { conversation_id: conversationId, user_id: currentUserId, updated_at: new Date().toISOString() },
+        { onConflict: "conversation_id,user_id" },
+      )
+    } else {
+      void supabase
+        .from("chat_typing")
+        .delete()
+        .eq("conversation_id", conversationId)
+        .eq("user_id", currentUserId)
+    }
   },
 
   setActiveConversation: (conversationId) =>
@@ -350,6 +440,78 @@ export const useChatStore = create<ChatState>((set, get) => ({
             // Refresh the conversation list so ordering/preview update.
             get().loadConversations()
           }
+        },
+      )
+      // Typing pings: INSERT/UPDATE refresh the "typing since" timestamp.
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_typing" },
+        (payload) => {
+          const row = payload.new as TypingRow
+          if (!row?.conversation_id || !row.user_id) return
+          if (row.user_id === useAuthStore.getState().currentUser?.id) return
+          set((s) => ({
+            typingByConversation: {
+              ...s.typingByConversation,
+              [row.conversation_id]: {
+                ...(s.typingByConversation[row.conversation_id] ?? {}),
+                [row.user_id]: Date.now(),
+              },
+            },
+          }))
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chat_typing" },
+        (payload) => {
+          const row = payload.new as TypingRow
+          if (!row?.conversation_id || !row.user_id) return
+          if (row.user_id === useAuthStore.getState().currentUser?.id) return
+          set((s) => ({
+            typingByConversation: {
+              ...s.typingByConversation,
+              [row.conversation_id]: {
+                ...(s.typingByConversation[row.conversation_id] ?? {}),
+                [row.user_id]: Date.now(),
+              },
+            },
+          }))
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_typing" },
+        (payload) => {
+          const old = payload.old as { conversation_id?: string; user_id?: string }
+          if (!old?.conversation_id || !old.user_id) return
+          set((s) => {
+            const map = { ...(s.typingByConversation[old.conversation_id] ?? {}) }
+            delete map[old.user_id]
+            return { typingByConversation: { ...s.typingByConversation, [old.conversation_id]: map } }
+          })
+        },
+      )
+      // Read receipts: the other participant bumped last_read_at.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversation_participants" },
+        (payload) => {
+          const row = payload.new as {
+            conversation_id: string
+            user_id: string
+            last_read_at: string | null
+          }
+          const me = useAuthStore.getState().currentUser?.id
+          if (!row?.conversation_id || !row.last_read_at || row.user_id === me) return
+          const existing = get().otherLastReadByConversation[row.conversation_id]
+          if (existing && new Date(row.last_read_at) <= new Date(existing)) return
+          set((s) => ({
+            otherLastReadByConversation: {
+              ...s.otherLastReadByConversation,
+              [row.conversation_id]: row.last_read_at,
+            },
+          }))
         },
       )
 

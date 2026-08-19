@@ -500,6 +500,31 @@ const s = {
   "footer.madeBy": "Made by students, for students in India.",
   "footer.copyright": "© 2026 Krantind. All rights reserved.",
   "chat.encrypted": "End-to-end encrypted",
+
+  // ─── Chat V2: groups, attachments, typing, receipts ─────────────────────────
+  "chat.newGroup": "New group",
+  "chat.group": "Group chat",
+  "chat.groupMembers": (n: number) => `${n} member${n === 1 ? "" : "s"}`,
+  "chat.groupName": "Group name",
+  "chat.groupNamePlaceholder": "e.g. Hostel Wing B",
+  "chat.addMembers": "Add members",
+  "chat.addMembersPlaceholder": "Search people by name…",
+  "chat.noMemberResults": "No people found — try a longer name.",
+  "chat.removeMember": "Remove member",
+  "chat.createGroup": "Create group",
+  "chat.searchPlaceholder": "Search conversations…",
+  "chat.searchEmptyTitle": "No matching conversations",
+  "chat.searchEmptyDescription": "Try a different name or message text.",
+  "chat.attach": "Attach a photo or video",
+  "chat.removeAttachment": "Remove attachment",
+  "chat.attachmentAlt": "Sent media",
+  "chat.attachmentLabel": "[media] ",
+  "chat.attachmentError": "Could not upload the attachment. Please try again.",
+  "chat.read": "Read",
+  "chat.sent": "Sent",
+  "chat.typing.one": (name: string) => `${name} is typing…`,
+  "chat.typing.multiple": "Several people are typing…",
+  "chat.typing.someone": "Someone",
 } as const
 
 export default s

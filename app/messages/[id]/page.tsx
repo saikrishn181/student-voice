@@ -1,19 +1,24 @@
 "use client"
 
 // Conversation thread: message history + input. Realtime keeps new messages
-// appearing live. Guarded: non-participants get an empty state (RLS would also
-// block the reads).
+// appearing live, shows typing indicators and read receipts, and supports
+// photo/video attachments and group conversations.
+// Guarded: non-participants get an empty state (RLS would also block reads).
 import { useEffect, useRef, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, MessageSquare, Lock } from "lucide-react"
+import { ArrowLeft, Send, MessageSquare, Lock, Paperclip, X, Users } from "lucide-react"
 import { Avatar, Button, EmptyState, Skeleton } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { useToastStore } from "@/lib/store/useToastStore"
+import { uploadPostMedia } from "@/lib/supabase/storage"
 import { timeAgo, cn } from "@/lib/utils"
 import s from "@/lib/strings"
+
+const TYPING_TTL_MS = 4000
+const TYPING_PING_MS = 2500
 
 export default function ConversationPage({
   params: paramsPromise,
@@ -27,12 +32,26 @@ export default function ConversationPage({
   const messages = useChatStore((s) => s.messagesByConversation[params.id] ?? [])
   const users = useUserStore((s) => s.users)
   const showToast = useToastStore((s) => s.show)
+  const typingByConv = useChatStore((s) => s.typingByConversation[params.id] ?? {})
+  const otherLastRead = useChatStore((s) => s.otherLastReadByConversation[params.id])
+  const memberCount = useChatStore((s) => s.memberCountByConversation[params.id] ?? 0)
 
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [attachment, setAttachment] = useState<{ url: string; type: "photo" | "video" } | null>(null)
+  const [uploading, setUploading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const lastPingRef = useRef(0)
+  // 1s tick so typing indicators expire without realtime cleanup.
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(tick)
+  }, [])
 
   // Load the conversation + messages; start realtime for the session.
   useEffect(() => {
@@ -53,7 +72,7 @@ export default function ConversationPage({
     })()
 
     useChatStore.getState().startRealtime()
-    // This conversation is open → clear its unread badge.
+    // This conversation is open → clear its unread badge + mark read.
     useChatStore.getState().markConversationRead(params.id)
 
     // Auto-reload fallback: poll the thread every 8s so new messages appear
@@ -66,6 +85,7 @@ export default function ConversationPage({
     return () => {
       cancelled = true
       if (poll) window.clearInterval(poll)
+      useChatStore.getState().setTyping(params.id, false)
       useChatStore.getState().stopRealtime()
       useChatStore.getState().setActiveConversation(null)
     }
@@ -76,21 +96,62 @@ export default function ConversationPage({
     bottomRef.current?.scrollIntoView({ block: "end" })
   }, [messages.length, loading])
 
-  const partner = conversation ? users[conversation.otherUserId] : undefined
+  const partner = conversation && !conversation.isGroup ? users[conversation.otherUserId] : undefined
+
+  // Throttled typing ping while the user types.
+  const pingTyping = () => {
+    const nowMs = Date.now()
+    if (nowMs - lastPingRef.current > TYPING_PING_MS) {
+      lastPingRef.current = nowMs
+      useChatStore.getState().setTyping(params.id, true)
+    }
+  }
 
   const handleSend = async () => {
     const content = draft.trim()
-    if (!content || sending) return
+    if ((!content && !attachment) || sending || uploading) return
     setSending(true)
     try {
-      await useChatStore.getState().sendMessage(params.id, content)
+      await useChatStore.getState().sendMessage(params.id, content, attachment ?? undefined)
       setDraft("")
+      setAttachment(null)
+      useChatStore.getState().setTyping(params.id, false)
     } catch (err) {
       showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
     } finally {
       setSending(false)
     }
   }
+
+  const handlePickFile = async (file: File | undefined) => {
+    if (!file) return
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      showToast(s["validation.fileType"], "error")
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      showToast(s["validation.fileSize"], "error")
+      return
+    }
+    setUploading(true)
+    const upload = await uploadPostMedia(file)
+    setUploading(false)
+    if (!upload.ok || !upload.url) {
+      showToast(upload.error ?? s["chat.attachmentError"], "error")
+      return
+    }
+    setAttachment({ url: upload.url, type: file.type.startsWith("video/") ? "video" : "photo" })
+  }
+
+  // Who is typing right now (excluding me, within TTL).
+  const typingUsers = Object.entries(typingByConv)
+    .filter(([uid, ts]) => uid !== currentUser?.id && now - ts < TYPING_TTL_MS)
+    .map(([uid]) => uid)
+  const typingLabel = typingUsers.length > 0
+    ? typingUsers.length === 1
+      ? s["chat.typing.one"](users[typingUsers[0]]?.name ?? s["chat.typing.someone"])
+      : s["chat.typing.multiple"]
+    : null
 
   if (loading) {
     return (
@@ -128,7 +189,7 @@ export default function ConversationPage({
     )
   }
 
-  if (!conversation || !partner) {
+  if (!conversation || (!conversation.isGroup && !partner)) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
         <EmptyState
@@ -147,6 +208,15 @@ export default function ConversationPage({
     )
   }
 
+  const headerName = conversation.isGroup
+    ? conversation.title ?? s["chat.group"]
+    : partner!.name
+  const headerSub = conversation.isGroup
+    ? s["chat.groupMembers"](memberCount)
+    : partner!.username
+      ? `@${partner!.username}`
+      : null
+
   return (
     <div className="mx-auto flex h-[calc(100dvh-7rem)] w-full max-w-2xl flex-col px-4 lg:h-[calc(100dvh-2rem)]">
       {/* Header */}
@@ -159,12 +229,16 @@ export default function ConversationPage({
         >
           <ArrowLeft size={20} />
         </button>
-        <Avatar name={partner.name} src={partner.avatarUrl ?? null} size="md" />
+        {conversation.isGroup ? (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+            <Users size={18} aria-hidden />
+          </span>
+        ) : (
+          <Avatar name={partner!.name} src={partner!.avatarUrl ?? null} size="md" />
+        )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{partner.name}</p>
-          {partner.username ? (
-            <p className="text-xs text-slate-400">@{partner.username}</p>
-          ) : null}
+          <p className="truncate text-sm font-semibold text-slate-900">{headerName}</p>
+          {headerSub ? <p className="text-xs text-slate-400">{headerSub}</p> : null}
         </div>
         <span
           className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
@@ -178,6 +252,8 @@ export default function ConversationPage({
       <div className="flex-1 space-y-2 overflow-y-auto py-4">
         {messages.map((m) => {
           const mine = m.senderId === currentUser?.id
+          // Read receipt: recipient opened the conversation after this message.
+          const read = mine && Boolean(m.readAt || (otherLastRead && new Date(otherLastRead) >= new Date(m.createdAt)))
           return (
             <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
               <div
@@ -188,7 +264,24 @@ export default function ConversationPage({
                     : "rounded-bl-sm border border-slate-200 bg-white text-slate-800",
                 )}
               >
-                <p className="break-words whitespace-pre-wrap">{m.content}</p>
+                {m.attachmentType === "video" && m.attachmentUrl ? (
+                  <video
+                    src={m.attachmentUrl}
+                    controls
+                    preload="metadata"
+                    className="mb-1.5 max-h-56 w-full rounded-lg"
+                  />
+                ) : null}
+                {m.attachmentType === "photo" && m.attachmentUrl ? (
+                  <img
+                    src={m.attachmentUrl}
+                    alt={s["chat.attachmentAlt"]}
+                    className="mb-1.5 max-h-56 w-full rounded-lg object-cover"
+                  />
+                ) : null}
+                {m.content ? (
+                  <p className="break-words whitespace-pre-wrap">{m.content}</p>
+                ) : null}
                 <p
                   className={cn(
                     "mt-1 text-right text-[10px]",
@@ -196,6 +289,9 @@ export default function ConversationPage({
                   )}
                 >
                   {timeAgo(m.createdAt)}
+                  {mine ? (
+                    <span className="ml-1">{read ? s["chat.read"] : s["chat.sent"]}</span>
+                  ) : null}
                 </p>
               </div>
             </div>
@@ -203,6 +299,37 @@ export default function ConversationPage({
         })}
         <div ref={bottomRef} />
       </div>
+
+      {/* Typing indicator (fixed strip above composer) */}
+      {typingLabel ? (
+        <p className="flex items-center gap-1.5 px-1 pb-1 text-xs text-slate-400">
+          <span className="flex gap-0.5">
+            <span className="h-1 w-1 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
+            <span className="h-1 w-1 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
+            <span className="h-1 w-1 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+          </span>
+          {typingLabel}
+        </p>
+      ) : null}
+
+      {/* Attachment preview */}
+      {attachment ? (
+        <div className="relative mb-2 w-fit max-w-xs overflow-hidden rounded-card border border-slate-200 bg-white">
+          {attachment.type === "video" ? (
+            <video src={attachment.url} controls className="max-h-40 w-full" />
+          ) : (
+            <img src={attachment.url} alt={s["chat.attachmentAlt"]} className="max-h-40 w-full object-cover" />
+          )}
+          <button
+            type="button"
+            onClick={() => setAttachment(null)}
+            aria-label={s["chat.removeAttachment"]}
+            className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : null}
 
       {/* Composer */}
       <form
@@ -212,9 +339,32 @@ export default function ConversationPage({
           handleSend()
         }}
       >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,video/*"
+          className="hidden"
+          aria-hidden
+          onChange={(e) => {
+            void handlePickFile(e.target.files?.[0])
+            e.target.value = ""
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading || Boolean(attachment)}
+          aria-label={s["chat.attach"]}
+          className="transition-app flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
+        >
+          <Paperclip size={19} />
+        </button>
         <textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            pingTyping()
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault()
@@ -227,7 +377,12 @@ export default function ConversationPage({
           className="max-h-32 min-h-11 flex-1 resize-none rounded-card border border-slate-200 bg-white px-3.5 py-2.5 text-body-sm text-slate-800 placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
           aria-label={s["chat.thread.placeholder"]}
         />
-        <Button type="submit" loading={sending} disabled={!draft.trim()} aria-label={s["chat.thread.send"]}>
+        <Button
+          type="submit"
+          loading={sending || uploading}
+          disabled={(!draft.trim() && !attachment) || uploading}
+          aria-label={s["chat.thread.send"]}
+        >
           <Send size={16} aria-hidden />
         </Button>
       </form>

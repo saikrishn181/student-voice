@@ -156,9 +156,13 @@ export type ReportReason = "spam" | "harassment" | "misinformation" | "inappropr
 // ─── Chat ────────────────────────────────────────────────────────────────────
 export interface Conversation {
   id: string
-  // The other participant (this user's perspective is always "me").
+  // The other participant (this user's perspective is always "me"). Empty for
+  // group conversations (title + member count drive the UI instead).
   otherUserId: string
   createdAt: string // ISO
+  // Group conversations: display title.
+  title?: string
+  isGroup: boolean
 }
 
 export interface Message {
@@ -167,4 +171,9 @@ export interface Message {
   senderId: string
   content: string
   createdAt: string // ISO
+  // Set when a recipient opened the conversation (read receipts).
+  readAt?: string
+  // Optional attachment (chat V2).
+  attachmentUrl?: string
+  attachmentType?: "photo" | "video"
 }
