@@ -135,6 +135,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const myReadByConv = new Map<string, string | null>()
     const otherReadByConv = new Map<string, string>()
     const memberCountByConv = new Map<string, number>()
+    // 1:1 partner per conversation (for non-group threads the single other
+    // participant); group conversations use the title instead.
+    const otherByConv = new Map<string, string>()
     for (const p of participantRows) {
       const count = (memberCountByConv.get(p.conversation_id) ?? 0) + 1
       memberCountByConv.set(p.conversation_id, count)

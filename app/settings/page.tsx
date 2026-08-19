@@ -468,7 +468,7 @@ export default function SettingsPage() {
                 {s["settings.college.verifiedAs"](currentUser.collegeName ?? "")}
               </p>
               <p className="text-body-sm text-slate-500">
-                {s["settings.college.verifiedEmail"](currentUser.college_email ?? "")}
+                {s["settings.college.verifiedEmail"](currentUser.collegeEmail ?? "")}
               </p>
             </div>
           ) : (

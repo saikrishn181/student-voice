@@ -322,13 +322,23 @@ export const usePostStore = create<PostState>()((set, get) => ({
     if (!last) return false
 
     const supabase = createSupabaseBrowserClient()
-    const { data: postRows, error } = await visiblePostsQuery()
+    // Single combined filter: visibility (scheduled_for must be null or past)
+    // AND keyset cursor. Built as one .or() so postgrest-js never drops the
+    // visibility clause when chaining a second .or().
+    const visA = "scheduled_for.is.null"
+    const visB = "scheduled_for.lte.now"
+    const { data: postRows, error } = await supabase
+      .from("posts")
+      .select("*")
+      .or(
+        `and(${visA},created_at.lt.${last.createdAt}),` +
+          `and(${visB},created_at.lt.${last.createdAt}),` +
+          `and(${visA},created_at.eq.${last.createdAt},id.lt.${last.id}),` +
+          `and(${visB},created_at.eq.${last.createdAt},id.lt.${last.id})`,
+      )
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(FEED_PAGE_SIZE)
-      .or(
-        `and(created_at.lt.${last.createdAt}),and(created_at.eq.${last.createdAt},id.lt.${last.id})`,
-      )
 
     if (error) return false
 
