@@ -10,6 +10,8 @@ import {
   clamp,
   timeAgo,
   compactNumber,
+  parseHashtags,
+  categoryFromHashtags,
 } from "../lib/utils.ts"
 
 test("cn merges tailwind classes without conflicts", () => {
@@ -52,4 +54,31 @@ test("compactNumber", () => {
   assert.equal(compactNumber(1000), "1k")
   assert.equal(compactNumber(1200), "1.2k")
   assert.equal(compactNumber(10_500), "10.5k")
+})
+
+test("parseHashtags normalizes input", () => {
+  assert.deepEqual(parseHashtags("#academic, hostel #Fees"), {
+    tags: ["academic", "hostel", "fees"],
+    error: null,
+  })
+  assert.deepEqual(parseHashtags("  #A  #a  "), { tags: ["a"], error: null })
+  assert.deepEqual(parseHashtags(""), { tags: [], error: null })
+})
+
+test("parseHashtags rejects invalid input", () => {
+  const tooMany = parseHashtags("a b c d e f")
+  assert.equal(tooMany.error, "validation.hashtagsTooMany")
+  const tooLong = parseHashtags("a".repeat(31))
+  assert.equal(tooLong.error, "validation.hashtagTooLong")
+  const invalid = parseHashtags("has-tag")
+  assert.equal(invalid.error, "validation.hashtagInvalid")
+})
+
+test("categoryFromHashtags maps keywords to categories", () => {
+  assert.equal(categoryFromHashtags(["harassment"]), "Harassment")
+  assert.equal(categoryFromHashtags(["mental-health", "stress"]), "Mental Health")
+  assert.equal(categoryFromHashtags(["fee", "scholarship"]), "Financial")
+  assert.equal(categoryFromHashtags(["placement", "intern"]), "Placements")
+  assert.equal(categoryFromHashtags(["exams", "marks"]), "Exams")
+  assert.equal(categoryFromHashtags(["hostel"]), "Academic")
 })

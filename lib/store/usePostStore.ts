@@ -226,6 +226,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     const { data: postRows, error: postsError } = await visiblePostsQuery()
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(0, FEED_PAGE_SIZE - 1)
 
     if (postsError) {
@@ -311,16 +312,23 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   loadMore: async (currentUserId) => {
-    const { loadedCount, hasMore, status } = get()
+    const { posts, hasMore, status } = get()
     if (!hasMore || status !== "ready") return false
 
-    const supabase = createSupabaseBrowserClient()
-    const from = loadedCount
-    const to = loadedCount + FEED_PAGE_SIZE - 1
+    // Keyset (cursor) pagination: fetch strictly older than the last loaded
+    // post. Ties on created_at are broken by id (uuid), which stays stable
+    // even if new posts arrive while paging.
+    const last = posts[posts.length - 1]
+    if (!last) return false
 
+    const supabase = createSupabaseBrowserClient()
     const { data: postRows, error } = await visiblePostsQuery()
       .order("created_at", { ascending: false })
-      .range(from, to)
+      .order("id", { ascending: false })
+      .limit(FEED_PAGE_SIZE)
+      .or(
+        `and(created_at.lt.${last.createdAt}),and(created_at.eq.${last.createdAt},id.lt.${last.id})`,
+      )
 
     if (error) return false
 
@@ -353,7 +361,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     set((s) => ({
       posts: [...s.posts, ...newPosts],
-      hasMore: (postRows?.length ?? 0) >= FEED_PAGE_SIZE,
+      hasMore: newPosts.length > 0 && (postRows?.length ?? 0) >= FEED_PAGE_SIZE,
       loadedCount: s.loadedCount + newPosts.length,
     }))
     return true

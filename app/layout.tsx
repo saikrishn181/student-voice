@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Fraunces, Manrope } from "next/font/google"
 import "./globals.css"
 import { AppShell } from "@/components/layout/AppShell"
+import { ServiceWorkerRegistrar } from "@/components/layout/ServiceWorkerRegistrar"
 import { Toaster } from "@/components/ui/Toast"
 
 // Warm editorial serif for headlines — human, not template-y.
@@ -96,6 +97,8 @@ export default function RootLayout({
         <AppShell>{children}</AppShell>
         {/* Global toast notifications render here on every page */}
         <Toaster />
+        {/* Offline support (progressive web app) */}
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   )

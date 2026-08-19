@@ -273,6 +273,9 @@ const s = {
   "settings.invite.copyFailed": "Couldn't copy the link. Please copy it manually.",
   "mention.notFound": "Couldn't find that person.",
 
+  // ─── Accessibility ─────────────────────────────────────────────────────────────
+  "a11y.skipToContent": "Skip to content",
+
   // ─── Signup: referral invites ────────────────────────────────────────────────
   "auth.signup.inviteLabel": "Invite code (optional)",
   "auth.signup.invitePlaceholder": "Have an invite code? Enter it here",
