@@ -23,7 +23,7 @@ interface CommentThreadProps {
 
 function CommentItem({ comment }: { comment: Comment }) {
   const author = useUserById(comment.authorId)
-  const currentUserId = useAuthStore((s) => s.currentUser?.id)
+  const currentUser = useAuthStore((s) => s.currentUser)
   const updateComment = usePostStore((s) => s.updateComment)
   const deleteComment = usePostStore((s) => s.deleteComment)
   const showToast = useToastStore((s) => s.show)
@@ -35,7 +35,9 @@ function CommentItem({ comment }: { comment: Comment }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const isMine = comment.authorId === currentUserId
+  const isMine = comment.authorId === currentUser?.id
+  const isAdmin = Boolean(currentUser?.isAdmin)
+  const canModerate = isMine || isAdmin
 
   const handleSave = async () => {
     const next = draft.trim()
@@ -118,7 +120,7 @@ function CommentItem({ comment }: { comment: Comment }) {
 
       <div className="mt-1 flex items-center justify-between gap-2">
         <p className="text-xs text-slate-400">{timeAgo(comment.createdAt)}</p>
-        {isMine && !editing ? (
+        {canModerate && !editing ? (
           <div className="relative">
             <button
               type="button"
@@ -133,18 +135,20 @@ function CommentItem({ comment }: { comment: Comment }) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                 <div className="absolute bottom-full right-0 z-20 mb-1 w-36 overflow-hidden rounded-card border border-slate-200 bg-white shadow-modal">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      setDraft(comment.text)
-                      setEditing(true)
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil size={14} className="text-slate-400" />
-                    {s["comment.edit"]}
-                  </button>
+                  {isMine ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        setDraft(comment.text)
+                        setEditing(true)
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <Pencil size={14} className="text-slate-400" />
+                      {s["comment.edit"]}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => {
@@ -154,7 +158,7 @@ function CommentItem({ comment }: { comment: Comment }) {
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     <Trash2 size={14} />
-                    {s["comment.delete"]}
+                    {isMine ? s["comment.delete"] : s["comment.deleteAsMod"]}
                   </button>
                 </div>
               </>

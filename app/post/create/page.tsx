@@ -47,6 +47,7 @@ export default function CreatePostPage() {
   // Scheduling (orgs only).
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduledFor, setScheduledFor] = useState("")
+  const [contentWarning, setContentWarning] = useState("")
 
   const state = currentUser?.state ?? ""
   const isOrg = currentUser?.accountType === "organization"
@@ -170,6 +171,7 @@ export default function CreatePostPage() {
         eventAt: eventAtISO,
         eventLocation: eventLocation.trim() || null,
         poll,
+        contentWarning: contentWarning || null,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
@@ -400,6 +402,27 @@ export default function CreatePostPage() {
             </Card>
           </>
         ) : null}
+
+        {/* Content warning */}
+        <Card className="flex flex-col gap-3 p-4">
+          <label htmlFor="content-warning" className="text-sm font-semibold text-slate-800">
+            {s["createPost.warningLabel"]}
+          </label>
+          <select
+            id="content-warning"
+            name="content-warning"
+            value={contentWarning}
+            onChange={(e) => setContentWarning(e.target.value)}
+            className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          >
+            <option value="">{s["createPost.warningNone"]}</option>
+            <option value="nsfw">{s["post.warning.nsfw"]}</option>
+            <option value="spoiler">{s["post.warning.spoiler"]}</option>
+            <option value="triggering">{s["post.warning.triggering"]}</option>
+            <option value="graphic">{s["post.warning.graphic"]}</option>
+          </select>
+          <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
+        </Card>
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
           <Send size={18} aria-hidden />

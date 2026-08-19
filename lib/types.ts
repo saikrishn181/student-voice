@@ -119,6 +119,8 @@ export interface Post {
   // Embedded poll (question + options). Votes live in poll_votes.
   poll?: Poll | null
   savedByCurrentUser: boolean
+  // Optional content warning; media + text stay blurred until revealed.
+  contentWarning?: string
 }
 
 export interface Comment {

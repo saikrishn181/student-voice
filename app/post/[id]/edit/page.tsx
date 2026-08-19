@@ -39,6 +39,7 @@ export default function EditPostPage({
   const [loaded, setLoaded] = useState(false)
   const [textError, setTextError] = useState("")
   const [tagError, setTagError] = useState("")
+  const [contentWarning, setContentWarning] = useState("")
 
   // Keep hashtag preview live as the user types.
   const previewTags = parseHashtags(hashtagInput)
@@ -54,6 +55,7 @@ export default function EditPostPage({
       }
       setText(fresh.text)
       setHashtagInput(fresh.hashtags.join(" "))
+      setContentWarning(fresh.contentWarning ?? "")
       setExistingMediaUrls((fresh.mediaUrl ?? "").split(" ").filter(Boolean))
       setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
       setLoaded(true)
@@ -65,6 +67,7 @@ export default function EditPostPage({
     if (post && !loaded) {
       setText(post.text)
       setHashtagInput(post.hashtags.join(" "))
+      setContentWarning(post.contentWarning ?? "")
       setExistingMediaUrls((post.mediaUrl ?? "").split(" ").filter(Boolean))
       setExistingMediaType(post.mediaType as "photo" | "video" | null)
       setLoaded(true)
@@ -121,6 +124,7 @@ export default function EditPostPage({
         mediaAspectRatio,
         state: currentUser?.state ?? "",
         hashtags: previewTags.tags,
+        contentWarning: contentWarning || null,
       })
       showToast(s["toast.postUpdated"], "success")
       router.push(`/post/${postId}`)
@@ -199,6 +203,26 @@ export default function EditPostPage({
         <Card className="flex flex-col gap-3">
           <h2 className="text-h4">{s["createPost.mediaHeading"]}</h2>
           <MediaUploader value={media} onChange={setMedia} />
+        </Card>
+
+        <Card className="flex flex-col gap-3">
+          <label htmlFor="content-warning" className="text-sm font-semibold text-slate-800">
+            {s["createPost.warningLabel"]}
+          </label>
+          <select
+            id="content-warning"
+            name="content-warning"
+            value={contentWarning}
+            onChange={(e) => setContentWarning(e.target.value)}
+            className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+          >
+            <option value="">{s["createPost.warningNone"]}</option>
+            <option value="nsfw">{s["post.warning.nsfw"]}</option>
+            <option value="spoiler">{s["post.warning.spoiler"]}</option>
+            <option value="triggering">{s["post.warning.triggering"]}</option>
+            <option value="graphic">{s["post.warning.graphic"]}</option>
+          </select>
+          <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">

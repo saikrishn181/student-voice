@@ -145,6 +145,7 @@ create table if not exists public.posts (
   event_at timestamptz,
   event_location text,
   poll_json jsonb,
+  content_warning text check (content_warning is null or content_warning in ('nsfw', 'spoiler', 'triggering', 'graphic')),
   created_at timestamptz not null default now()
 );
 
@@ -176,7 +177,46 @@ create policy "Users can update their own posts"
 
 drop policy if exists "Users can delete their own posts" on public.posts;
 create policy "Users can delete their own posts"
-  on public.posts for delete using (auth.uid() = author_id);
+  on public.posts for delete
+  using (
+    auth.uid() = author_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+-- Optional content warnings blur a post's media/text until the viewer
+-- explicitly reveals it (nsfw / spoiler / triggering / graphic).
+alter table public.posts
+  add column if not exists content_warning text
+  check (content_warning is null or content_warning in ('nsfw', 'spoiler', 'triggering', 'graphic'));
+
+-- Post spam guard (parallel to guard_comment_spam): max 4 posts per minute,
+-- max 12 posts per hour, per user. Admins are exempt.
+create or replace function public.guard_post_spam()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if not exists (select 1 from public.profiles p where p.id = new.author_id and p.is_admin) then
+    if (select count(*) from public.posts
+        where author_id = new.author_id
+          and created_at > now() - interval '1 minute') >= 4 then
+      raise exception 'Too many posts — slow down and try again in a moment.';
+    end if;
+    if (select count(*) from public.posts
+        where author_id = new.author_id
+          and created_at > now() - interval '1 hour') >= 12 then
+      raise exception 'Post limit reached for the hour — come back later.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists post_spam_guard on public.posts;
+create trigger post_spam_guard
+  before insert on public.posts
+  for each row execute function public.guard_post_spam();
 
 -- ============================================================
 -- POST ENGAGEMENT: poll votes, bookmarks, event RSVPs
@@ -340,7 +380,11 @@ create policy "Users can edit their comments"
 
 drop policy if exists "Users can delete their comments" on public.comments;
 create policy "Users can delete their comments"
-  on public.comments for delete using (auth.uid() = author_id);
+  on public.comments for delete
+  using (
+    auth.uid() = author_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 
 create or replace function public.increment_comment_count()
 returns trigger

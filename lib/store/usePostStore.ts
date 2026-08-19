@@ -38,6 +38,7 @@ interface PostRow {
   event_at: string | null
   event_location: string | null
   poll_json: unknown | null
+  content_warning: string | null
   created_at: string
 }
 
@@ -72,6 +73,7 @@ function rowToPost(row: PostRow): Post {
           }
         : null,
     savedByCurrentUser: false,
+    contentWarning: row.content_warning ?? undefined,
   }
 }
 
@@ -170,6 +172,7 @@ interface PostState {
     eventAt?: string | null
     eventLocation?: string | null
     poll?: Post["poll"]
+    contentWarning?: string | null
   }) => Promise<Post>
   updatePost: (id: string, input: {
     text: string
@@ -181,6 +184,7 @@ interface PostState {
     eventAt?: string | null
     eventLocation?: string | null
     poll?: Post["poll"]
+    contentWarning?: string | null
   }) => Promise<void>
   deletePost: (id: string) => Promise<void>
   toggleSave: (postId: string, currentUserId: string) => Promise<void>
@@ -371,6 +375,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
         scheduled_for: input.scheduledFor ?? null,
         event_at: input.eventAt ?? null,
         event_location: input.eventLocation ?? null,
+        content_warning: input.contentWarning ?? null,
         poll_json: input.poll
           ? {
               question: input.poll.question,
@@ -405,6 +410,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
         updated_at: new Date().toISOString(),
         event_at: input.eventAt ?? null,
         event_location: input.eventLocation ?? null,
+        content_warning: input.contentWarning ?? null,
         poll_json: input.poll
           ? {
               question: input.poll.question,
@@ -809,6 +815,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
                     viewCount: row.view_count,
                     isPinned: row.is_pinned,
                     editedAt: row.updated_at ?? undefined,
+                    contentWarning: row.content_warning ?? undefined,
                   }
                 : p,
             ),

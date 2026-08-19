@@ -305,6 +305,7 @@ const s = {
   "comment.edit": "Edit",
   "comment.editLabel": "Edit comment",
   "comment.delete": "Delete",
+  "comment.deleteAsMod": "Delete comment (moderator)",
   "comment.deleteTitle": "Delete this comment?",
   "comment.deleteDescription": "This will permanently remove the comment. It can't be undone.",
   "comment.save": "Save",
@@ -342,6 +343,21 @@ const s = {
   "post.deleteConfirm.description": "This will permanently remove the post and its comments. This can't be undone.",
   "post.deleteConfirm.cancel": "Cancel",
   "post.deleteConfirm.delete": "Delete",
+
+  // ─── Post: content warnings + moderation ───────────────────────────────────
+  "post.warning.nsfw": "Sensitive content",
+  "post.warning.spoiler": "Spoiler",
+  "post.warning.triggering": "Triggering content",
+  "post.warning.graphic": "Graphic content",
+  "post.revealWarning": "View content",
+  "post.warningBlurHint": "This post has a content warning. Its text and media are hidden until you choose to view them.",
+  "post.deleteAsMod": "Delete post (moderator)",
+
+  // ─── Create post: content warning select ───────────────────────────────────
+  "createPost.warningLabel": "Content warning",
+  "createPost.warningNone": "None — safe to view",
+  "createPost.warningHint":
+    "Posts flagged here are blurred in feeds until viewers choose to reveal them. Good for spoilers, exam-result discussions, and sensitive topics.",
   "post.deleteSuccess": "Post deleted",
   "post.menuLabel": "Post actions",
 

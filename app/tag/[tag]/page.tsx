@@ -36,6 +36,7 @@ interface PostRow {
   event_at: string | null
   event_location: string | null
   poll_json: unknown | null
+  content_warning: string | null
   created_at: string
 }
 
@@ -70,6 +71,7 @@ function rowToPost(row: PostRow): Post {
           }
         : null,
     savedByCurrentUser: false,
+    contentWarning: row.content_warning ?? undefined,
   }
 }
 

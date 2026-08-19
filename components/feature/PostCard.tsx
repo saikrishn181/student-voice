@@ -26,6 +26,7 @@ import {
   CalendarClock,
   CalendarCheck,
   CalendarX,
+  TriangleAlert,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -83,9 +84,13 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const [blocking, setBlocking] = useState(false)
   const [pinning, setPinning] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [warningRevealed, setWarningRevealed] = useState(false)
 
   const isOwnPost = currentUser?.id === post.authorId
+  const isAdmin = Boolean(currentUser?.isAdmin)
   const isBlocked = Boolean(author?.id && blockedUserIds.includes(author.id))
+  const hasWarning = Boolean(post.contentWarning)
+  const concealed = hasWarning && !warningRevealed
   const isVerifiedOrg =
     author?.accountType === "organization" && author.verificationStatus === "verified"
   const follows = usePostStore((s) => s.follows)
@@ -215,6 +220,11 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       {isEvent ? (
         <span className="inline-flex items-center gap-1 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
           <CalendarClock size={11} aria-hidden /> {s["post.eventBadge"]}
+        </span>
+      ) : null}
+      {hasWarning ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+          <TriangleAlert size={11} aria-hidden /> {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
         </span>
       ) : null}
       <RegionTag state={post.state} />
@@ -349,6 +359,19 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
                     </>
                   ) : (
                     <>
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false)
+                            setConfirmOpen(true)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                          {s["post.deleteAsMod"]}
+                        </button>
+                      ) : null}
                       {canMessage ? (
                         <button
                           type="button"
@@ -414,14 +437,30 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       {/* Region/Category/Time tags */}
       {meta}
 
+      {/* Content warning gate: blur text + media until explicitly revealed */}
+      {concealed ? (
+        <div className="flex flex-col items-center gap-3 rounded-card border border-red-200 bg-red-50/60 p-4 text-center">
+          <TriangleAlert size={20} className="text-red-600" aria-hidden />
+          <p className="text-body-sm font-medium text-red-800">
+            {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
+          </p>
+          <p className="max-w-sm text-body-sm text-red-700/80">{s["post.warningBlurHint"]}</p>
+          <Button size="sm" onClick={() => setWarningRevealed(true)}>
+            {s["post.revealWarning"]}
+          </Button>
+        </div>
+      ) : null}
+
       {/* Text */}
       {post.text ? (
-        <p className="break-words text-body text-slate-800">{post.text}</p>
+        <p className={cn("break-words text-body text-slate-800", concealed && "blur-md select-none")}>
+          {post.text}
+        </p>
       ) : null}
 
       {/* Event card */}
       {isEvent ? (
-        <div className="flex flex-col gap-2 rounded-card border border-amber-200 bg-amber-50/60 p-3">
+        <div className={cn("flex flex-col gap-2 rounded-card border border-amber-200 bg-amber-50/60 p-3", concealed && "blur-md select-none")}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-slate-800">
             <span className="inline-flex items-center gap-1.5">
               <CalendarClock size={15} className="text-amber-600" aria-hidden />
@@ -442,11 +481,15 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       ) : null}
 
       {/* Poll */}
-      {post.poll ? <PollDisplay postId={post.id} poll={post.poll} /> : null}
+      {post.poll ? (
+        <div className={cn(concealed && "pointer-events-none select-none blur-md")}>
+          <PollDisplay postId={post.id} poll={post.poll} />
+        </div>
+      ) : null}
 
       {/* Media */}
       {post.mediaUrl && post.mediaType ? (
-        <Link href={`/post/${post.id}`} className="block">
+        <Link href={`/post/${post.id}`} className={cn("block", concealed && "pointer-events-none select-none blur-md")}>
           <MediaDisplay
             mediaUrl={post.mediaUrl}
             mediaType={post.mediaType}
