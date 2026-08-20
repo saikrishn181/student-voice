@@ -1,19 +1,59 @@
--- Upgrade script for databases created from an OLDER schema.sql.
+-- ============================================================
+-- KRANTIND — CONSOLIDATED UPGRADE (all batches, idempotent)
+-- ============================================================
+-- Run this ONCE in the Supabase SQL Editor (New query -> paste -> Run).
+-- If it errors, the message shows the failing statement — re-run the whole
+-- thing after fixing (every statement is safe to re-run).
 --
--- Re-run supabase/schema.sql on a fresh project, or run THIS file against an
--- existing database to add everything added since:
---   - profiles.username (settings feature)
---   - profiles.is_admin (moderation)
---   - blocks / reports tables
---   - comment edit policy + comment spam guard
---   - follow count + follow notification triggers
---   - post/comment length checks + realtime publication
---   - profiles.is_private (private accounts) + privacy-aware post visibility
---   - chat tables (conversations, conversation_participants, messages) + RLS
--- Idempotent: safe to run more than once.
+-- Sections:  [1] pre-flight data fixes   [2] profiles
+--            [3] content limits          [4] comments
+--            [5] follows                 [6] blocks/reports
+--            [7] private accounts        [8] chat v1
+--            [9] follow requests         [10] realtime
+--            [11] unread counts          [12] post features (pins/polls/...)
+--            [13] discovery topics       [14] chat v2 (groups/typing/...)
+--            [15] notification prefs     [16] safety (warnings/spam/mod)
+--            [17] identity (college/invites)
 
 -- ============================================================
--- USERS / PROFILES
+-- [1] PRE-FLIGHT DATA FIXES
+-- Trims out-of-range rows BEFORE the length constraints below are added,
+-- and de-duplicates usernames before the unique index. All guarded so they
+-- no-op on databases that never had these columns.
+-- ============================================================
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'posts' and column_name = 'text') then
+    update public.posts set text = left(text, 2000) where char_length(text) > 2000;
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'comments' and column_name = 'content') then
+    update public.comments set content = left(content, 500) where char_length(content) > 500;
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'profiles' and column_name = 'username') then
+    -- Keep the oldest profile with a given username; suffix the duplicates.
+    update public.profiles p
+      set username = p.username || '-' || left(replace(p.id::text, '-', ''), 6)
+      where p.username is not null
+        and exists (
+          select 1 from public.profiles q
+          where lower(q.username) = lower(p.username) and q.id < p.id
+        );
+  end if;
+end $$;
+
+-- ============================================================
+-- [2] PROFILES
 -- ============================================================
 alter table public.profiles
   add column if not exists username text;
@@ -32,12 +72,8 @@ create policy "Admins can update any profile"
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
 
 -- ============================================================
--- CONTENT LIMITS
+-- [3] CONTENT LIMITS
 -- ============================================================
--- NOTE: existing out-of-range rows would block these; the app enforces the
--- same limits client-side, so new writes are always within bounds. If you had
--- longer rows, trim them first:
---   update public.posts set text = left(text, 2000) where char_length(text) > 2000;
 alter table public.posts
   drop constraint if exists posts_text_length;
 alter table public.posts
@@ -54,7 +90,7 @@ alter table public.comments
   add constraint comments_content_length check (char_length(trim(content)) > 0 and char_length(content) <= 500);
 
 -- ============================================================
--- COMMENTS: EDIT POLICY + SPAM GUARD
+-- [4] COMMENTS: EDIT POLICY + SPAM GUARD
 -- ============================================================
 drop policy if exists "Users can edit their comments" on public.comments;
 create policy "Users can edit their comments"
@@ -81,7 +117,7 @@ create trigger comment_spam_guard
   for each row execute function public.guard_comment_spam();
 
 -- ============================================================
--- FOLLOWS (count sync + notification)
+-- [5] FOLLOWS (count sync + notification)
 -- ============================================================
 create or replace function public.sync_follow_counts()
 returns trigger
@@ -127,7 +163,7 @@ create trigger notify_on_follow
   for each row execute function public.notify_on_follow();
 
 -- ============================================================
--- BLOCKS
+-- [6] BLOCKS + REPORTS
 -- ============================================================
 create table if not exists public.blocks (
   blocker_id uuid not null references public.profiles(id) on delete cascade,
@@ -151,9 +187,6 @@ drop policy if exists "Users can remove blocks" on public.blocks;
 create policy "Users can remove blocks"
   on public.blocks for delete using (auth.uid() = blocker_id);
 
--- ============================================================
--- REPORTS
--- ============================================================
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid not null references public.profiles(id) on delete cascade,
@@ -188,7 +221,7 @@ create policy "Admins update reports"
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
 
 -- ============================================================
--- PRIVATE ACCOUNTS (post visibility)
+-- [7] PRIVATE ACCOUNTS (post visibility)
 -- ============================================================
 drop policy if exists "Posts are public by everyone" on public.posts;
 drop policy if exists "Posts visible per privacy" on public.posts;
@@ -202,7 +235,7 @@ create policy "Posts visible per privacy"
   );
 
 -- ============================================================
--- CHAT (1:1 direct messages)
+-- [8] CHAT V1 (1:1 direct messages)
 -- ============================================================
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
@@ -268,6 +301,8 @@ create policy "Participants send messages"
     and public.is_conversation_participant(messages.conversation_id, auth.uid())
   );
 
+-- NOTE: references can_message_user, defined in section [9]. Plpgsql bodies
+-- are validated at CALL time, so creation order does not matter.
 create or replace function public.get_or_create_conversation(p_other uuid)
 returns uuid
 language plpgsql
@@ -277,7 +312,7 @@ declare
   v_conv uuid;
 begin
   -- Private accounts can only be messaged by the owner, their followers, and
-  -- admins (can_message_user is defined below).
+  -- admins.
   if not public.can_message_user(p_other) then
     raise exception 'PRIVATE_ACCOUNT_NOT_ALLOWED';
   end if;
@@ -304,7 +339,8 @@ end;
 $$;
 
 -- ============================================================
--- FOLLOW REQUESTS (private accounts require approval)
+-- [9] FOLLOW REQUESTS (private accounts require approval)
+--     + can_message_user
 -- ============================================================
 create table if not exists public.follow_requests (
   id uuid primary key default gen_random_uuid(),
@@ -425,30 +461,33 @@ end;
 $$;
 
 -- ============================================================
--- REALTIME
+-- [10] REALTIME (guarded: skips cleanly if the publication is missing)
 -- ============================================================
 do $$
 begin
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'posts'
-  ) then
-    alter publication supabase_realtime add table public.posts;
-  end if;
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'messages'
-  ) then
-    alter publication supabase_realtime add table public.messages;
+  if exists (select 1 from pg_publication p where p.pubname = 'supabase_realtime') then
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'posts'
+    ) then
+      alter publication supabase_realtime add table public.posts;
+    end if;
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'messages'
+    ) then
+      alter publication supabase_realtime add table public.messages;
+    end if;
   end if;
 end
 $$;
+
 -- ============================================================
--- CHAT UNREAD COUNTS
+-- [11] CHAT UNREAD COUNTS
 -- ============================================================
 -- Tracks when each participant last opened a conversation so the inbox can
 -- show unread badges. Existing rows start with NULL = "all read".
@@ -456,7 +495,7 @@ alter table public.conversation_participants
   add column if not exists last_read_at timestamptz;
 
 -- ============================================================
--- POST FEATURES: pinning, edit tracking, views, scheduling,
+-- [12] POST FEATURES: pinning, edit tracking, views, scheduling,
 -- events, polls, bookmarks, RSVPs
 -- ============================================================
 alter table public.posts
@@ -516,7 +555,7 @@ drop policy if exists "Users delete their RSVPs" on public.post_rsvps;
 create policy "Users delete their RSVPs" on public.post_rsvps for delete using (auth.uid() = user_id);
 
 -- ============================================================
--- DISCOVERY: followed hashtag topics
+-- [13] DISCOVERY: followed hashtag topics
 -- ============================================================
 create table if not exists public.followed_topics (
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -533,7 +572,7 @@ drop policy if exists "Users delete their topics" on public.followed_topics;
 create policy "Users delete their topics" on public.followed_topics for delete using (auth.uid() = user_id);
 
 -- ============================================================
--- CHAT V2: groups, attachments, read receipts, typing
+-- [14] CHAT V2: groups, attachments, read receipts, typing
 -- ============================================================
 alter table public.messages
   add column if not exists read_at timestamptz;
@@ -644,7 +683,7 @@ begin
 end;
 $$;
 
--- Realtime for typing + read-state (guarded like the messages publication).
+-- Realtime for typing + read-state (guarded like section [10]).
 do $$
 begin
   if exists (select 1 from pg_publication p where p.pubname = 'supabase_realtime') then
@@ -664,7 +703,7 @@ begin
 end $$;
 
 -- ============================================================
--- NOTIFICATION PREFERENCES + EMAIL DIGEST QUEUE
+-- [15] NOTIFICATION PREFERENCES + EMAIL DIGEST QUEUE
 -- ============================================================
 create table if not exists public.notification_preferences (
   user_id uuid primary key references public.profiles(id) on delete cascade,
@@ -746,7 +785,7 @@ end;
 $$;
 
 -- ============================================================
--- SAFETY: content warnings, post spam guard, admin moderation deletes
+-- [16] SAFETY: content warnings, post spam guard, admin moderation deletes
 -- ============================================================
 alter table public.posts
   add column if not exists content_warning text
@@ -799,7 +838,7 @@ create policy "Users can delete their comments"
   );
 
 -- ============================================================
--- IDENTITY: college email verification, badges, referral invites
+-- [17] IDENTITY: college email verification, badges, referral invites
 -- ============================================================
 alter table public.profiles
   add column if not exists college_email text,
@@ -909,3 +948,7 @@ begin
   return 'ok';
 end;
 $$;
+
+-- ============================================================
+-- DONE — all sections applied.
+-- ============================================================
