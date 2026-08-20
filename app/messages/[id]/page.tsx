@@ -15,10 +15,16 @@ import { useUserStore } from "@/lib/store/useUserStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { timeAgo, cn } from "@/lib/utils"
+import type { Message } from "@/lib/types"
 import s from "@/lib/strings"
 
 const TYPING_TTL_MS = 4000
 const TYPING_PING_MS = 2500
+// Stable fallbacks for store selectors: zustand compares the selector result
+// with Object.is, so a fresh `?? []` / `?? {}` per render would loop forever
+// (React error #185 — "Maximum update depth exceeded").
+const EMPTY_MESSAGES: Message[] = []
+const EMPTY_TYPING: Record<string, number> = {}
 
 export default function ConversationPage({
   params: paramsPromise,
@@ -29,10 +35,10 @@ export default function ConversationPage({
   const router = useRouter()
   const currentUser = useAuthStore((s) => s.currentUser)
   const conversation = useChatStore((s) => s.conversations.find((c) => c.id === params.id))
-  const messages = useChatStore((s) => s.messagesByConversation[params.id] ?? [])
+  const messages = useChatStore((s) => s.messagesByConversation[params.id] ?? EMPTY_MESSAGES)
   const users = useUserStore((s) => s.users)
   const showToast = useToastStore((s) => s.show)
-  const typingByConv = useChatStore((s) => s.typingByConversation[params.id] ?? {})
+  const typingByConv = useChatStore((s) => s.typingByConversation[params.id] ?? EMPTY_TYPING)
   const otherLastRead = useChatStore((s) => s.otherLastReadByConversation[params.id])
   const memberCount = useChatStore((s) => s.memberCountByConversation[params.id] ?? 0)
 
