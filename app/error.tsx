@@ -27,6 +27,11 @@ export default function ErrorBoundary({
       <p className="mt-2 max-w-sm text-body-sm text-slate-500">
         An unexpected error occurred while loading this page. Please try again.
       </p>
+      <pre className="mt-4 max-w-full overflow-auto rounded-card bg-slate-900 p-4 text-left text-xs text-red-300">
+        {error.message}
+        {"\n\n"}
+        {error.digest ? `digest: ${error.digest}` : ""}
+      </pre>
       <div className="mt-6 flex items-center gap-3">
         <Button onClick={reset}>Try again</Button>
         <Button variant="outline" onClick={() => (window.location.href = "/feed")}>
