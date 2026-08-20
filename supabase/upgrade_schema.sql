@@ -952,3 +952,13 @@ $$;
 -- ============================================================
 -- DONE — all sections applied.
 -- ============================================================
+-- ============================================================
+-- [18] CHAT: unsend / delete own messages
+-- ============================================================
+-- Senders can remove their own messages ("unsend"). The app removes the row
+-- from the conversation for everyone; other participants see it disappear
+-- live via realtime (messages is already in the realtime publication).
+drop policy if exists "Senders delete their messages" on public.messages;
+create policy "Senders delete their messages"
+  on public.messages for delete
+  using (auth.uid() = sender_id);

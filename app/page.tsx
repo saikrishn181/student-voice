@@ -111,6 +111,12 @@ export default function LandingPage() {
       <footer className="w-full border-t border-[#E8E1D6]">
         <div className="mx-auto flex w-full max-w-content flex-col items-center gap-2 px-4 py-10 text-center sm:px-6 lg:px-8">
           <Logo size="sm" />
+          <Link
+            href="/about"
+            className="mt-1 rounded-pill border border-[#E8E1D6] bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700"
+          >
+            {s["footer.about"]}
+          </Link>
           <p className="max-w-md text-body-sm text-slate-500">{s["footer.tagline"]}</p>
           <p className="text-xs text-slate-400">{s["footer.madeBy"]}</p>
           <p className="mt-2 text-xs font-medium text-slate-500">{s["footer.copyright"]}</p>

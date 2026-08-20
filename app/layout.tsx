@@ -87,10 +87,31 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: "Krantind",
-              url: SITE_URL,
-              description: metadata.description,
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": `${SITE_URL}/#organization`,
+                  name: "Krantind",
+                  url: SITE_URL,
+                  logo: `${SITE_URL}/icon.png`,
+                  description:
+                    "Krantind is a student-run platform where students and student organizations post campus problems and get real support from people in their state.",
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": `${SITE_URL}/#website`,
+                  url: SITE_URL,
+                  name: "Krantind",
+                  description: metadata.description,
+                  inLanguage: "en-IN",
+                  publisher: { "@id": `${SITE_URL}/#organization` },
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: `${SITE_URL}/search?q={search_term_string}`,
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+              ],
             }),
           }}
         />

@@ -16,7 +16,7 @@ import { PageShell } from "./PageShell"
 import { Spinner } from "@/components/ui/Spinner"
 import s from "@/lib/strings"
 
-const PUBLIC_ROUTES = ["/", "/forgot-password", "/login", "/signup"]
+const PUBLIC_ROUTES = ["/", "/about", "/forgot-password", "/login", "/signup"]
 
 // Slim copyright pill shown at the bottom of every page without its own
 // footer (the landing page has its own full footer).

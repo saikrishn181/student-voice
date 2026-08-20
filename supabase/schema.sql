@@ -878,6 +878,11 @@ create policy "Participants send messages"
     and public.is_conversation_participant(messages.conversation_id, auth.uid())
   );
 
+drop policy if exists "Senders delete their messages" on public.messages;
+create policy "Senders delete their messages"
+  on public.messages for delete
+  using (auth.uid() = sender_id);
+
 -- Atomically find (or create) the 1:1 conversation between the caller and
 -- another user. Returns the conversation id. Private accounts can only be
 -- messaged by the owner, their followers, and admins.

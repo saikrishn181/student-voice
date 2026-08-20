@@ -7,8 +7,8 @@
 import { useEffect, useRef, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, MessageSquare, Lock, Paperclip, X, Users } from "lucide-react"
-import { Avatar, Button, EmptyState, Skeleton } from "@/components/ui"
+import { ArrowLeft, Send, MessageSquare, Lock, Paperclip, X, Users, Trash2, Maximize2, Download } from "lucide-react"
+import { Avatar, Button, EmptyState, Skeleton, Modal } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
 import { useUserStore } from "@/lib/store/useUserStore"
@@ -47,6 +47,7 @@ export default function ConversationPage({
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [attachment, setAttachment] = useState<{ url: string; type: "photo" | "video" } | null>(null)
+  const [viewMedia, setViewMedia] = useState<{ url: string; type: "photo" | "video" } | null>(null)
   const [uploading, setUploading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -147,6 +148,11 @@ export default function ConversationPage({
       return
     }
     setAttachment({ url: upload.url, type: file.type.startsWith("video/") ? "video" : "photo" })
+  }
+
+  const handleUnsend = async (messageId: string) => {
+    const ok = await useChatStore.getState().deleteMessage(params.id, messageId)
+    if (!ok) showToast(s["validation.generic"], "error")
   }
 
   // Who is typing right now (excluding me, within TTL).
@@ -271,32 +277,66 @@ export default function ConversationPage({
                 )}
               >
                 {m.attachmentType === "video" && m.attachmentUrl ? (
-                  <video
-                    src={m.attachmentUrl}
-                    controls
-                    preload="metadata"
-                    className="mb-1.5 max-h-56 w-full rounded-lg"
-                  />
+                  <div className="relative mb-1.5">
+                    <video
+                      src={m.attachmentUrl}
+                      controls
+                      preload="metadata"
+                      className="max-h-56 w-full rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setViewMedia({ url: m.attachmentUrl!, type: "video" })}
+                      aria-label={s["chat.openMedia"]}
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/60 text-white hover:bg-slate-900/80"
+                    >
+                      <Maximize2 size={13} aria-hidden />
+                    </button>
+                  </div>
                 ) : null}
                 {m.attachmentType === "photo" && m.attachmentUrl ? (
-                  <img
-                    src={m.attachmentUrl}
-                    alt={s["chat.attachmentAlt"]}
-                    className="mb-1.5 max-h-56 w-full rounded-lg object-cover"
-                  />
+                  <div className="relative mb-1.5">
+                    <img
+                      src={m.attachmentUrl}
+                      alt={s["chat.attachmentAlt"]}
+                      className="max-h-56 w-full rounded-lg object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setViewMedia({ url: m.attachmentUrl!, type: "photo" })}
+                      aria-label={s["chat.openMedia"]}
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/60 text-white hover:bg-slate-900/80"
+                    >
+                      <Maximize2 size={13} aria-hidden />
+                    </button>
+                  </div>
                 ) : null}
                 {m.content ? (
                   <p className="break-words whitespace-pre-wrap">{m.content}</p>
                 ) : null}
                 <p
                   className={cn(
-                    "mt-1 text-right text-[10px]",
+                    "mt-1 flex items-center justify-end gap-1 text-right text-[10px]",
                     mine ? "text-primary-100" : "text-slate-400",
                   )}
                 >
                   {timeAgo(m.createdAt)}
                   {mine ? (
                     <span className="ml-1">{read ? s["chat.read"] : s["chat.sent"]}</span>
+                  ) : null}
+                  {mine ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleUnsend(m.id)}
+                      aria-label={s["chat.unsend"]}
+                      title={s["chat.unsend"]}
+                      className={cn(
+                        "transition-app rounded p-0.5",
+                        mine ? "text-primary-100/70 hover:bg-primary-700 hover:text-white" : "text-slate-300 hover:bg-slate-100 hover:text-slate-600",
+                      )}
+                    >
+                      <Trash2 size={11} aria-hidden />
+                    </button>
                   ) : null}
                 </p>
               </div>
@@ -392,6 +432,37 @@ export default function ConversationPage({
           <Send size={16} aria-hidden />
         </Button>
       </form>
+
+      {/* Media lightbox: open full-size + download */}
+      <Modal open={viewMedia !== null} onClose={() => setViewMedia(null)} title={s["chat.media"]}>
+        {viewMedia ? (
+          <div className="flex flex-col gap-3">
+            {viewMedia.type === "video" ? (
+              <video
+                src={viewMedia.url}
+                controls
+                autoPlay
+                className="max-h-[65dvh] w-full rounded-card bg-black"
+              />
+            ) : (
+              <img
+                src={viewMedia.url}
+                alt={s["chat.attachmentAlt"]}
+                className="max-h-[65dvh] w-full rounded-card bg-black object-contain"
+              />
+            )}
+            <a
+              href={viewMedia.url}
+              download
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-2 rounded-card bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-app hover:bg-primary-700"
+            >
+              <Download size={16} aria-hidden /> {s["chat.downloadMedia"]}
+            </a>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   )
 }

@@ -548,10 +548,26 @@ const s = {
   "hero.features.support.text":
     "When enough people stand with you, organizations step in and the problem actually gets fixed.",
   "how.title": "How it works",
-  "footer.tagline":
-    "Your campus, your problems, your people — one place for every voice to be heard.",
+"footer.tagline":
+    "Students and student organizations post campus problems and get real support from people in their state.",
   "footer.madeBy": "Made by students, for students in India.",
   "footer.copyright": "© 2026 Krantind. All rights reserved.",
+  "footer.about": "About",
+  "about.title": "About Krantind",
+  "about.tagline": "Post the problem, get real support — region by region, problem by problem.",
+  "about.whatTitle": "What is Krantind?",
+  "about.whatText":
+    "Krantind is a student-run platform where students and student organizations post campus and regional problems and get real support from people in their state. Posts are organized by region and hashtags, so a problem posted in one college can reach students, organizations and officials across the state.",
+  "about.whoTitle": "Who runs Krantind?",
+  "about.whoText":
+    "Krantind is built and maintained by students. There is no corporation behind it — no ads, no sponsors. The platform exists to give students a direct voice and a way to turn problems into action.",
+  "about.howTitle": "How it works",
+  "about.howText":
+    "Post a problem to your region, follow hashtags that matter to you, and get support from people nearby. Private accounts, reporting, content warnings and moderation keep the space safe, and college verification ties posts to real student identities.",
+  "about.contactTitle": "Contact",
+  "about.contactText":
+    "Questions, feedback or problems? Write to us from inside the app, or start a conversation on any post.",
+  "about.backHome": "Back to Krantind",
   "chat.encrypted": "End-to-end encrypted",
 
   // ─── Chat V2: groups, attachments, typing, receipts ─────────────────────────
@@ -575,6 +591,10 @@ const s = {
   "chat.attachmentError": "Could not upload the attachment. Please try again.",
   "chat.read": "Read",
   "chat.sent": "Sent",
+  "chat.unsend": "Unsend",
+  "chat.openMedia": "Open media",
+  "chat.media": "Media",
+  "chat.downloadMedia": "Download",
   "chat.typing.one": (name: string) => `${name} is typing…`,
   "chat.typing.multiple": "Several people are typing…",
   "chat.typing.someone": "Someone",

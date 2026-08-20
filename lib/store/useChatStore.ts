@@ -65,6 +65,8 @@ interface ChatState {
   loadMessages: (conversationId: string) => Promise<boolean>
   // Throws an Error with a human-readable message on failure (callers toast it).
   sendMessage: (conversationId: string, content: string, attachment?: { url: string; type: "photo" | "video" }) => Promise<boolean>
+  // Unsend: removes the message (sender only, enforced by RLS).
+  deleteMessage: (conversationId: string, messageId: string) => Promise<boolean>
   // Marks the open conversation as read (badge zeroed + DB read receipts).
   markConversationRead: (conversationId: string) => Promise<void>
   setActiveConversation: (conversationId: string | null) => void
@@ -349,6 +351,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return true
   },
 
+  deleteMessage: async (conversationId, messageId) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    if (!currentUserId) return false
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId)
+      .eq("sender_id", currentUserId)
+    if (error) return false
+    // Optimistic removal; realtime DELETEs from the other side also land here.
+    set((s) => ({
+      messagesByConversation: {
+        ...s.messagesByConversation,
+        [conversationId]: (s.messagesByConversation[conversationId] ?? []).filter(
+          (m) => m.id !== messageId,
+        ),
+      },
+    }))
+    return true
+  },
+
   markConversationRead: async (conversationId) => {
     const currentUserId = useAuthStore.getState().currentUser?.id
     if (!currentUserId) return
@@ -443,6 +467,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
             // Refresh the conversation list so ordering/preview update.
             get().loadConversations()
           }
+        },
+      )
+      // Unsend: remove the message from every participant's view.
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages" },
+        (payload) => {
+          const old = payload.old as { id?: string; conversation_id?: string }
+          if (!old || !old.id || !old.conversation_id) return
+          const delConvId = old.conversation_id
+          const delMessageId = old.id
+          set((s) => ({
+            messagesByConversation: {
+              ...s.messagesByConversation,
+              [delConvId]: (s.messagesByConversation[delConvId] ?? []).filter(
+                (m) => m.id !== delMessageId,
+              ),
+            },
+          }))
+          // Refresh ordering/preview in the inbox.
+          get().loadConversations()
         },
       )
       // Typing pings: INSERT/UPDATE refresh the "typing since" timestamp.
