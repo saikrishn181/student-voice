@@ -52,7 +52,7 @@ interface ChatState {
   // Who is typing per conversation: user_id -> when they last pinged.
   typingByConversation: Record<string, Record<string, number>>
   // Other participants' latest read timestamp per conversation (receipts).
-  otherLastReadByConversation: Record<string, string>
+  otherLastReadByConversation: Record<string, string | null>
   // Group member count per conversation (for headers/labels).
   memberCountByConversation: Record<string, number>
 
@@ -155,7 +155,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 3. Most recent message per conversation (for the preview line).
     const { data: messageRows, error: msgError } = await supabase
       .from("messages")
-      .select("id, conversation_id, sender_id, content, created_at")
+      .select("id, conversation_id, sender_id, content, created_at, read_at, attachment_url, attachment_type")
       .in("conversation_id", conversationIds)
       .order("created_at", { ascending: false })
     if (msgError || !messageRows) {
@@ -487,11 +487,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
         { event: "DELETE", schema: "public", table: "chat_typing" },
         (payload) => {
           const old = payload.old as { conversation_id?: string; user_id?: string }
-          if (!old?.conversation_id || !old.user_id) return
+          if (!old || !old.conversation_id || !old.user_id) return
+          const convId = old.conversation_id
+          const userId = old.user_id
           set((s) => {
-            const map = { ...(s.typingByConversation[old.conversation_id] ?? {}) }
-            delete map[old.user_id]
-            return { typingByConversation: { ...s.typingByConversation, [old.conversation_id]: map } }
+            const map = { ...(s.typingByConversation[convId] ?? {}) }
+            delete map[userId]
+            return { typingByConversation: { ...s.typingByConversation, [convId]: map } }
           })
         },
       )

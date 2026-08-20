@@ -20,7 +20,7 @@ const manrope = Manrope({
   display: "swap",
 })
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://krantind.vercel.app"
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://krantind.xyz"
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

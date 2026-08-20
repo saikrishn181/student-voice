@@ -72,14 +72,14 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
       // Video is always single. Replacing it clears the rest.
       picked.forEach((m) => URL.revokeObjectURL(m.url))
       onChange(picked.slice(0, 1))
-      picked.slice(0, 1).forEach(rememberBlob)
+      picked.slice(0, 1).forEach((m) => rememberBlob(m.url))
       return
     }
     const combined = [...value, ...picked].slice(0, MAX_PHOTOS)
     if (combined.length < value.length + picked.length) {
       showToast(s["media.uploader.maxPhotos"](MAX_PHOTOS), "error")
     }
-    picked.forEach(rememberBlob)
+    picked.forEach((m) => rememberBlob(m.url))
     onChange(combined)
   }
 

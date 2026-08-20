@@ -201,6 +201,9 @@ export default function SettingsPage() {
   const [verifying, setVerifying] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Incoming follow requests (sent TO me) for the accept/reject list.
+  const myIncoming = followRequests.filter((r) => r.targetId === currentUser?.id)
+
   const notificationTypes: { type: string; label: string }[] = [
     { type: "support", label: s["notification.type.support"] },
     { type: "comment", label: s["notification.type.comment"] },
@@ -211,6 +214,7 @@ export default function SettingsPage() {
   ]
 
   const toggleMutedType = (type: string) => {
+    if (!currentUser) return
     const muted = new Set(notificationPrefs?.mutedTypes ?? [])
     if (muted.has(type)) muted.delete(type)
     else muted.add(type)
@@ -218,6 +222,7 @@ export default function SettingsPage() {
   }
 
   const setDigestFrequency = (freq: "instant" | "daily" | "never") => {
+    if (!currentUser) return
     void updateNotificationPrefs(currentUser.id, { digestFrequency: freq })
   }
 
@@ -250,6 +255,7 @@ export default function SettingsPage() {
   }
 
   const handleCopyInvite = async () => {
+    if (!currentUser) return
     const code = currentUser.inviteCode
     if (!code) return
     const link = `${window.location.origin}/signup?invite=${encodeURIComponent(code)}`
