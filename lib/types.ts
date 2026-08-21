@@ -159,7 +159,6 @@ export interface FollowRequest {
   createdAt: string // ISO
 }
 
-export type ToastTone = "success" | "error" | "info"
 export type ToastKind = "success" | "error" | "info"
 
 // Reasons a user can flag a post for moderation (mirrors reports.reason CHECK).

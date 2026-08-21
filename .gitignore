@@ -4,6 +4,7 @@ node_modules/
 # Next.js build output & dev cache
 .next/
 out/
+*.tsbuildinfo
 
 # Logs
 *.log
@@ -14,7 +15,10 @@ npm-debug.log*
 Thumbs.db
 
 # Env / secrets
+.env
 .env*.local
+.env.production
+.env.development
 
 # Local AI-assisted dev tooling (not part of the app)
 .opencode/

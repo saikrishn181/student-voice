@@ -1,9 +1,13 @@
-// About page: tells search engines (and people) who publishes this site, so
-// "About this source" describes Krantind instead of its hosting platform.
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowLeft, MapPin, HeartHandshake, ShieldCheck } from "lucide-react"
 import { Logo } from "@/components/feature"
 import s from "@/lib/strings"
+
+export const metadata: Metadata = {
+  title: "About Krantind — India's Student Voice",
+  description: "Learn about Krantind, the platform empowering Indian students to speak up, organize, and find solutions together.",
+}
 
 const SECTIONS = [
   {

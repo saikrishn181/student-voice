@@ -12,7 +12,7 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useSearchStore } from "@/lib/store/useSearchStore"
 import { useDebounce } from "@/hooks"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { categoryFromHashtags } from "@/lib/utils"
+import { rowToPost, type PostRow } from "@/lib/mappers"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import type { Post } from "@/lib/types"
@@ -20,68 +20,15 @@ import type { Post } from "@/lib/types"
 // A couple of commonly filtered states to keep the chip bar short.
 const QUICK_STATES = ["Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", "Uttar Pradesh", "West Bengal"]
 
-interface PostRow {
-  id: string
-  author_id: string
-  text: string
-  media_url: string | null
-  media_type: string | null
-  media_aspect_ratio: number | null
-  state: string | null
-  hashtags: string[] | null
-  support_count: number
-  comment_count: number
-  is_pinned: boolean
-  updated_at: string | null
-  view_count: number
-  scheduled_for: string | null
-  event_at: string | null
-  event_location: string | null
-  poll_json: unknown | null
-  content_warning: string | null
-  created_at: string
-}
-
-function rowToPost(row: PostRow): Post {
-  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
-  return {
-    id: row.id,
-    authorId: row.author_id,
-    text: row.text,
-    mediaUrl: row.media_url,
-    mediaType: (row.media_type as Post["mediaType"]) ?? null,
-    mediaAspectRatio: row.media_aspect_ratio,
-    state: row.state ?? "",
-    category: categoryFromHashtags(row.hashtags ?? []),
-    hashtags: row.hashtags ?? [],
-    supportCount: row.support_count,
-    commentCount: row.comment_count,
-    createdAt: row.created_at,
-    supportedByCurrentUser: false,
-    isPinned: row.is_pinned,
-    editedAt: row.updated_at ?? undefined,
-    viewCount: row.view_count,
-    scheduledFor: row.scheduled_for ?? undefined,
-    eventAt: row.event_at ?? undefined,
-    eventLocation: row.event_location ?? undefined,
-    poll:
-      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
-        ? {
-            question: rawPoll.question ?? "",
-            options: rawPoll.options,
-            endsAt: rawPoll.ends_at ?? undefined,
-          }
-        : null,
-    savedByCurrentUser: false,
-    contentWarning: row.content_warning ?? undefined,
-  }
-}
-
 interface OrgRow {
   id: string
   name: string
   bio: string | null
   state: string | null
+}
+
+function sanitizeSearchQuery(input: string): string {
+  return input.replace(/[%_,.()"'\\]/g, " ").trim()
 }
 
 interface Results {
@@ -119,16 +66,23 @@ function SearchPage() {
 
     const supabase = createSupabaseBrowserClient()
     const isTag = q.startsWith("#")
-    const tagName = isTag ? q.slice(1).toLowerCase() : ""
+    const tagName = isTag ? sanitizeSearchQuery(q.slice(1).toLowerCase()) : ""
+    const cleanQ = sanitizeSearchQuery(q)
+
+    if (!cleanQ && !tagName) {
+      setResults({ posts: [], orgs: [] })
+      setSearching(false)
+      return
+    }
 
     const postQuery = supabase
       .from("posts")
       .select("*")
       .or("scheduled_for.is.null,scheduled_for.lte.now")
-    if (isTag) {
+    if (isTag && tagName) {
       postQuery.contains("hashtags", [tagName])
     } else {
-      postQuery.or(`text.ilike.%${q}%,state.ilike.%${q}%`)
+      postQuery.or(`text.ilike.%${cleanQ}%,state.ilike.%${cleanQ}%`)
     }
     if (stateFilter) postQuery.eq("state", stateFilter)
     postQuery.limit(30)
@@ -137,7 +91,7 @@ function SearchPage() {
       .from("profiles")
       .select("id, name, bio, state")
       .eq("account_type", "organization")
-      .or(`name.ilike.%${q}%,bio.ilike.%${q}%`)
+      .or(`name.ilike.%${cleanQ}%,bio.ilike.%${cleanQ}%`)
       .limit(10)
 
     Promise.all([postQuery, orgQuery]).then(([postRes, orgRes]) => {
@@ -202,12 +156,11 @@ function SearchPage() {
                   onClick={() => setStateFilter((prev) => (prev === st ? "" : st))}
                   aria-pressed={stateFilter === st}
                   className={cn(
-                    "rounded-pill border px-3 py-1.5 text-sm transition-app",
+                    "rounded-pill border px-4 min-h-[44px] text-sm transition-app",
                     stateFilter === st
                       ? "border-primary-600 bg-primary-600 text-white"
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
                   )}
-                  style={{ minHeight: 40 }}
                 >
                   {st}
                 </button>
@@ -216,8 +169,7 @@ function SearchPage() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="flex items-center gap-1 rounded-pill border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-50"
-                  style={{ minHeight: 40 }}
+                  className="flex items-center gap-1 rounded-pill border border-slate-200 px-4 min-h-[44px] text-sm font-medium text-slate-500 hover:bg-slate-50"
                 >
                   <X size={14} aria-hidden /> Clear filters
                 </button>

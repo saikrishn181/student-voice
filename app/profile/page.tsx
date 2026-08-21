@@ -15,68 +15,11 @@ import { PostCard, FollowersModal } from "@/components/feature"
 import { Button } from "@/components/ui/Button"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
-import { categoryFromHashtags } from "@/lib/utils"
+import { rowToPost, type PostRow } from "@/lib/mappers"
 import type { FollowsTab } from "@/components/feature/FollowersModal"
 import type { Post } from "@/lib/types"
 
 type FeedTab = "posts" | "saved"
-
-interface PostRow {
-  id: string
-  author_id: string
-  text: string
-  media_url: string | null
-  media_type: string | null
-  media_aspect_ratio: number | null
-  state: string | null
-  hashtags: string[] | null
-  support_count: number
-  comment_count: number
-  is_pinned: boolean
-  updated_at: string | null
-  view_count: number
-  scheduled_for: string | null
-  event_at: string | null
-  event_location: string | null
-  poll_json: unknown | null
-  content_warning: string | null
-  created_at: string
-}
-
-function rowToPost(row: PostRow): Post {
-  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
-  return {
-    id: row.id,
-    authorId: row.author_id,
-    text: row.text,
-    mediaUrl: row.media_url,
-    mediaType: (row.media_type as Post["mediaType"]) ?? null,
-    mediaAspectRatio: row.media_aspect_ratio,
-    state: row.state ?? "",
-    category: categoryFromHashtags(row.hashtags ?? []),
-    hashtags: row.hashtags ?? [],
-    supportCount: row.support_count,
-    commentCount: row.comment_count,
-    createdAt: row.created_at,
-    supportedByCurrentUser: false,
-    isPinned: row.is_pinned,
-    editedAt: row.updated_at ?? undefined,
-    viewCount: row.view_count,
-    scheduledFor: row.scheduled_for ?? undefined,
-    eventAt: row.event_at ?? undefined,
-    eventLocation: row.event_location ?? undefined,
-    poll:
-      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
-        ? {
-            question: rawPoll.question ?? "",
-            options: rawPoll.options,
-            endsAt: rawPoll.ends_at ?? undefined,
-          }
-        : null,
-    savedByCurrentUser: true,
-    contentWarning: row.content_warning ?? undefined,
-  }
-}
 
 export default function ProfilePage() {
   const currentUser = useAuthStore((s) => s.currentUser)

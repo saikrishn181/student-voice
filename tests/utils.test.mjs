@@ -1,6 +1,3 @@
-// Unit tests for pure helpers in lib/utils.ts, run with the built-in Node test
-// runner (zero dependencies): `npm test` -> `node --test "tests/*.test.ts"`
-// Node >= 22.6 can execute TypeScript directly (type stripping).
 import { test } from "node:test"
 import assert from "node:assert/strict"
 
@@ -12,7 +9,7 @@ import {
   compactNumber,
   parseHashtags,
   categoryFromHashtags,
-} from "../lib/utils.ts"
+} from "./utils-runner.mjs"
 
 test("cn merges tailwind classes without conflicts", () => {
   assert.equal(cn("px-2", "px-4"), "px-4")
@@ -44,7 +41,7 @@ test("timeAgo", () => {
   assert.equal(timeAgo(new Date(now - 30 * 86_400_000).toISOString()), lastLocaleDate(new Date(now - 30 * 86_400_000)))
 })
 
-function lastLocaleDate(d: Date) {
+function lastLocaleDate(d) {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" })
 }
 

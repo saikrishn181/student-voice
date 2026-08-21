@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
   const hasRegion = Boolean(profile?.state)
   const destination = hasRegion
-    ? next && next.startsWith("/") && !next.startsWith("//")
+    ? next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
       ? next
       : LOGGED_IN_HOME
     : POST_SIGNUP_ROUTE

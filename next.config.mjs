@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV === 'development'
+
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://fonts.googleapis.com"
+  : "script-src 'self' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://fonts.googleapis.com"
+
 const nextConfig = {
   // Consolidate all crawl/traffic signals on the custom domain: if Vercel
   // ever re-attaches the old *.vercel.app alias, every request permanently
@@ -29,7 +35,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://fonts.googleapis.com",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https: https://*.supabase.co https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com",
@@ -61,8 +67,6 @@ const nextConfig = {
           { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
           // DNS prefetch control
           { key: 'X-DNS-Prefetch-Control', value: 'off' },
-          // Expect-CT (optional, if using certificate transparency)
-          { key: 'Expect-CT', value: 'max-age=86400, enforce' },
         ],
       },
     ]

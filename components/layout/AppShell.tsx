@@ -14,9 +14,18 @@ import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { PageShell } from "./PageShell"
 import { Spinner } from "@/components/ui/Spinner"
+import { validateEnv } from "@/lib/env"
 import s from "@/lib/strings"
 
-const PUBLIC_ROUTES = ["/", "/about", "/forgot-password", "/login", "/signup"]
+const PUBLIC_ROUTES = [
+  "/",
+  "/about",
+  "/forgot-password",
+  "/reset-password",
+  "/login",
+  "/signup",
+  "/auth/callback",
+]
 
 // Slim copyright pill shown at the bottom of every page without its own
 // footer (the landing page has its own full footer).
@@ -39,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Restore the session once on mount.
   useEffect(() => {
+    validateEnv()
     useAuthStore.getState().bootstrap()
   }, [])
 

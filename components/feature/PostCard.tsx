@@ -298,11 +298,18 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
             className="-mr-1 -mt-1 shrink-0"
           />
         ) : (
-          <div className="relative shrink-0">
+          <div
+            className="relative shrink-0"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setMenuOpen(false)
+            }}
+          >
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={s["post.menuLabel"]}
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
               className="transition-app -mr-1 -mt-1 rounded-card p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               style={{ minHeight: 40, minWidth: 40 }}
             >
@@ -311,7 +318,11 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
             {menuOpen ? (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-card border border-slate-200 bg-white shadow-modal">
+                <div
+                  role="menu"
+                  aria-orientation="vertical"
+                  className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-card border border-slate-200 bg-white shadow-modal"
+                >
                   {isOwnPost ? (
                     <>
                       <button

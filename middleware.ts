@@ -6,6 +6,7 @@ import { createServerClient } from "@supabase/ssr"
 
 const PUBLIC_ROUTES = [
   "/",
+  "/about",
   "/forgot-password",
   "/reset-password",
   "/login",
@@ -52,7 +53,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // A signed-in user hitting an auth page is bounced to the feed instead.
-  if (isPublicRoute && isAuthenticated && path !== "/") {
+  const AUTH_ONLY_GUEST_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password"]
+  if (AUTH_ONLY_GUEST_PAGES.includes(path) && isAuthenticated) {
     const url = request.nextUrl.clone()
     url.pathname = "/feed"
     url.search = ""

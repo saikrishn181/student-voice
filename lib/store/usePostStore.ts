@@ -13,68 +13,11 @@ import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
 import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
 import { categoryFromHashtags } from "@/lib/utils"
+import { rowToPost, rowToComment, type PostRow, type CommentRow } from "@/lib/mappers"
 
 // Represents a row from the `profiles` table.
 interface BlockRow {
   blocked_id: string
-}
-
-interface PostRow {
-  id: string
-  author_id: string
-  text: string
-  media_url: string | null
-  media_type: MediaType
-  media_aspect_ratio: number | null
-  state: string | null
-  category: Category
-  hashtags: string[] | null
-  support_count: number
-  comment_count: number
-  is_pinned: boolean
-  updated_at: string | null
-  view_count: number
-  scheduled_for: string | null
-  event_at: string | null
-  event_location: string | null
-  poll_json: unknown | null
-  content_warning: string | null
-  created_at: string
-}
-
-function rowToPost(row: PostRow): Post {
-  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
-  return {
-    id: row.id,
-    authorId: row.author_id,
-    text: row.text,
-    mediaUrl: row.media_url,
-    mediaType: row.media_type,
-    mediaAspectRatio: row.media_aspect_ratio,
-    state: row.state ?? "",
-    category: row.category,
-    hashtags: row.hashtags ?? [],
-    supportCount: row.support_count,
-    commentCount: row.comment_count,
-    createdAt: row.created_at,
-    supportedByCurrentUser: false,
-    isPinned: row.is_pinned,
-    editedAt: row.updated_at ?? undefined,
-    viewCount: row.view_count,
-    scheduledFor: row.scheduled_for ?? undefined,
-    eventAt: row.event_at ?? undefined,
-    eventLocation: row.event_location ?? undefined,
-    poll:
-      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
-        ? {
-            question: rawPoll.question ?? "",
-            options: rawPoll.options,
-            endsAt: rawPoll.ends_at ?? undefined,
-          }
-        : null,
-    savedByCurrentUser: false,
-    contentWarning: row.content_warning ?? undefined,
-  }
 }
 
 // Visible posts: not scheduled for the future. PostgREST `now` is UTC.
@@ -84,24 +27,6 @@ function visiblePostsQuery() {
     .from("posts")
     .select("*")
     .or("scheduled_for.is.null,scheduled_for.lte.now")
-}
-
-function rowToComment(row: {
-  id: string
-  post_id: string
-  author_id: string
-  content: string
-  is_org_help: boolean
-  created_at: string
-}): Comment {
-  return {
-    id: row.id,
-    postId: row.post_id,
-    authorId: row.author_id,
-    text: row.content,
-    isOrgHelp: row.is_org_help,
-    createdAt: row.created_at,
-  }
 }
 
 function rowToFollow(row: {
@@ -234,8 +159,11 @@ export const usePostStore = create<PostState>()((set, get) => ({
       return
     }
 
+    const postIds = (postRows ?? []).map((r) => r.id)
     const [{ data: commentRows }, { data: followRows }] = await Promise.all([
-      supabase.from("comments").select("*").order("created_at", { ascending: false }),
+      postIds.length > 0
+        ? supabase.from("comments").select("*").in("post_id", postIds).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
       supabase.from("follows").select("*"),
     ])
 

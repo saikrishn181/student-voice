@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 // Signup: toggle Student / Organization account type, validate, then create the
 // account via Supabase (through the auth store) and go to Region Selection.
@@ -173,7 +173,7 @@ export default function SignupPage() {
               autoComplete="new-password"
             />
 
-<Input
+            <Input
               label={s["auth.signup.inviteLabel"]}
               type="text"
               value={inviteCode}

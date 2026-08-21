@@ -22,7 +22,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useUserById } from "@/hooks"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
-import { categoryFromHashtags } from "@/lib/utils"
+import { rowToPost, type PostRow } from "@/lib/mappers"
 import type { Post, User } from "@/lib/types"
 import type { FollowsTab } from "@/components/feature/FollowersModal"
 
@@ -30,63 +30,6 @@ interface ProfileStats {
   posts_count: number
   follower_count: number
   following_count: number
-}
-
-interface PostRow {
-  id: string
-  author_id: string
-  text: string
-  media_url: string | null
-  media_type: string | null
-  media_aspect_ratio: number | null
-  state: string | null
-  hashtags: string[] | null
-  support_count: number
-  comment_count: number
-  is_pinned: boolean
-  updated_at: string | null
-  view_count: number
-  scheduled_for: string | null
-  event_at: string | null
-  event_location: string | null
-  poll_json: unknown | null
-  content_warning: string | null
-  created_at: string
-}
-
-function rowToPost(row: PostRow): Post {
-  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null
-  return {
-    id: row.id,
-    authorId: row.author_id,
-    text: row.text,
-    mediaUrl: row.media_url,
-    mediaType: (row.media_type as Post["mediaType"]) ?? null,
-    mediaAspectRatio: row.media_aspect_ratio,
-    state: row.state ?? "",
-    category: categoryFromHashtags(row.hashtags ?? []),
-    hashtags: row.hashtags ?? [],
-    supportCount: row.support_count,
-    commentCount: row.comment_count,
-    createdAt: row.created_at,
-    supportedByCurrentUser: false,
-    isPinned: row.is_pinned,
-    editedAt: row.updated_at ?? undefined,
-    viewCount: row.view_count,
-    scheduledFor: row.scheduled_for ?? undefined,
-    eventAt: row.event_at ?? undefined,
-    eventLocation: row.event_location ?? undefined,
-    poll:
-      rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0
-        ? {
-            question: rawPoll.question ?? "",
-            options: rawPoll.options,
-            endsAt: rawPoll.ends_at ?? undefined,
-          }
-        : null,
-    savedByCurrentUser: false,
-    contentWarning: row.content_warning ?? undefined,
-  }
 }
 
 export default function PublicProfilePage({
@@ -268,35 +211,39 @@ export default function PublicProfilePage({
           ) : null}
 
           {/* Stats — clickable for followers/owner only (private accounts keep
-              their lists private too). */}
-          <div className="flex gap-6 text-center">
+              their lists private too). 44px min touch target on mobile. */}
+          <div className="flex gap-4 text-center">
             <button
               type="button"
               disabled={!canViewContent}
               onClick={() => setFollowsTab("followers")}
               className={cn(
-                "rounded-card p-1 transition-colors",
+                "flex-1 rounded-card px-3 py-2.5 min-h-[44px] transition-colors",
                 canViewContent ? "hover:bg-slate-50" : "cursor-default",
               )}
               aria-label={s["follow.modal.followers"]}
             >
-              <p className="text-h4 text-slate-900">{followerCount}</p>
-              <p className="text-xs text-slate-500">{s["profile.followers"]}</p>
+              <div className="flex flex-col items-center">
+                <p className="text-h4 text-slate-900">{followerCount}</p>
+                <p className="text-xs text-slate-500">{s["profile.followers"]}</p>
+              </div>
             </button>
             <button
               type="button"
               disabled={!canViewContent}
               onClick={() => setFollowsTab("following")}
               className={cn(
-                "rounded-card p-1 transition-colors",
+                "flex-1 rounded-card px-3 py-2.5 min-h-[44px] transition-colors",
                 canViewContent ? "hover:bg-slate-50" : "cursor-default",
               )}
               aria-label={s["follow.modal.following"]}
             >
-              <p className="text-h4 text-slate-900">{followingCount}</p>
-              <p className="text-xs text-slate-500">{s["profile.following"]}</p>
+              <div className="flex flex-col items-center">
+                <p className="text-h4 text-slate-900">{followingCount}</p>
+                <p className="text-xs text-slate-500">{s["profile.following"]}</p>
+              </div>
             </button>
-            <div>
+            <div className="flex-1 flex flex-col items-center min-h-[44px] px-3 py-2.5">
               <p className="text-h4 text-slate-900">{postsCount}</p>
               <p className="text-xs text-slate-500">{s["profile.stats.posts"]}</p>
             </div>

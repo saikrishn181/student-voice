@@ -14,6 +14,7 @@ import { Button, EmptyState, Skeleton } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { rowToPost, rowToComment, type PostRow, type CommentRow } from "@/lib/mappers"
 import s from "@/lib/strings"
 
 export default function PostDetailPage({
@@ -62,18 +63,13 @@ export default function PostDetailPage({
         .select("*")
         .eq("post_id", params.id)
         .order("created_at", { ascending: true })
+      const mappedPost = rowToPost(row as unknown as PostRow)
+      const mappedComments = (commentRows ?? []).map((r) => rowToComment(r as unknown as CommentRow))
       usePostStore.setState((s) => ({
-        posts: s.posts.some((p) => p.id === row.id) ? s.posts : [row as any, ...s.posts],
+        posts: s.posts.some((p) => p.id === row.id) ? s.posts : [mappedPost, ...s.posts],
         comments: [
           ...s.comments.filter((c) => c.postId !== params.id),
-          ...(commentRows ?? []).map((r) => ({
-            id: r.id,
-            postId: r.post_id,
-            authorId: r.author_id,
-            text: r.content,
-            isOrgHelp: r.is_org_help,
-            createdAt: r.created_at,
-          })),
+          ...mappedComments,
         ],
       }))
       setLookingUp(false)
@@ -157,7 +153,7 @@ export default function PostDetailPage({
       <section className="mt-6" aria-label="Comments">
         <h2 className="mb-3 text-h4">{s["postDetail.commentsHeading"](post.commentCount)}</h2>
         {/* Fixed composer on mobile above bottom nav; inline on desktop */}
-        <div className="sticky bottom-20 z-10 mb-4 lg:static lg:mb-4 lg:bottom-auto">
+        <div className="sticky bottom-24 z-10 mb-4 lg:static lg:mb-4 lg:bottom-auto">
           <div className="rounded-card border border-slate-200 bg-white/95 p-3 shadow-card backdrop-blur lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none">
             <CommentInput postId={post.id} />
           </div>

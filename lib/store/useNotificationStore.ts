@@ -123,7 +123,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     await supabase.from("notifications").update({ read: true }).eq("id", id)
   },
 
-markAllAsRead: async () => {
+  markAllAsRead: async () => {
     const unreadIds = get().notifications.filter((n) => !n.read).map((n) => n.id)
     // Optimistic.
     set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) }))

@@ -1,14 +1,14 @@
 // Krantind service worker: offline-first app shell + runtime caching.
 // - Navigation requests: network-first, falling back to the cached shell so
 //   the app still opens offline.
-// - Static assets: cache-first for speed.
-const CACHE = "krantind-v1"
-const PRECACHE = ["/", "/login", "/signup"]
+// - Static assets: network-first with cache fallback or cache-first for hashed Next.js chunks.
+const CACHE_NAME = "krantind-v2"
+const PRECACHE = ["/", "/login", "/signup", "/about"]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
-      .open(CACHE)
+      .open(CACHE_NAME)
       .then((cache) => cache.addAll(PRECACHE))
       .then(() => self.skipWaiting()),
   )
@@ -19,7 +19,11 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))),
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key)),
+        ),
       )
       .then(() => self.clients.claim()),
   )
@@ -37,8 +41,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE).then((cache) => cache.put(req, copy))
+          if (res.status === 200) {
+            const copy = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
+          }
           return res
         })
         .catch(() =>
@@ -48,16 +54,37 @@ self.addEventListener("fetch", (event) => {
     return
   }
 
-  // Static assets (JS/CSS/images): cache-first.
-  event.respondWith(
-    caches.match(req).then(
-      (cached) =>
-        cached ||
-        fetch(req).then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE).then((cache) => cache.put(req, copy))
+  // Next static chunks (immutable with hash): cache first
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        if (cached) return cached
+        return fetch(req).then((res) => {
+          if (res.status === 200) {
+            const copy = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
+          }
           return res
-        }),
-    ),
+        })
+      }),
+    )
+    return
+  }
+
+  // Other static assets (images/fonts): stale while revalidate
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req)
+        .then((res) => {
+          if (res.status === 200) {
+            const copy = res.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
+          }
+          return res
+        })
+        .catch(() => cached)
+
+      return cached || fetchPromise
+    }),
   )
 })

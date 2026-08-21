@@ -108,11 +108,12 @@ export default function FeedPage() {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={
+              className={cn(
+                "rounded-pill px-4 min-h-[44px] text-sm font-semibold transition-app",
                 filter === key
-                  ? "rounded-pill bg-primary-700 px-3 py-1 text-xs font-semibold text-white"
-                  : "rounded-pill border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-700"
-              }
+                  ? "bg-primary-700 text-white"
+                  : "border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700",
+              )}
             >
               {label}
             </button>

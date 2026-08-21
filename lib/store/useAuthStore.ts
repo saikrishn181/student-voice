@@ -10,6 +10,7 @@ import { create } from "zustand"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { AccountType, OrganizationType, Profile, User } from "@/lib/types"
+import { rowToUser } from "@/lib/mappers"
 import { useUserStore } from "./useUserStore"
 
 export interface SignupPayload {
@@ -66,30 +67,7 @@ export interface ProfilePatch {
   isPrivate?: boolean
 }
 
-// Map a `profiles` row to the app's User type.
-function rowToUser(row: Profile): User {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    username: row.username ?? undefined,
-    accountType: row.account_type,
-    organizationType: row.organization_type ?? undefined,
-    verificationStatus: row.verification_status ?? undefined,
-    avatarUrl: row.avatar_url ?? undefined,
-    state: row.state ?? undefined,
-    bio: row.bio ?? undefined,
-    followerCount: row.follower_count,
-    followingCount: row.following_count,
-    createdAt: row.created_at,
-    isAdmin: row.is_admin,
-    isPrivate: row.is_private,
-    collegeVerified: row.college_verified,
-    collegeName: row.college_name ?? undefined,
-    collegeEmail: row.college_email ?? undefined,
-    inviteCode: row.invite_code ?? undefined,
-  }
-}
+let authListenerSubscription: { unsubscribe: () => void } | null = null
 
 async function fetchProfile(userId: string): Promise<User | null> {
   const supabase = createSupabaseBrowserClient()
@@ -309,7 +287,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     })
 
     // Keep the store in sync with auth changes (sign-in from other tabs, etc.).
-    supabase.auth.onAuthStateChange((event) => {
+    if (authListenerSubscription) {
+      authListenerSubscription.unsubscribe()
+      authListenerSubscription = null
+    }
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         supabase.auth.getUser().then(({ data }) => {
           if (!data.user) return
@@ -321,6 +304,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         set({ isLoggedIn: false, currentUser: null, bootstrapping: false })
       }
     })
+    authListenerSubscription = sub.subscription
   },
 }))
 

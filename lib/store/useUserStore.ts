@@ -7,30 +7,8 @@ import { create } from "zustand"
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Profile, User } from "@/lib/types"
-
-export function rowToUser(row: Profile): User {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    username: row.username ?? undefined,
-    accountType: row.account_type,
-    organizationType: row.organization_type ?? undefined,
-    verificationStatus: row.verification_status ?? undefined,
-    avatarUrl: row.avatar_url ?? undefined,
-    state: row.state ?? undefined,
-    bio: row.bio ?? undefined,
-    followerCount: row.follower_count,
-    followingCount: row.following_count,
-    createdAt: row.created_at,
-    isAdmin: row.is_admin,
-    isPrivate: row.is_private,
-    collegeVerified: row.college_verified,
-    collegeName: row.college_name ?? undefined,
-    collegeEmail: row.college_email ?? undefined,
-    inviteCode: row.invite_code ?? undefined,
-  }
-}
+import { rowToUser } from "@/lib/mappers"
+export { rowToUser }
 
 interface UserState {
   users: Record<string, User>

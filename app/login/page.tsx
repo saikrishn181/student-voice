@@ -3,11 +3,11 @@
 // Login: email + password, validate empty fields, then sign in via Supabase
 // through the auth store and redirect to /feed (a returning user already has
 // a region set).
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Mail, Lock } from "lucide-react"
-import { Button, Input } from "@/components/ui"
+import { Button, Input, Spinner } from "@/components/ui"
 import { GoogleIcon, Logo } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -16,7 +16,15 @@ import s from "@/lib/strings"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function LoginPage() {
+function getSafeRedirect(next: string | null): string {
+  if (!next) return LOGGED_IN_HOME
+  if (next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
+    return next
+  }
+  return LOGGED_IN_HOME
+}
+
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const login = useAuthStore((s) => s.login)
@@ -52,7 +60,7 @@ export default function LoginPage() {
     }
     showToast(s["toast.loginSuccess"], "success")
     const next = searchParams.get("next")
-    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : LOGGED_IN_HOME)
+    router.push(getSafeRedirect(next))
   }
 
   const handleGoogle = async () => {
@@ -146,5 +154,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh w-full items-center justify-center">
+          <Spinner size={28} />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
