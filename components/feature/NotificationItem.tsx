@@ -2,8 +2,7 @@
 
 // Single notification row. Unread items get a tinted background + indicator dot.
 // Clicking marks the notification read and, when it references a post, deep-links
-// to that post's detail page. "follow_request" notifications link to the actor's
-// profile instead.
+// to that post's detail page. The actor's name is always a link to their profile.
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -28,12 +27,18 @@ export function NotificationItem({ notification }: NotificationItemProps) {
 
   // follow_request notifications have no post; deep-link to the requester's
   // profile so the viewer can review the request.
-  const href =
-    notification.type === "follow_request" ? `/profile/${notification.actorId}` : undefined
+  const cardHref =
+    notification.type === "follow_request"
+      ? `/profile/${notification.actorId}`
+      : notification.postId
+        ? `/post/${notification.postId}`
+        : undefined
 
   const onClick = () => {
     if (unread) markAsRead(notification.id)
   }
+
+  const profileHref = `/profile/${notification.actorId}`
 
   const body = (
     <div
@@ -46,7 +51,13 @@ export function NotificationItem({ notification }: NotificationItemProps) {
       <Avatar name={actor?.name ?? s["post.unknownName"]} src={actor?.avatarUrl} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="text-body-sm text-slate-700">
-          <span className="font-semibold text-slate-900">{actor?.name ?? s["post.unknownAuthor"]}</span>{" "}
+          <Link
+            href={profileHref}
+            className="font-semibold text-slate-900 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {actor?.name ?? s["post.unknownAuthor"]}
+          </Link>{" "}
           {s[`notification.type.${notification.type}` as keyof typeof s] as string}
         </p>
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-400">
@@ -63,17 +74,9 @@ export function NotificationItem({ notification }: NotificationItemProps) {
     </div>
   )
 
-  if (href) {
+  if (cardHref) {
     return (
-      <Link href={href} onClick={onClick} className="block">
-        {body}
-      </Link>
-    )
-  }
-
-  if (notification.postId) {
-    return (
-      <Link href={`/post/${notification.postId}`} onClick={onClick} className="block">
+      <Link href={cardHref} onClick={onClick} className="block">
         {body}
       </Link>
     )
