@@ -31,6 +31,12 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <div className="min-h-dvh w-full">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-card focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-card"
+      >
+        {s["a11y.skipToContent"]}
+      </a>
       {/* Top bar */}
       <header className="w-full border-b border-[#E8E1D6] bg-[#FDFBF7]/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-content items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
@@ -51,6 +57,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
+      <main id="main-content">
       <section className="mx-auto flex w-full max-w-content flex-col items-center px-4 pb-14 pt-14 text-center sm:px-6 md:pt-20 lg:px-8">
         <span className="animate-fade-up inline-flex items-center gap-1.5 rounded-pill border border-accent-200 bg-accent-50 px-3.5 py-1.5 text-xs font-semibold text-accent-700">
           🇮🇳 {s["hero.builtForIndia"]}
@@ -106,6 +113,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="w-full border-t border-[#E8E1D6]">

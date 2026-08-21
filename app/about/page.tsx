@@ -30,6 +30,12 @@ const SECTIONS = [
 export default function AboutPage() {
   return (
     <div className="min-h-dvh w-full">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-card focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-card"
+      >
+        {s["a11y.skipToContent"]}
+      </a>
       <header className="w-full border-b border-[#E8E1D6] bg-[#FDFBF7]/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-content items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
           <Link href="/" className="transition-app hover:opacity-90">
@@ -44,7 +50,7 @@ export default function AboutPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-content flex-col gap-10 px-4 py-12 sm:px-6 lg:px-8">
+      <main id="main-content" className="mx-auto flex w-full max-w-content flex-col gap-10 px-4 py-12 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-3">
           <h1 className="font-display text-h1 text-ink">{s["about.title"]}</h1>
           <p className="max-w-xl text-body text-slate-600">{s["about.tagline"]}</p>
