@@ -16,6 +16,7 @@ import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useUserStore } from "@/lib/store/useUserStore"
+import { cn } from "@/lib/utils"
 import s from "@/lib/strings"
 
 export default function FeedPage() {

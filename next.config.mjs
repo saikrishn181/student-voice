@@ -6,6 +6,13 @@ const scriptSrc = isDev
   : "script-src 'self' 'unsafe-inline' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://fonts.googleapis.com"
 
 const nextConfig = {
+  eslint: {
+    // Prevent ESLint missing package from failing production builds on Vercel
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: false,
+  },
   // Consolidate all crawl/traffic signals on the custom domain: if Vercel
   // ever re-attaches the old *.vercel.app alias, every request permanently
   // redirects to https://krantind.xyz.
