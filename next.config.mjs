@@ -1,5 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Consolidate all crawl/traffic signals on the custom domain: if Vercel
+  // ever re-attaches the old *.vercel.app alias, every request permanently
+  // redirects to https://krantind.xyz.
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'krantind.vercel.app' }],
+        destination: 'https://krantind.xyz/:path*',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {
