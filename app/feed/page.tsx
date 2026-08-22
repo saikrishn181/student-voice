@@ -208,7 +208,7 @@ export default function FeedPage() {
             title={s["feed.topicsEmpty.title"]}
             description={s["feed.topicsEmpty.description"]}
             action={
-              <Link href="/explore">
+              <Link href="/search">
                 <Button variant="outline" size="sm">
                   {s["feed.topicsEmpty.explore"]}
                 </Button>
