@@ -237,7 +237,7 @@ function SearchPage() {
           </div>
         </div>
 
-        {/* Recent searches (shown when query is empty) */}
+        {/* Recent searches (shown when query is empty and user has actual searches) */}
         {!isQueryActive && recent.length > 0 ? (
           <div>
             <div className="flex items-center justify-between">
@@ -252,14 +252,29 @@ function SearchPage() {
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {recent.map((term) => (
-                <button
+                <div
                   key={term}
-                  type="button"
-                  onClick={() => setQuery(term)}
-                  className="rounded-pill border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50 transition-app"
+                  className="inline-flex items-center rounded-pill border border-slate-200 bg-white pl-3 pr-1 py-0.5 text-xs text-slate-700 hover:bg-slate-50 transition-app shadow-xs"
                 >
-                  {term}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setQuery(term)}
+                    className="font-medium text-slate-700 hover:text-primary-700 pr-1 py-1"
+                  >
+                    {term}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      useSearchStore.getState().removeRecent(term)
+                    }}
+                    aria-label={`Remove ${term}`}
+                    className="rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-app"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
