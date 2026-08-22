@@ -432,8 +432,6 @@ const s = {
   "admin.notAdmin.title": "Admins only",
   "admin.notAdmin.description": "You don't have permission to view this page.",
   "nav.admin": "Moderation",
-  "search.organizationsHeading": "Organizations",
-  "search.postsHeading": "Posts",
   "tag.back": "Back to feed",
   "tag.subtitle": (count: number) =>
     `${count} ${count === 1 ? "post" : "posts"} tagged with this hashtag`,
