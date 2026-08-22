@@ -289,6 +289,11 @@ const s = {
   "search.clearRecent": "Clear",
   "search.empty": "No results found",
   "search.placeholder": "Search posts, organizations…",
+  "search.allPostsHeading": "All posts",
+  "search.organizationsHeading": "Organizations",
+  "search.postsHeading": "Matching posts",
+  "search.stateFilterLabel": "Filter by state",
+  "search.clearFilters": "Clear filter",
 
   // ─── Notifications ──────────────────────────────────────────────────────────
   "notifications.title": "Notifications",
