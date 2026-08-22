@@ -187,4 +187,6 @@ export interface Message {
   // Optional attachment (chat V2).
   attachmentUrl?: string
   attachmentType?: "photo" | "video"
+  // Set if the message has been edited.
+  editedAt?: string
 }

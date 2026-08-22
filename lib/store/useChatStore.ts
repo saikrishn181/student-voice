@@ -19,6 +19,26 @@ interface MessageRow {
   attachment_url: string | null
   attachment_type: "photo" | "video" | null
   created_at: string
+  updated_at?: string | null
+}
+
+function getDeletedForMeSet(userId?: string): Set<string> {
+  if (!userId || typeof window === "undefined") return new Set()
+  try {
+    const raw = localStorage.getItem(`krantind_deleted_for_me_${userId}`)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function saveDeletedForMeId(userId: string | undefined, messageId: string) {
+  if (!userId || typeof window === "undefined") return
+  try {
+    const current = getDeletedForMeSet(userId)
+    current.add(messageId)
+    localStorage.setItem(`krantind_deleted_for_me_${userId}`, JSON.stringify([...current]))
+  } catch {}
 }
 
 function rowToMessage(row: MessageRow): Message {
@@ -31,6 +51,7 @@ function rowToMessage(row: MessageRow): Message {
     readAt: row.read_at ?? undefined,
     attachmentUrl: row.attachment_url ?? undefined,
     attachmentType: row.attachment_type ?? undefined,
+    editedAt: row.updated_at ?? undefined,
   }
 }
 
@@ -65,7 +86,13 @@ interface ChatState {
   loadMessages: (conversationId: string) => Promise<boolean>
   // Throws an Error with a human-readable message on failure (callers toast it).
   sendMessage: (conversationId: string, content: string, attachment?: { url: string; type: "photo" | "video" }) => Promise<boolean>
-  // Unsend: removes the message (sender only, enforced by RLS).
+  // Edit message: updates the message content (sender only).
+  editMessage: (conversationId: string, messageId: string, newContent: string) => Promise<boolean>
+  // Delete for me: hides the message only on the current user's device.
+  deleteMessageForMe: (conversationId: string, messageId: string) => void
+  // Delete for everyone: removes the message from Supabase for all participants.
+  deleteMessageForEveryone: (conversationId: string, messageId: string) => Promise<boolean>
+  // Unsend alias (backwards compatible).
   deleteMessage: (conversationId: string, messageId: string) => Promise<boolean>
   // Marks the open conversation as read (badge zeroed + DB read receipts).
   markConversationRead: (conversationId: string) => Promise<void>
@@ -303,10 +330,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       .order("created_at", { ascending: true })
       .limit(200)
     if (error || !data) return false
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    const deletedForMe = getDeletedForMeSet(currentUserId)
+    const messages = (data as MessageRow[])
+      .filter((r) => !deletedForMe.has(r.id))
+      .map(rowToMessage)
     set((s) => ({
       messagesByConversation: {
         ...s.messagesByConversation,
-        [conversationId]: (data as MessageRow[]).map(rowToMessage),
+        [conversationId]: messages,
       },
     }))
     return true
@@ -351,17 +383,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return true
   },
 
-  deleteMessage: async (conversationId, messageId) => {
+  editMessage: async (conversationId, messageId, newContent) => {
+    const trimmed = newContent.trim()
+    if (!trimmed) return false
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
     if (!currentUserId) return false
+
+    const nowIso = new Date().toISOString()
+    // Optimistic update
+    set((s) => ({
+      messagesByConversation: {
+        ...s.messagesByConversation,
+        [conversationId]: (s.messagesByConversation[conversationId] ?? []).map((m) =>
+          m.id === messageId ? { ...m, content: trimmed, editedAt: nowIso } : m,
+        ),
+      },
+    }))
+
     const { error } = await supabase
       .from("messages")
-      .delete()
+      .update({ content: trimmed })
       .eq("id", messageId)
       .eq("sender_id", currentUserId)
-    if (error) return false
-    // Optimistic removal; realtime DELETEs from the other side also land here.
+
+    if (error) {
+      await get().loadMessages(conversationId)
+      return false
+    }
+    return true
+  },
+
+  deleteMessageForMe: (conversationId, messageId) => {
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    saveDeletedForMeId(currentUserId, messageId)
     set((s) => ({
       messagesByConversation: {
         ...s.messagesByConversation,
@@ -370,7 +425,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
         ),
       },
     }))
+  },
+
+  deleteMessageForEveryone: async (conversationId, messageId) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUserId = useAuthStore.getState().currentUser?.id
+    const currentUser = useAuthStore.getState().currentUser
+    if (!currentUserId) return false
+
+    // Optimistic removal
+    set((s) => ({
+      messagesByConversation: {
+        ...s.messagesByConversation,
+        [conversationId]: (s.messagesByConversation[conversationId] ?? []).filter(
+          (m) => m.id !== messageId,
+        ),
+      },
+    }))
+
+    let query = supabase.from("messages").delete().eq("id", messageId)
+    if (!currentUser?.isAdmin) {
+      query = query.eq("sender_id", currentUserId)
+    }
+    const { error } = await query
+    if (error) {
+      await get().loadMessages(conversationId)
+      return false
+    }
     return true
+  },
+
+  deleteMessage: async (conversationId, messageId) => {
+    return get().deleteMessageForEveryone(conversationId, messageId)
   },
 
   markConversationRead: async (conversationId) => {
@@ -441,6 +527,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const row = payload.new as MessageRow
           if (!row?.id) return
           const convId = row.conversation_id
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          const deletedForMe = getDeletedForMeSet(currentUserId)
+          if (deletedForMe.has(row.id)) return
+
           const existing = get().messagesByConversation[convId] ?? []
           if (!existing.some((m) => m.id === row.id)) {
             set((s) => ({
@@ -467,6 +557,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
             // Refresh the conversation list so ordering/preview update.
             get().loadConversations()
           }
+        },
+      )
+      // Live edit: update edited message for all participants in realtime.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const row = payload.new as MessageRow
+          if (!row?.id || !row?.conversation_id) return
+          const convId = row.conversation_id
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          const deletedForMe = getDeletedForMeSet(currentUserId)
+          if (deletedForMe.has(row.id)) return
+
+          set((s) => ({
+            messagesByConversation: {
+              ...s.messagesByConversation,
+              [convId]: (s.messagesByConversation[convId] ?? []).map((m) =>
+                m.id === row.id
+                  ? {
+                      ...m,
+                      content: row.content,
+                      editedAt: row.updated_at ?? new Date().toISOString(),
+                    }
+                  : m,
+              ),
+            },
+          }))
+          get().loadConversations()
         },
       )
       // Unsend: remove the message from every participant's view.

@@ -10,3 +10,8 @@ drop policy if exists "Senders delete their messages" on public.messages;
 create policy "Senders delete their messages"
   on public.messages for delete
   using (auth.uid() = sender_id);
+
+drop policy if exists "Senders update their messages" on public.messages;
+create policy "Senders update their messages"
+  on public.messages for update
+  using (auth.uid() = sender_id);

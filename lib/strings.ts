@@ -598,6 +598,22 @@ const s = {
   "chat.typing.one": (name: string) => `${name} is typing…`,
   "chat.typing.multiple": "Several people are typing…",
   "chat.typing.someone": "Someone",
+  "chat.edited": "edited",
+  "chat.actions.title": "Message options",
+  "chat.actions.edit": "Edit message",
+  "chat.actions.copy": "Copy text",
+  "chat.actions.copied": "Copied to clipboard",
+  "chat.actions.deleteForMe": "Delete for you",
+  "chat.actions.deleteForEveryone": "Delete for everyone",
+  "chat.actions.deleteForMeConfirm": "Delete this message for yourself? It will remain visible to other participants.",
+  "chat.actions.deleteForEveryoneConfirm": "Delete this message for everyone in the chat? This cannot be undone.",
+  "chat.actions.cancel": "Cancel",
+  "chat.editingBanner": "Editing message",
+  "chat.cancelEdit": "Cancel",
+  "chat.saveEdit": "Save changes",
+  "chat.editSuccess": "Message updated",
+  "chat.deleteForMeSuccess": "Message deleted for you",
+  "chat.deleteForEveryoneSuccess": "Message deleted for everyone",
 } as const
 
 export default s

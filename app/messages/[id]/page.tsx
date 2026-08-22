@@ -2,12 +2,27 @@
 
 // Conversation thread: message history + input. Realtime keeps new messages
 // appearing live, shows typing indicators and read receipts, and supports
-// photo/video attachments and group conversations.
+// photo/video attachments, editing messages, long-press actions, and group conversations.
 // Guarded: non-participants get an empty state (RLS would also block reads).
 import { useEffect, useRef, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Send, MessageSquare, Lock, Paperclip, X, Users, Trash2, Maximize2, Download } from "lucide-react"
+import {
+  ArrowLeft,
+  Send,
+  MessageSquare,
+  Lock,
+  Paperclip,
+  X,
+  Users,
+  Trash2,
+  Maximize2,
+  Download,
+  Pencil,
+  Copy,
+  Check,
+  MoreVertical,
+} from "lucide-react"
 import { Avatar, Button, EmptyState, Skeleton, Modal } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useChatStore } from "@/lib/store/useChatStore"
@@ -49,9 +64,27 @@ export default function ConversationPage({
   const [attachment, setAttachment] = useState<{ url: string; type: "photo" | "video" } | null>(null)
   const [viewMedia, setViewMedia] = useState<{ url: string; type: "photo" | "video" } | null>(null)
   const [uploading, setUploading] = useState(false)
+
+  // Long press / Action menu state
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [actionMenuOpen, setActionMenuOpen] = useState(false)
+
+  // Edit message state
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null)
+  const [editDraft, setEditDraft] = useState("")
+  const [editingSaving, setEditingSaving] = useState(false)
+
+  // Delete for everyone confirmation dialog
+  const [deleteConfirm, setDeleteConfirm] = useState<{ message: Message } | null>(null)
+  const [deletingEveryone, setDeletingEveryone] = useState(false)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lastPingRef = useRef(0)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+
   // 1s tick so typing indicators expire without realtime cleanup.
   const [now, setNow] = useState(Date.now())
 
@@ -114,7 +147,68 @@ export default function ConversationPage({
     }
   }
 
+  // Long press handling on messages
+  const handleTouchStart = (m: Message, e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY }
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+    longPressTimerRef.current = setTimeout(() => {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(40)
+        } catch {}
+      }
+      setSelectedMessage(m)
+      setActionMenuOpen(true)
+    }, 450)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x)
+    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y)
+    if (dx > 10 || dy > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    touchStartPosRef.current = null
+  }
+
+  const handleContextMenu = (m: Message, e: React.MouseEvent) => {
+    e.preventDefault()
+    setSelectedMessage(m)
+    setActionMenuOpen(true)
+  }
+
   const handleSend = async () => {
+    // If we're editing an existing message
+    if (editingMessage) {
+      const trimmed = editDraft.trim()
+      if (!trimmed) return
+      setEditingSaving(true)
+      const ok = await useChatStore.getState().editMessage(params.id, editingMessage.id, trimmed)
+      setEditingSaving(false)
+      if (ok) {
+        showToast(s["chat.editSuccess"], "success")
+        setEditingMessage(null)
+        setEditDraft("")
+      } else {
+        showToast(s["validation.generic"], "error")
+      }
+      return
+    }
+
+    // Normal send
     const content = draft.trim()
     if ((!content && !attachment) || sending || uploading) return
     setSending(true)
@@ -150,9 +244,30 @@ export default function ConversationPage({
     setAttachment({ url: upload.url, type: file.type.startsWith("video/") ? "video" : "photo" })
   }
 
-  const handleUnsend = async (messageId: string) => {
-    const ok = await useChatStore.getState().deleteMessage(params.id, messageId)
-    if (!ok) showToast(s["validation.generic"], "error")
+  const handleDeleteForMe = (messageId: string) => {
+    useChatStore.getState().deleteMessageForMe(params.id, messageId)
+    showToast(s["chat.deleteForMeSuccess"], "success")
+    setActionMenuOpen(false)
+  }
+
+  const handleDeleteForEveryone = async () => {
+    if (!deleteConfirm) return
+    setDeletingEveryone(true)
+    const ok = await useChatStore.getState().deleteMessageForEveryone(params.id, deleteConfirm.message.id)
+    setDeletingEveryone(false)
+    setDeleteConfirm(null)
+    if (ok) {
+      showToast(s["chat.deleteForEveryoneSuccess"], "success")
+    } else {
+      showToast(s["validation.generic"], "error")
+    }
+  }
+
+  const handleStartEdit = (m: Message) => {
+    setEditingMessage(m)
+    setEditDraft(m.content)
+    setActionMenuOpen(false)
+    setTimeout(() => textareaRef.current?.focus(), 100)
   }
 
   // Who is typing right now (excluding me, within TTL).
@@ -267,10 +382,31 @@ export default function ConversationPage({
           // Read receipt: recipient opened the conversation after this message.
           const read = mine && Boolean(m.readAt || (otherLastRead && new Date(otherLastRead) >= new Date(m.createdAt)))
           return (
-            <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+            <div key={m.id} className={cn("group relative flex items-center gap-1.5", mine ? "justify-end" : "justify-start")}>
+              {/* Desktop action menu trigger */}
+              {mine ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMessage(m)
+                    setActionMenuOpen(true)
+                  }}
+                  title={s["chat.actions.title"]}
+                  aria-label={s["chat.actions.title"]}
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <MoreVertical size={14} />
+                </button>
+              ) : null}
+
               <div
+                onTouchStart={(e) => handleTouchStart(m, e)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
+                onContextMenu={(e) => handleContextMenu(m, e)}
                 className={cn(
-                  "max-w-[78%] rounded-card px-3.5 py-2 text-body-sm",
+                  "max-w-[78%] select-none rounded-card px-3.5 py-2 text-body-sm transition-transform active:scale-[0.98]",
                   mine
                     ? "rounded-br-sm bg-primary-600 text-white"
                     : "rounded-bl-sm border border-slate-200 bg-white text-slate-800",
@@ -320,26 +456,33 @@ export default function ConversationPage({
                     mine ? "text-primary-100" : "text-slate-400",
                   )}
                 >
+                  {m.editedAt ? (
+                    <span className={cn("italic opacity-80", mine ? "text-primary-100" : "text-slate-400")}>
+                      ({s["chat.edited"]})
+                    </span>
+                  ) : null}
                   {timeAgo(m.createdAt)}
                   {mine ? (
                     <span className="ml-1">{read ? s["chat.read"] : s["chat.sent"]}</span>
                   ) : null}
-                  {mine ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleUnsend(m.id)}
-                      aria-label={s["chat.unsend"]}
-                      title={s["chat.unsend"]}
-                      className={cn(
-                        "transition-app rounded p-0.5",
-                        mine ? "text-primary-100/70 hover:bg-primary-700 hover:text-white" : "text-slate-300 hover:bg-slate-100 hover:text-slate-600",
-                      )}
-                    >
-                      <Trash2 size={11} aria-hidden />
-                    </button>
-                  ) : null}
                 </p>
               </div>
+
+              {/* Desktop action menu trigger for received messages */}
+              {!mine ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMessage(m)
+                    setActionMenuOpen(true)
+                  }}
+                  title={s["chat.actions.title"]}
+                  aria-label={s["chat.actions.title"]}
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <MoreVertical size={14} />
+                </button>
+              ) : null}
             </div>
           )
         })}
@@ -356,6 +499,27 @@ export default function ConversationPage({
           </span>
           {typingLabel}
         </p>
+      ) : null}
+
+      {/* Editing message indicator banner */}
+      {editingMessage ? (
+        <div className="flex items-center justify-between rounded-t-card border-x border-t border-primary-200 bg-primary-50 px-3.5 py-2 text-xs text-primary-900 shadow-sm animate-fade-in">
+          <div className="flex min-w-0 items-center gap-2">
+            <Pencil size={13} className="shrink-0 text-primary-600" />
+            <span className="font-semibold">{s["chat.editingBanner"]}:</span>
+            <span className="truncate text-slate-600">&ldquo;{editingMessage.content}&rdquo;</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingMessage(null)
+              setEditDraft("")
+            }}
+            className="ml-3 shrink-0 font-semibold text-primary-700 hover:text-primary-900 transition-app"
+          >
+            {s["chat.cancelEdit"]}
+          </button>
+        </div>
       ) : null}
 
       {/* Attachment preview */}
@@ -379,59 +543,189 @@ export default function ConversationPage({
 
       {/* Composer */}
       <form
-        className="flex items-end gap-2 border-t border-slate-200 py-3"
+        className={cn(
+          "flex items-end gap-2 py-3",
+          editingMessage ? "border-x border-b border-primary-200 rounded-b-card bg-primary-50/30 px-2 pb-2" : "border-t border-slate-200"
+        )}
         onSubmit={(e) => {
           e.preventDefault()
           handleSend()
         }}
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,video/*"
-          className="hidden"
-          aria-hidden
-          onChange={(e) => {
-            void handlePickFile(e.target.files?.[0])
-            e.target.value = ""
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading || Boolean(attachment)}
-          aria-label={s["chat.attach"]}
-          className="transition-app flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
-        >
-          <Paperclip size={19} />
-        </button>
+        {!editingMessage ? (
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              aria-hidden
+              onChange={(e) => {
+                void handlePickFile(e.target.files?.[0])
+                e.target.value = ""
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || Boolean(attachment)}
+              aria-label={s["chat.attach"]}
+              className="transition-app flex h-11 w-11 shrink-0 items-center justify-center rounded-card text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
+            >
+              <Paperclip size={19} />
+            </button>
+          </>
+        ) : null}
         <textarea
-          value={draft}
+          ref={textareaRef}
+          value={editingMessage ? editDraft : draft}
           onChange={(e) => {
-            setDraft(e.target.value)
-            pingTyping()
+            if (editingMessage) {
+              setEditDraft(e.target.value)
+            } else {
+              setDraft(e.target.value)
+              pingTyping()
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault()
               handleSend()
+            } else if (e.key === "Escape" && editingMessage) {
+              setEditingMessage(null)
+              setEditDraft("")
             }
           }}
-          placeholder={s["chat.thread.placeholder"]}
+          placeholder={editingMessage ? s["chat.thread.placeholder"] : s["chat.thread.placeholder"]}
           rows={1}
           maxLength={2000}
           className="max-h-32 min-h-11 flex-1 resize-none rounded-card border border-slate-200 bg-white px-3.5 py-2.5 text-body-sm text-slate-800 placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100"
-          aria-label={s["chat.thread.placeholder"]}
+          aria-label={editingMessage ? s["chat.saveEdit"] : s["chat.thread.placeholder"]}
         />
         <Button
           type="submit"
-          loading={sending || uploading}
-          disabled={(!draft.trim() && !attachment) || uploading}
-          aria-label={s["chat.thread.send"]}
+          loading={sending || uploading || editingSaving}
+          disabled={editingMessage ? !editDraft.trim() : (!draft.trim() && !attachment) || uploading}
+          aria-label={editingMessage ? s["chat.saveEdit"] : s["chat.thread.send"]}
         >
-          <Send size={16} aria-hidden />
+          {editingMessage ? <Check size={16} aria-hidden /> : <Send size={16} aria-hidden />}
         </Button>
       </form>
+
+      {/* Long-Press / Options Action Modal */}
+      <Modal
+        open={actionMenuOpen && selectedMessage !== null}
+        onClose={() => {
+          setActionMenuOpen(false)
+          setSelectedMessage(null)
+        }}
+        title={s["chat.actions.title"]}
+      >
+        {selectedMessage ? (
+          <div className="flex flex-col gap-3">
+            {/* Snippet preview */}
+            <div className="max-h-24 overflow-y-auto rounded-card border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+              {selectedMessage.attachmentUrl ? (
+                <p className="mb-1 italic text-slate-500">{s["chat.attachmentLabel"]}</p>
+              ) : null}
+              {selectedMessage.content ? (
+                <p className="break-words">{selectedMessage.content}</p>
+              ) : null}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col gap-1 pt-1">
+              {/* Edit message (only available for sender's own text messages) */}
+              {selectedMessage.senderId === currentUser?.id && selectedMessage.content ? (
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(selectedMessage)}
+                  className="flex w-full items-center gap-3 rounded-card px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-app hover:bg-slate-100"
+                >
+                  <Pencil size={17} className="shrink-0 text-primary-600" />
+                  <span>{s["chat.actions.edit"]}</span>
+                </button>
+              ) : null}
+
+              {/* Copy text */}
+              {selectedMessage.content ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(selectedMessage.content)
+                    showToast(s["chat.actions.copied"], "success")
+                    setActionMenuOpen(false)
+                    setSelectedMessage(null)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-card px-3.5 py-2.5 text-left text-sm font-medium text-slate-800 transition-app hover:bg-slate-100"
+                >
+                  <Copy size={17} className="shrink-0 text-slate-500" />
+                  <span>{s["chat.actions.copy"]}</span>
+                </button>
+              ) : null}
+
+              {/* Delete for you */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteForMe(selectedMessage.id)
+                  setSelectedMessage(null)
+                }}
+                className="flex w-full items-center gap-3 rounded-card px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 transition-app hover:bg-slate-100"
+              >
+                <Trash2 size={17} className="shrink-0 text-slate-500" />
+                <span>{s["chat.actions.deleteForMe"]}</span>
+              </button>
+
+              {/* Delete for everyone (sender or admin) */}
+              {selectedMessage.senderId === currentUser?.id || currentUser?.isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = selectedMessage
+                    setActionMenuOpen(false)
+                    setSelectedMessage(null)
+                    setDeleteConfirm({ message: msg })
+                  }}
+                  className="flex w-full items-center gap-3 rounded-card px-3.5 py-2.5 text-left text-sm font-medium text-danger-600 transition-app hover:bg-danger-50"
+                >
+                  <Trash2 size={17} className="shrink-0 text-danger-600" />
+                  <span>{s["chat.actions.deleteForEveryone"]}</span>
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Delete for Everyone Confirmation Modal */}
+      <Modal
+        open={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title={s["chat.actions.deleteForEveryone"]}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body-sm text-slate-600">
+            {s["chat.actions.deleteForEveryoneConfirm"]}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={deletingEveryone}
+            >
+              {s["chat.actions.cancel"]}
+            </Button>
+            <Button
+              variant="danger"
+              loading={deletingEveryone}
+              onClick={() => void handleDeleteForEveryone()}
+            >
+              {s["chat.actions.deleteForEveryone"]}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Media lightbox: open full-size + download */}
       <Modal open={viewMedia !== null} onClose={() => setViewMedia(null)} title={s["chat.media"]}>

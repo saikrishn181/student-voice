@@ -883,6 +883,11 @@ create policy "Senders delete their messages"
   on public.messages for delete
   using (auth.uid() = sender_id);
 
+drop policy if exists "Senders update their messages" on public.messages;
+create policy "Senders update their messages"
+  on public.messages for update
+  using (auth.uid() = sender_id);
+
 -- Atomically find (or create) the 1:1 conversation between the caller and
 -- another user. Returns the conversation id. Private accounts can only be
 -- messaged by the owner, their followers, and admins.
