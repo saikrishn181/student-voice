@@ -89,9 +89,9 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const [warningRevealed, setWarningRevealed] = useState(false)
   const [heartPop, setHeartPop] = useState(false)
 
-  const lastTapRef = useRef<number>(0)
+  const tapCountRef = useRef<number>(0)
+  const tapTimerRef = useRef<NodeJS.Timeout | null>(null)
   const heartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const singleTapTimerRef = useRef<NodeJS.Timeout | null>(null)
   const toggleSupport = usePostStore((s) => s.toggleSupport)
 
   const triggerDoubleTapSupport = async () => {
@@ -121,82 +121,40 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     }
   }
 
-  const handleMediaClick = (e: React.MouseEvent) => {
-    // Prevent double-click from navigating to post detail
-    if (e.detail === 2) {
-      if (singleTapTimerRef.current) {
-        clearTimeout(singleTapTimerRef.current)
-        singleTapTimerRef.current = null
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      void triggerDoubleTapSupport()
-    } else if (e.detail === 1) {
-      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current)
-      singleTapTimerRef.current = setTimeout(() => {
-        router.push(`/post/${post.id}`)
-      }, 260)
+  const handleCardTap = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    // Ignore clicks on specific interactive controls (buttons, links to profile, inputs, menus, etc.)
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("[role='menu']")
+    ) {
+      return
     }
-  }
 
-  const handleMediaTouchStart = (e: React.TouchEvent) => {
-    const now = Date.now()
-    const DOUBLE_TAP_DELAY = 300
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      lastTapRef.current = 0
-      if (singleTapTimerRef.current) {
-        clearTimeout(singleTapTimerRef.current)
-        singleTapTimerRef.current = null
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      void triggerDoubleTapSupport()
-    } else {
-      lastTapRef.current = now
-      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current)
-      singleTapTimerRef.current = setTimeout(() => {
-        router.push(`/post/${post.id}`)
+    tapCountRef.current += 1
+
+    if (tapCountRef.current === 1) {
+      // Single tap: start 280ms timer. If no second tap occurs, open post and comments!
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current)
+      tapTimerRef.current = setTimeout(() => {
+        tapCountRef.current = 0
+        if (pathname !== `/post/${post.id}`) {
+          router.push(`/post/${post.id}`)
+        }
       }, 280)
-    }
-  }
-
-  const handlePostClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest("textarea") ||
-      target.closest("[role='menu']")
-    ) {
-      return
-    }
-
-    // Native mouse double click
-    if (e.detail === 2) {
+    } else if (tapCountRef.current >= 2) {
+      // Double tap: cancel single-tap navigation and like / support the post!
+      if (tapTimerRef.current) {
+        clearTimeout(tapTimerRef.current)
+        tapTimerRef.current = null
+      }
+      tapCountRef.current = 0
       e.preventDefault()
+      e.stopPropagation()
       void triggerDoubleTapSupport()
-    }
-  }
-
-  const handlePostTouchStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement
-    if (
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest("textarea") ||
-      target.closest("[role='menu']")
-    ) {
-      return
-    }
-
-    const now = Date.now()
-    const DOUBLE_TAP_DELAY = 300
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      lastTapRef.current = 0
-      e.preventDefault()
-      void triggerDoubleTapSupport()
-    } else {
-      lastTapRef.current = now
     }
   }
 
@@ -379,10 +337,9 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
 
   return (
     <Card
-      onClick={handlePostClick}
-      onTouchStart={handlePostTouchStart}
+      onClick={handleCardTap}
       className={cn(
-        "transition-app relative overflow-hidden flex flex-col gap-3 hover:shadow-lift sm:hover:-translate-y-0.5",
+        "transition-app relative overflow-hidden flex flex-col gap-3 hover:shadow-lift sm:hover:-translate-y-0.5 cursor-pointer",
         className
       )}
     >
@@ -639,19 +596,8 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
       {/* Media */}
       {post.mediaUrl && post.mediaType ? (
         <div
-          role="button"
-          tabIndex={0}
-          onClick={handleMediaClick}
-          onTouchStart={handleMediaTouchStart}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              router.push(`/post/${post.id}`)
-            }
-          }}
-          aria-label={s["post.viewProfile"]}
           className={cn(
-            "block cursor-pointer select-none relative focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-card",
+            "block select-none relative rounded-card",
             concealed && "pointer-events-none select-none blur-md"
           )}
         >
