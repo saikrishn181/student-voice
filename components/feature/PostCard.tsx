@@ -91,6 +91,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
 
   const lastTapRef = useRef<number>(0)
   const heartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const singleTapTimerRef = useRef<NodeJS.Timeout | null>(null)
   const toggleSupport = usePostStore((s) => s.toggleSupport)
 
   const triggerDoubleTapSupport = async () => {
@@ -120,11 +121,49 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     }
   }
 
+  const handleMediaClick = (e: React.MouseEvent) => {
+    // Prevent double-click from navigating to post detail
+    if (e.detail === 2) {
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current)
+        singleTapTimerRef.current = null
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      void triggerDoubleTapSupport()
+    } else if (e.detail === 1) {
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current)
+      singleTapTimerRef.current = setTimeout(() => {
+        router.push(`/post/${post.id}`)
+      }, 260)
+    }
+  }
+
+  const handleMediaTouchStart = (e: React.TouchEvent) => {
+    const now = Date.now()
+    const DOUBLE_TAP_DELAY = 300
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      lastTapRef.current = 0
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current)
+        singleTapTimerRef.current = null
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      void triggerDoubleTapSupport()
+    } else {
+      lastTapRef.current = now
+      if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current)
+      singleTapTimerRef.current = setTimeout(() => {
+        router.push(`/post/${post.id}`)
+      }, 280)
+    }
+  }
+
   const handlePostClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement
     if (
       target.closest("button") ||
-      target.closest("a") ||
       target.closest("input") ||
       target.closest("textarea") ||
       target.closest("[role='menu']")
@@ -134,6 +173,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
 
     // Native mouse double click
     if (e.detail === 2) {
+      e.preventDefault()
       void triggerDoubleTapSupport()
     }
   }
@@ -142,7 +182,6 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     const target = e.target as HTMLElement
     if (
       target.closest("button") ||
-      target.closest("a") ||
       target.closest("input") ||
       target.closest("textarea") ||
       target.closest("[role='menu']")
@@ -154,6 +193,7 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     const DOUBLE_TAP_DELAY = 300
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
       lastTapRef.current = 0
+      e.preventDefault()
       void triggerDoubleTapSupport()
     } else {
       lastTapRef.current = now
@@ -598,13 +638,29 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
 
       {/* Media */}
       {post.mediaUrl && post.mediaType ? (
-        <Link href={`/post/${post.id}`} className={cn("block", concealed && "pointer-events-none select-none blur-md")}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleMediaClick}
+          onTouchStart={handleMediaTouchStart}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              router.push(`/post/${post.id}`)
+            }
+          }}
+          aria-label={s["post.viewProfile"]}
+          className={cn(
+            "block cursor-pointer select-none relative focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-card",
+            concealed && "pointer-events-none select-none blur-md"
+          )}
+        >
           <MediaDisplay
             mediaUrl={post.mediaUrl}
             mediaType={post.mediaType}
             knownAspectRatio={post.mediaAspectRatio}
           />
-        </Link>
+        </div>
       ) : null}
 
       {/* Actions */}
