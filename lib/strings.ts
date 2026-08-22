@@ -378,7 +378,7 @@ const s = {
   "post.deleteConfirm.delete": "Delete",
 
   // ─── Post: content warnings + moderation ───────────────────────────────────
-  "post.warning.nsfw": "Sensitive content",
+  "post.warning.nsfw": "18+ NSFW",
   "post.warning.spoiler": "Spoiler",
   "post.warning.triggering": "Triggering content",
   "post.warning.graphic": "Graphic content",
@@ -388,9 +388,10 @@ const s = {
 
   // ─── Create post: content warning select ───────────────────────────────────
   "createPost.warningLabel": "Content warning",
-  "createPost.warningNone": "None — safe to view",
+  "createPost.warningNone": "None — safe for all",
+  "createPost.nsfwToggle": "Mark as 18+ NSFW",
   "createPost.warningHint":
-    "Posts flagged here are blurred in feeds until viewers choose to reveal them. Good for spoilers, exam-result discussions, and sensitive topics.",
+    "Posts flagged as NSFW or with content warnings are blurred in feeds until viewers choose to reveal them.",
   "post.deleteSuccess": "Post deleted",
   "post.menuLabel": "Post actions",
 

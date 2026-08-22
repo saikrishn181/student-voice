@@ -440,11 +440,25 @@ export default function CreatePostPage() {
           </>
         ) : null}
 
-        {/* Content warning */}
-        <Card className="flex flex-col gap-3 p-4">
-          <label htmlFor="content-warning" className="text-sm font-semibold text-slate-800">
-            {s["createPost.warningLabel"]}
-          </label>
+        {/* Content warning & NSFW */}
+        <Card className="flex flex-col gap-3.5 p-4">
+          <div className="flex items-center justify-between">
+            <label htmlFor="content-warning" className="text-sm font-semibold text-slate-800">
+              {s["createPost.warningLabel"]}
+            </label>
+            <button
+              type="button"
+              onClick={() => setContentWarning((prev) => (prev === "nsfw" ? "" : "nsfw"))}
+              className={cn(
+                "rounded-pill border px-3 py-1 text-xs font-semibold transition-app flex items-center gap-1.5",
+                contentWarning === "nsfw"
+                  ? "border-red-500 bg-red-600 text-white shadow-xs"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              🔞 {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
+            </button>
+          </div>
           <select
             id="content-warning"
             name="content-warning"
@@ -453,10 +467,10 @@ export default function CreatePostPage() {
             className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
           >
             <option value="">{s["createPost.warningNone"]}</option>
-            <option value="nsfw">{s["post.warning.nsfw"]}</option>
-            <option value="spoiler">{s["post.warning.spoiler"]}</option>
-            <option value="triggering">{s["post.warning.triggering"]}</option>
-            <option value="graphic">{s["post.warning.graphic"]}</option>
+            <option value="nsfw">🔞 18+ NSFW (Not Safe For Work)</option>
+            <option value="spoiler">⚠️ Spoiler</option>
+            <option value="triggering">⚡ Triggering content</option>
+            <option value="graphic">🛑 Graphic content</option>
           </select>
           <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>
