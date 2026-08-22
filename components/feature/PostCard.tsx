@@ -5,7 +5,7 @@
 // RegionTag, CategoryTag, timestamp, text, media, SupportButton, comment count,
 // and a FollowButton (hidden for the viewer's own posts). Own posts show an
 // actions menu (Edit / Delete) with a delete confirmation dialog.
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import {
@@ -27,6 +27,7 @@ import {
   CalendarCheck,
   CalendarX,
   TriangleAlert,
+  Heart,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -86,6 +87,78 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   const [pinning, setPinning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [warningRevealed, setWarningRevealed] = useState(false)
+  const [heartPop, setHeartPop] = useState(false)
+
+  const lastTapRef = useRef<number>(0)
+  const heartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const toggleSupport = usePostStore((s) => s.toggleSupport)
+
+  const triggerDoubleTapSupport = async () => {
+    // Haptic feedback
+    if (typeof window !== "undefined" && navigator.vibrate) {
+      try {
+        navigator.vibrate([40, 30, 40])
+      } catch {}
+    }
+
+    // Show heart pop animation
+    if (heartTimeoutRef.current) clearTimeout(heartTimeoutRef.current)
+    setHeartPop(true)
+    heartTimeoutRef.current = setTimeout(() => setHeartPop(false), 850)
+
+    if (!currentUser) {
+      showToast(s["validation.loginRequired"], "error")
+      return
+    }
+
+    if (!post.supportedByCurrentUser) {
+      try {
+        await toggleSupport(post.id, currentUser.id)
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
+      }
+    }
+  }
+
+  const handlePostClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("[role='menu']")
+    ) {
+      return
+    }
+
+    // Native mouse double click
+    if (e.detail === 2) {
+      void triggerDoubleTapSupport()
+    }
+  }
+
+  const handlePostTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("[role='menu']")
+    ) {
+      return
+    }
+
+    const now = Date.now()
+    const DOUBLE_TAP_DELAY = 300
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      lastTapRef.current = 0
+      void triggerDoubleTapSupport()
+    } else {
+      lastTapRef.current = now
+    }
+  }
 
   const isOwnPost = currentUser?.id === post.authorId
   const isAdmin = Boolean(currentUser?.isAdmin)
@@ -265,7 +338,29 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
   if (isBlocked) return null
 
   return (
-    <Card className={cn("transition-app flex flex-col gap-3 hover:shadow-lift sm:hover:-translate-y-0.5", className)}>
+    <Card
+      onClick={handlePostClick}
+      onTouchStart={handlePostTouchStart}
+      className={cn(
+        "transition-app relative overflow-hidden flex flex-col gap-3 hover:shadow-lift sm:hover:-translate-y-0.5",
+        className
+      )}
+    >
+      {/* Floating Heart Pop Animation on Double Tap */}
+      {heartPop ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-black/5 backdrop-blur-[0.5px]"
+        >
+          <div className="animate-double-tap-heart flex items-center justify-center drop-shadow-2xl">
+            <Heart
+              size={80}
+              className="fill-accent-500 text-accent-500 drop-shadow-[0_8px_30px_rgba(237,95,42,0.6)]"
+            />
+          </div>
+        </div>
+      ) : null}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
