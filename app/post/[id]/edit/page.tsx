@@ -1,10 +1,8 @@
 "use client"
 
-// Edit post: prefills the create form with an existing post and saves via
-// usePostStore.updatePost. Only the author can edit (RLS enforces this too).
 import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
-import { Send } from "lucide-react"
+import { Send, ShieldAlert, X } from "lucide-react"
 import { Button, Card, Input, Textarea, EmptyState } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
@@ -13,6 +11,7 @@ import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { parseHashtags } from "@/lib/utils"
+import { checkInappropriateContent } from "@/lib/moderation"
 import s from "@/lib/strings"
 
 export default function EditPostPage({
@@ -39,6 +38,7 @@ export default function EditPostPage({
   const [loaded, setLoaded] = useState(false)
   const [textError, setTextError] = useState("")
   const [tagError, setTagError] = useState("")
+  const [moderationError, setModerationError] = useState("")
   const [contentWarning, setContentWarning] = useState("")
 
   // Keep hashtag preview live as the user types.
@@ -78,6 +78,7 @@ export default function EditPostPage({
     e.preventDefault()
     setTextError("")
     setTagError("")
+    setModerationError("")
 
     if (!currentUser) {
       showToast(s["validation.loginRequired"], "error")
@@ -92,6 +93,15 @@ export default function EditPostPage({
       setTextError(s["validation.postTooLong"])
       return
     }
+
+    // Content moderation validation: blocks profanity, harassment, hate speech, explicit content & scam spam
+    const moderation = checkInappropriateContent(text, previewTags.tags)
+    if (!moderation.isAllowed) {
+      setModerationError(moderation.message)
+      showToast(moderation.message, "error")
+      return
+    }
+
     if (previewTags.error) {
       setTagError(s[previewTags.error])
       return
@@ -119,12 +129,11 @@ export default function EditPostPage({
     try {
       await updatePost(postId, {
         text: text.trim(),
-        mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
-        mediaType: finalUrls.length > 0 ? mediaType : null,
-        mediaAspectRatio,
-        state: currentUser?.state ?? "",
         hashtags: previewTags.tags,
         contentWarning: contentWarning || null,
+        mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
+        mediaType: finalUrls.length > 0 ? mediaType : null,
+        mediaAspectRatio: finalUrls.length > 0 ? mediaAspectRatio : null,
       })
       showToast(s["toast.postUpdated"], "success")
       router.push(`/post/${postId}`)
@@ -159,6 +168,24 @@ export default function EditPostPage({
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {moderationError ? (
+          <div className="flex items-start gap-3 rounded-card border border-red-300 bg-red-50 p-4 text-red-900 shadow-sm animate-fade-up">
+            <ShieldAlert size={22} className="mt-0.5 shrink-0 text-red-600" aria-hidden />
+            <div className="flex-1 text-sm">
+              <p className="font-bold text-red-950">Post Blocked by Safety Guidelines</p>
+              <p className="mt-1 leading-relaxed text-red-800">{moderationError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModerationError("")}
+              aria-label="Dismiss alert"
+              className="rounded-full p-1 text-red-400 hover:bg-red-200 hover:text-red-700 transition-app"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ) : null}
+
         <Card className="flex flex-col gap-4">
           <Textarea
             label={s["createPost.textLabel"]}
@@ -167,7 +194,11 @@ export default function EditPostPage({
             required
             placeholder={s["createPost.textPlaceholder"]}
             value={text}
-            onChange={(e) => { setText(e.target.value); setTextError("") }}
+            onChange={(e) => {
+              setText(e.target.value)
+              setTextError("")
+              setModerationError("")
+            }}
             maxLength={MAX_POST_CHARS}
             error={textError || undefined}
           />
@@ -177,7 +208,11 @@ export default function EditPostPage({
             name="hashtags"
             placeholder={s["createPost.hashtagsPlaceholder"]}
             value={hashtagInput}
-            onChange={(e) => { setHashtagInput(e.target.value); setTagError("") }}
+            onChange={(e) => {
+              setHashtagInput(e.target.value)
+              setTagError("")
+              setModerationError("")
+            }}
             error={tagError || undefined}
           />
           <p className="-mt-2 text-body-sm text-slate-500">{s["createPost.hashtagsHint"]}</p>

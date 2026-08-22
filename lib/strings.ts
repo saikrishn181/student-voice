@@ -282,6 +282,7 @@ const s = {
   "auth.signup.inviteHint": "Used a friend's invite code? Enter it to get credited to their referrals.",
   "validation.usernameInvalid": "Username can only contain letters, numbers, and underscores.",
   "validation.nameRequired": "Please enter your name",
+  "validation.inappropriateContent": "This post contains inappropriate content and cannot be uploaded.",
 
   // ─── Search ─────────────────────────────────────────────────────────────────
   "search.title": "Search",
