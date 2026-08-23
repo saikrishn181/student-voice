@@ -10,9 +10,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { deletePostMedia } from "@/lib/supabase/storage"
 import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
-import { useAuthStore } from "./useAuthStore"
 import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
 import { categoryFromHashtags } from "@/lib/utils"
+import { checkInappropriateContent, processPostViolation, checkUserBanStatus } from "@/lib/moderation"
 import { rowToPost, rowToComment, type PostRow, type CommentRow } from "@/lib/mappers"
 
 // Represents a row from the `profiles` table.
@@ -307,6 +307,38 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
   addPost: async (input) => {
     const supabase = createSupabaseBrowserClient()
+
+    // 1. Pre-check ban status
+    const { data: authorProfile } = await supabase
+      .from("profiles")
+      .select("is_banned, banned_until, strike_count")
+      .eq("id", input.authorId)
+      .maybeSingle()
+
+    if (authorProfile?.is_banned) {
+      const banStatus = checkUserBanStatus({
+        id: input.authorId,
+        name: "",
+        email: "",
+        accountType: "student",
+        followerCount: 0,
+        followingCount: 0,
+        createdAt: "",
+        isAdmin: false,
+        isBanned: authorProfile.is_banned,
+        bannedUntil: authorProfile.banned_until ?? undefined,
+        strikeCount: authorProfile.strike_count,
+      })
+      if (banStatus.isBanned) {
+        throw new Error(
+          banStatus.isPermanent
+            ? "Your account has been permanently banned due to repeated guideline strikes."
+            : `Your account is temporarily suspended (${banStatus.remainingDays} days remaining).`
+        )
+      }
+    }
+
+    // 2. Insert post
     const { data, error } = await supabase
       .from("posts")
       .insert({
@@ -334,6 +366,14 @@ export const usePostStore = create<PostState>()((set, get) => ({
       .single()
 
     if (error || !data) throw new Error(error?.message ?? "Could not publish post")
+
+    // 3. Post-upload NSFW / Inappropriate Content Detection Scan
+    const moderation = checkInappropriateContent(input.text, input.hashtags)
+    if (!moderation.isAllowed) {
+      // Offending post detected post-upload: automatically remove post & record strike
+      const strikeRes = await processPostViolation(data.id, input.authorId, moderation.message)
+      throw new Error(strikeRes.message)
+    }
 
     const post = rowToPost(data as PostRow)
     set((s) => ({ posts: [post, ...s.posts] }))
@@ -496,6 +536,11 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   addComment: async (postId, authorId, text, isOrgHelp = false) => {
+    const moderation = checkInappropriateContent(text)
+    if (!moderation.isAllowed) {
+      throw new Error(moderation.message)
+    }
+
     const supabase = createSupabaseBrowserClient()
     const { error: insertError } = await supabase.from("comments").insert({
       post_id: postId,

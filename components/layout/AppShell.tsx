@@ -13,6 +13,8 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { PageShell } from "./PageShell"
+import { BannedUserScreen } from "@/components/feature"
+import { checkUserBanStatus } from "@/lib/moderation"
 import { Spinner } from "@/components/ui/Spinner"
 import { validateEnv } from "@/lib/env"
 import s from "@/lib/strings"
@@ -104,6 +106,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Spinner size={28} />
       </div>
     )
+  }
+
+  // Banned user suspension gate: display the suspension screen if account is banned.
+  const banStatus = checkUserBanStatus(currentUser)
+  if (banStatus.isBanned) {
+    return <BannedUserScreen user={currentUser!} />
   }
 
   // Authenticated on-boarding page: no Navbar, but still guest-protected.

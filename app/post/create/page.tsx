@@ -188,7 +188,9 @@ export default function CreatePostPage() {
       router.push(`/post/${post.id}`)
     } catch (err) {
       setSubmitting(false)
-      showToast(err instanceof Error ? err.message : "Could not publish post. Please try again.", "error")
+      const errorMsg = err instanceof Error ? err.message : "Could not publish post. Please try again."
+      setModerationError(errorMsg)
+      showToast(errorMsg, "error")
     }
   }
 

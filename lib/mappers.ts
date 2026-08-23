@@ -90,6 +90,10 @@ export function rowToUser(row: Profile): User {
     collegeName: row.college_name ?? undefined,
     collegeEmail: row.college_email ?? undefined,
     inviteCode: row.invite_code ?? undefined,
+    strikeCount: row.strike_count ?? 0,
+    isBanned: row.is_banned ?? false,
+    bannedUntil: row.banned_until ?? undefined,
+    banReason: row.ban_reason ?? undefined,
   }
 }
 

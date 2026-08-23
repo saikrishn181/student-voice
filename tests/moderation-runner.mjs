@@ -1,4 +1,4 @@
-// Test runner wrapper for moderation engine
+// Test runner wrapper for moderation & 10-strike ban engine
 const PROFANITY_WORDS = [
   "fuck", "fucking", "fucker", "fucked", "fuckoff", "motherfucker", "mf",
   "bitch", "bitches", "bitching", "bastard", "bastards",
@@ -31,9 +31,10 @@ const VIOLENCE_PATTERNS = [
 ]
 
 const EXPLICIT_WORDS = [
-  "porn", "porno", "pornography", "xxx", "blowjob", "handjob", "deepthroat",
+  "nsfw", "porn", "porno", "pornography", "xxx", "blowjob", "handjob", "deepthroat",
   "orgasm", "masturbate", "masturbation", "erotic", "nude pics", "send nudes",
-  "sexting", "escort service", "call girls", "sex chat",
+  "sexting", "escort service", "call girls", "sex chat", "striptease",
+  "onlyfans leak", "hardcore porn", "xvideos", "pornhub",
 ]
 
 const SPAM_PATTERNS = [
@@ -62,20 +63,33 @@ function normalizeText(input) {
 
 export function checkInappropriateContent(text, hashtags = []) {
   const combined = `${text} ${hashtags.join(" ")}`.trim()
-  if (!combined) return { isAllowed: true, message: "" }
+  if (!combined) return { isAllowed: true, isNsfw: false, message: "" }
 
   const normalized = normalizeText(combined)
   const cleanPunctuation = normalized.replace(/[^\w\s]/g, " ")
   const words = cleanPunctuation.split(/\s+/).filter(Boolean)
   const wordSet = new Set(words)
 
+  for (const explicit of EXPLICIT_WORDS) {
+    if (wordSet.has(explicit) || normalized.includes(explicit)) {
+      return {
+        isAllowed: false,
+        isNsfw: true,
+        category: "nsfw",
+        flaggedWord: explicit,
+        message: "This post contains sexually explicit or NSFW material and cannot be uploaded.",
+      }
+    }
+  }
+
   for (const phrase of HARASSMENT_PATTERNS) {
     if (normalized.includes(phrase)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "harassment",
         flaggedWord: phrase,
-        message: "This post cannot be uploaded because it contains harassment, bullying, or threats against others.",
+        message: "This post contains harassment, bullying, or threats against others.",
       }
     }
   }
@@ -84,6 +98,7 @@ export function checkInappropriateContent(text, hashtags = []) {
     if (normalized.includes(phrase)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "violence",
         flaggedWord: phrase,
         message: "This post cannot be uploaded because it contains violent threats or harmful content.",
@@ -95,20 +110,10 @@ export function checkInappropriateContent(text, hashtags = []) {
     if (wordSet.has(slur) || normalized.includes(` ${slur} `)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "hate_speech",
         flaggedWord: slur,
-        message: "This post cannot be uploaded because it contains hate speech or derogatory slurs.",
-      }
-    }
-  }
-
-  for (const explicit of EXPLICIT_WORDS) {
-    if (wordSet.has(explicit) || normalized.includes(explicit)) {
-      return {
-        isAllowed: false,
-        category: "explicit",
-        flaggedWord: explicit,
-        message: "This post cannot be uploaded because it contains sexually explicit content.",
+        message: "This post contains hate speech, derogatory slurs, or discriminatory language.",
       }
     }
   }
@@ -117,9 +122,10 @@ export function checkInappropriateContent(text, hashtags = []) {
     if (normalized.includes(spam)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "spam",
         flaggedWord: spam,
-        message: "This post cannot be uploaded because it contains promotional spam or scams.",
+        message: "This post contains promotional spam, scams, or malicious links.",
       }
     }
   }
@@ -128,20 +134,78 @@ export function checkInappropriateContent(text, hashtags = []) {
     if (wordSet.has(badWord)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "profanity",
         flaggedWord: badWord,
-        message: "This post cannot be uploaded because it contains abusive or vulgar language.",
+        message: "This post contains abusive or vulgar language.",
       }
     }
     if (badWord.includes(" ") && normalized.includes(badWord)) {
       return {
         isAllowed: false,
+        isNsfw: false,
         category: "profanity",
         flaggedWord: badWord,
-        message: "This post cannot be uploaded because it contains abusive or vulgar language.",
+        message: "This post contains abusive or vulgar language.",
       }
     }
   }
 
-  return { isAllowed: true, message: "" }
+  return { isAllowed: true, isNsfw: false, message: "" }
+}
+
+export function calculateStrikePolicy(currentStrikes) {
+  const newStrikes = currentStrikes + 1
+  let isBanned = false
+  let bannedUntil = null
+  let banReason = ""
+  let message = ""
+
+  if (newStrikes >= 10) {
+    isBanned = true
+    bannedUntil = null
+    banReason = "Account permanently banned: Reached 10 NSFW / Community Guidelines violations."
+    message = `Your post was removed for NSFW / inappropriate content. You have reached 10 strikes — your account has been permanently banned.`
+  } else if (newStrikes >= 6) {
+    isBanned = true
+    const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    bannedUntil = until.toISOString()
+    banReason = `Account temporarily suspended for 7 days (Strike ${newStrikes}/10).`
+    message = `Your post was removed for NSFW / inappropriate content. Strike ${newStrikes} of 10. Your account is temporarily suspended for 7 days.`
+  } else if (newStrikes >= 3) {
+    isBanned = true
+    const until = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    bannedUntil = until.toISOString()
+    banReason = `Account temporarily restricted for 24 hours (Strike ${newStrikes}/10).`
+    message = `Your post was removed for NSFW / inappropriate content. Strike ${newStrikes} of 10. Your account is temporarily restricted for 24 hours.`
+  } else {
+    message = `Your post was removed for NSFW / inappropriate content. Strike ${newStrikes} of 10. Repeated violations will result in account suspension.`
+  }
+
+  return {
+    postRemoved: true,
+    strikeCount: newStrikes,
+    isBanned,
+    bannedUntil,
+    banReason,
+    message,
+  }
+}
+
+export function checkUserBanStatus(user) {
+  if (!user) return { isBanned: false, isPermanent: false }
+  if (!user.isBanned) return { isBanned: false, isPermanent: false }
+
+  if (user.bannedUntil) {
+    const expiresAt = new Date(user.bannedUntil).getTime()
+    const now = Date.now()
+    if (now >= expiresAt) {
+      return { isBanned: false, isPermanent: false }
+    }
+    const remainingMs = expiresAt - now
+    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+    return { isBanned: true, remainingDays, isPermanent: false }
+  }
+
+  return { isBanned: true, isPermanent: true }
 }

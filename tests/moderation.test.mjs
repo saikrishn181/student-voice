@@ -1,16 +1,28 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { checkInappropriateContent } from "./moderation-runner.mjs"
+import {
+  checkInappropriateContent,
+  calculateStrikePolicy,
+  checkUserBanStatus,
+} from "./moderation-runner.mjs"
 
 test("moderation allows clean student posts", () => {
   const result1 = checkInappropriateContent("The library needs more study spaces during exams", ["library", "exams"])
   assert.equal(result1.isAllowed, true)
+  assert.equal(result1.isNsfw, false)
 
   const result2 = checkInappropriateContent("Hostel mess food quality has dropped, please sign our petition", ["hostel", "messFood"])
   assert.equal(result2.isAllowed, true)
 
   const result3 = checkInappropriateContent("Campus wifi is down in Block C since yesterday", ["wifi", "campus"])
   assert.equal(result3.isAllowed, true)
+})
+
+test("moderation detects and flags NSFW content", () => {
+  const result = checkInappropriateContent("check out explicit porn and leaked nsfw photos")
+  assert.equal(result.isAllowed, false)
+  assert.equal(result.isNsfw, true)
+  assert.equal(result.category, "nsfw")
 })
 
 test("moderation blocks severe profanity & abuses", () => {
@@ -37,13 +49,70 @@ test("moderation blocks hate speech and derogatory slurs", () => {
   assert.equal(result.category, "hate_speech")
 })
 
-test("moderation blocks explicit NSFW content", () => {
-  const result = checkInappropriateContent("check out my leaked sex chat and nude pics")
-  assert.equal(result.isAllowed, false)
-  assert.equal(result.category, "explicit")
-})
-
 test("moderation blocks inappropriate hashtags", () => {
   const result = checkInappropriateContent("Normal post text here", ["cleanTag", "bitch"])
   assert.equal(result.isAllowed, false)
+})
+
+test("strike policy issues warnings for strikes 1 and 2", () => {
+  const strike1 = calculateStrikePolicy(0)
+  assert.equal(strike1.strikeCount, 1)
+  assert.equal(strike1.isBanned, false)
+  assert.match(strike1.message, /Strike 1 of 10/)
+
+  const strike2 = calculateStrikePolicy(1)
+  assert.equal(strike2.strikeCount, 2)
+  assert.equal(strike2.isBanned, false)
+  assert.match(strike2.message, /Strike 2 of 10/)
+})
+
+test("strike policy applies 24-hour temporary suspension at 3 strikes", () => {
+  const strike3 = calculateStrikePolicy(2)
+  assert.equal(strike3.strikeCount, 3)
+  assert.equal(strike3.isBanned, true)
+  assert.ok(strike3.bannedUntil !== null)
+  assert.match(strike3.message, /temporarily restricted for 24 hours/)
+})
+
+test("strike policy applies 7-day temporary suspension at 6 strikes", () => {
+  const strike6 = calculateStrikePolicy(5)
+  assert.equal(strike6.strikeCount, 6)
+  assert.equal(strike6.isBanned, true)
+  assert.ok(strike6.bannedUntil !== null)
+  assert.match(strike6.message, /temporarily suspended for 7 days/)
+})
+
+test("strike policy permanently bans account after 10 strikes", () => {
+  const strike10 = calculateStrikePolicy(9)
+  assert.equal(strike10.strikeCount, 10)
+  assert.equal(strike10.isBanned, true)
+  assert.equal(strike10.bannedUntil, null) // permanent
+  assert.match(strike10.message, /permanently banned/)
+})
+
+test("checkUserBanStatus distinguishes active vs expired bans", () => {
+  // 1. Unbanned user
+  const cleanUser = { isBanned: false }
+  assert.deepEqual(checkUserBanStatus(cleanUser), { isBanned: false, isPermanent: false })
+
+  // 2. Permanently banned user
+  const permUser = { isBanned: true, bannedUntil: undefined }
+  assert.deepEqual(checkUserBanStatus(permUser), { isBanned: true, isPermanent: true })
+
+  // 3. Temporarily banned user (active)
+  const activeTempUser = {
+    isBanned: true,
+    bannedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+  }
+  const tempStatus = checkUserBanStatus(activeTempUser)
+  assert.equal(tempStatus.isBanned, true)
+  assert.equal(tempStatus.isPermanent, false)
+  assert.equal(tempStatus.remainingDays, 3)
+
+  // 4. Temporarily banned user (expired)
+  const expiredUser = {
+    isBanned: true,
+    bannedUntil: new Date(Date.now() - 1000).toISOString(),
+  }
+  assert.deepEqual(checkUserBanStatus(expiredUser), { isBanned: false, isPermanent: false })
 })

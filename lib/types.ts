@@ -38,6 +38,11 @@ export interface User {
   collegeEmail?: string
   // Referral invite code shown in settings.
   inviteCode?: string
+  // Strikes for NSFW / community guidelines violations (max 10 before permanent ban).
+  strikeCount?: number
+  isBanned?: boolean
+  bannedUntil?: string // ISO date for temporary bans, null/undefined for permanent
+  banReason?: string
 }
 
 // Profile row shape from the `public.profiles` Supabase table (snake_case).
@@ -61,6 +66,10 @@ export interface Profile {
   college_name: string | null
   college_verified: boolean
   invite_code: string | null
+  strike_count?: number
+  is_banned?: boolean
+  banned_until?: string | null
+  ban_reason?: string | null
 }
 
 // Post categories (Phase 2).

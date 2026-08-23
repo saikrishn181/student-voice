@@ -70,7 +70,12 @@ create table if not exists public.profiles (
   college_email text,
   college_name text,
   college_verified boolean not null default false,
-  invite_code text
+  invite_code text,
+  -- NSFW / community guidelines violations and account suspension.
+  strike_count integer not null default 0,
+  is_banned boolean not null default false,
+  banned_until timestamptz,
+  ban_reason text
 );
 
 -- Unique on lower(username) so "Jane" and "jane" can't both register.
