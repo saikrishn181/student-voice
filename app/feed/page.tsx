@@ -8,7 +8,7 @@
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw } from "lucide-react"
+import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { FollowButton } from "@/components/feature/FollowButton"
@@ -16,6 +16,7 @@ import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useUserStore } from "@/lib/store/useUserStore"
+import { rankPostsForYou } from "@/lib/recommendation"
 import { cn } from "@/lib/utils"
 import s from "@/lib/strings"
 
@@ -29,7 +30,7 @@ export default function FeedPage() {
   const loadError = status === "error"
   const [retrying, setRetrying] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [filter, setFilter] = useState<"all" | "local" | "trending" | "topics">("all")
+  const [filter, setFilter] = useState<"forYou" | "all" | "local" | "trending" | "topics">("forYou")
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Load once on mount; keep ears open for live updates (default-on but
@@ -100,6 +101,7 @@ export default function FeedPage() {
         <div className="flex flex-wrap gap-2">
           {(
             [
+              ["forYou", s["feed.filter.forYou"]],
               ["all", s["feed.filter.all"]],
               ["local", s["feed.filter.local"]],
               ["trending", s["feed.filter.trending"]],
@@ -110,10 +112,10 @@ export default function FeedPage() {
               key={key}
               onClick={() => setFilter(key)}
               className={cn(
-                "rounded-pill px-4 min-h-[44px] text-sm font-semibold transition-app",
+                "rounded-pill px-4 min-h-[44px] text-sm font-semibold transition-app flex items-center gap-1.5",
                 filter === key
-                  ? "bg-primary-700 text-white"
-                  : "border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700",
+                  ? "bg-primary-700 text-white shadow-xs"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
               )}
             >
               {label}
@@ -146,9 +148,22 @@ export default function FeedPage() {
           </div>
         ) : null}
 
-        {/* Posts — local posts first, then a single divider, then the rest */}
+        {/* Posts rendering */}
         {!initialLoading && !loadError
           ? (() => {
+              if (filter === "forYou") {
+                const ranked = rankPostsForYou(posts, users, currentUser, followedTopics)
+                return (
+                  <>
+                    {ranked.map((post) => (
+                      <div key={post.id}>
+                        <PostCard post={post} recommendationReason={post.recommendationReason} />
+                      </div>
+                    ))}
+                  </>
+                )
+              }
+
               const visible =
                 filter === "trending"
                   ? [...posts].sort((a, b) => b.supportCount - a.supportCount)

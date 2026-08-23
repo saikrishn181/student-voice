@@ -28,6 +28,7 @@ import {
   CalendarX,
   TriangleAlert,
   Heart,
+  Sparkles,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -35,6 +36,7 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useChatStore } from "@/lib/store/useChatStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { useUserById } from "@/hooks"
+import { trackInteraction } from "@/lib/recommendation"
 import s from "@/lib/strings"
 import { cn, timeAgo } from "@/lib/utils"
 import type { Post, ReportReason } from "@/lib/types"
@@ -56,13 +58,14 @@ const REPORT_OPTIONS: { value: ReportReason; label: string }[] = [
 
 interface PostCardProps {
   post: Post
+  recommendationReason?: string
   // When true (detail page) we expand comment affordance; header still links out
   // to the post detail.
   showFollow?: boolean
   className?: string
 }
 
-export function PostCard({ post, showFollow = true, className }: PostCardProps) {
+export function PostCard({ post, recommendationReason, showFollow = true, className }: PostCardProps) {
   const router = useRouter()
   const pathname = usePathname()
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -115,6 +118,13 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     if (!post.supportedByCurrentUser) {
       try {
         await toggleSupport(post.id, currentUser.id)
+        trackInteraction(currentUser.id, {
+          hashtags: post.hashtags,
+          authorCollege: author?.collegeName,
+          authorState: post.state,
+          category: post.category,
+          type: "support",
+        })
       } catch (err) {
         showToast(err instanceof Error ? err.message : s["validation.generic"], "error")
       }
@@ -257,6 +267,15 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
     setSaving(true)
     try {
       await toggleSave(post.id, currentUser.id)
+      if (!post.savedByCurrentUser) {
+        trackInteraction(currentUser.id, {
+          hashtags: post.hashtags,
+          authorCollege: author?.collegeName,
+          authorState: post.state,
+          category: post.category,
+          type: "save",
+        })
+      }
       showToast(
         post.savedByCurrentUser ? s["post.savedRemoved"] : s["post.savedAdded"],
         "success",
@@ -343,6 +362,14 @@ export function PostCard({ post, showFollow = true, className }: PostCardProps) 
         className
       )}
     >
+      {/* Personalized Recommendation Reason Badge */}
+      {recommendationReason ? (
+        <div className="-mt-1 flex items-center gap-1.5 self-start rounded-pill border border-primary-100 bg-primary-50/90 px-2.5 py-0.5 text-[11px] font-medium text-primary-800">
+          <Sparkles size={11} className="text-primary-600 shrink-0" aria-hidden />
+          <span>{recommendationReason}</span>
+        </div>
+      ) : null}
+
       {/* Floating Heart Pop Animation on Double Tap */}
       {heartPop ? (
         <div
