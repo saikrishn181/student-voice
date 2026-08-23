@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles } from "lucide-react"
 import { PostCard } from "@/components/feature"
+import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { FollowButton } from "@/components/feature/FollowButton"
 import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
@@ -17,6 +18,7 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { rankPostsForYou } from "@/lib/recommendation"
+import { detectHotIssues } from "@/lib/heatmap"
 import { cn } from "@/lib/utils"
 import s from "@/lib/strings"
 
@@ -84,6 +86,12 @@ export default function FeedPage() {
       !follows.some((f) => f.followerId === currentUser?.id && f.followingId === u.id),
   ).slice(0, 3)
 
+  // Campus Heatmap: detect surging issues across colleges.
+  const hotIssues = useMemo(
+    () => detectHotIssues(posts, users),
+    [posts, users],
+  )
+
   const localState = currentUser?.state
 
   return (
@@ -96,6 +104,11 @@ export default function FeedPage() {
             {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
           </p>
         </div>
+
+        {/* 🔥 Hot Issues Banner — Campus Heatmap */}
+        {!initialLoading && hotIssues.length > 0 ? (
+          <HotIssueBanner issues={hotIssues} />
+        ) : null}
 
         {/* Feed filters */}
         <div className="flex flex-wrap gap-2">

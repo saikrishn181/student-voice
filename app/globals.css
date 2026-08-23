@@ -94,6 +94,15 @@
   animation: double-tap-heart 800ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Slow pulse for breaking campus issue banners */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 2.5s ease-in-out infinite;
+}
+
 /* Respect prefers-reduced-motion: disable motion/transitions for users who
    opt out. Applies to the smooth page scroll and all transition utilities. */
 @media (prefers-reduced-motion: reduce) {
