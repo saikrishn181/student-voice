@@ -11,7 +11,7 @@ import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { parseHashtags } from "@/lib/utils"
-import { checkInappropriateContent } from "@/lib/moderation"
+import { checkInappropriateContent, scanImageFile } from "@/lib/moderation"
 import s from "@/lib/strings"
 
 export default function EditPostPage({
@@ -126,11 +126,24 @@ export default function EditPostPage({
       if (picked.url.startsWith("blob:")) URL.revokeObjectURL(picked.url)
     }
 
+    // Pre-upload image computer vision scan
+    let effectiveContentWarning = contentWarning
+    for (const picked of media) {
+      if (picked.type === "photo") {
+        const imgScan = await scanImageFile(picked.file)
+        if (imgScan.isNsfw && !effectiveContentWarning) {
+          effectiveContentWarning = "nsfw"
+          setContentWarning("nsfw")
+          showToast("Sensitive visual content detected — post marked as 18+ NSFW with blur overlay.", "info")
+        }
+      }
+    }
+
     try {
       await updatePost(postId, {
         text: text.trim(),
         hashtags: previewTags.tags,
-        contentWarning: contentWarning || null,
+        contentWarning: effectiveContentWarning || null,
         mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
         mediaType: finalUrls.length > 0 ? mediaType : null,
         mediaAspectRatio: finalUrls.length > 0 ? mediaAspectRatio : null,

@@ -15,7 +15,7 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { cn, parseHashtags } from "@/lib/utils"
-import { checkInappropriateContent } from "@/lib/moderation"
+import { checkInappropriateContent, scanImageFile } from "@/lib/moderation"
 import s from "@/lib/strings"
 import type { Poll } from "@/lib/types"
 
@@ -169,6 +169,19 @@ export default function CreatePostPage() {
       return
     }
 
+    // Pre-upload image computer vision scan
+    let effectiveContentWarning = contentWarning
+    for (const picked of media) {
+      if (picked.type === "photo") {
+        const imgScan = await scanImageFile(picked.file)
+        if (imgScan.isNsfw && !effectiveContentWarning) {
+          effectiveContentWarning = "nsfw"
+          setContentWarning("nsfw")
+          showToast("Sensitive image detected — automatically marked as 18+ NSFW with blur overlay.", "info")
+        }
+      }
+    }
+
     try {
       const post = await addPost({
         authorId: currentUser.id,
@@ -182,7 +195,7 @@ export default function CreatePostPage() {
         eventAt: eventAtISO,
         eventLocation: eventLocation.trim() || null,
         poll,
-        contentWarning: contentWarning || null,
+        contentWarning: effectiveContentWarning || null,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
