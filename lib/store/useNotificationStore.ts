@@ -18,6 +18,7 @@ interface NotificationRow {
   post_id: string | null
   read: boolean
   created_at: string
+  metadata: string | null
 }
 
 function rowToNotification(row: NotificationRow): Notification {
@@ -29,6 +30,7 @@ function rowToNotification(row: NotificationRow): Notification {
     postId: row.post_id ?? undefined,
     read: row.read,
     createdAt: row.created_at,
+    metadata: row.metadata ?? undefined,
   }
 }
 

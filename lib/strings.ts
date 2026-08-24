@@ -455,6 +455,8 @@ const s = {
   "notification.type.follow_request": "wants to follow you",
   "notification.type.offer_help": "offered help on your post",
   "notification.type.verification_approved": "your organization verification was approved.",
+  "notification.type.content_warning": "⚠️ Your post was auto-blurred for containing sensitive content. It's still visible with a content warning.",
+  "notification.type.post_removed": "🚫 Your post was removed for violating community guidelines.",
 
   // ─── Modal ──────────────────────────────────────────────────────────────────
   "modal.close": "Close",

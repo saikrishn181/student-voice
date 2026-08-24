@@ -1,6 +1,12 @@
 // Content moderation engine for Krantind.
 // Validates text, hashtags, and media keywords for NSFW / inappropriate content.
 // Automatically removes offending posts post-upload and manages the 10-strike ban policy.
+//
+// Enhanced NSFW Detection System:
+//   1. User self-tagged NSFW (contentWarning="nsfw") → KEEP as-is, no scan needed.
+//   2. Full NSFW detected → auto-DELETE post + issue strike + send in-app notification.
+//   3. Partial NSFW on trending/important topic → auto-BLUR (set contentWarning) + send notification (no strike).
+//   4. Non-NSFW profanity / hate speech → delete + strike (existing behavior).
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -19,6 +25,17 @@ export type ModerationCategory =
 export interface ModerationResult {
   isAllowed: boolean
   isNsfw: boolean
+  category?: ModerationCategory
+  flaggedWord?: string
+  message: string
+}
+
+/** Severity of NSFW content detected during post-upload scanning. */
+export type NsfwSeverity = "clean" | "partial_nsfw" | "full_nsfw"
+
+/** Result of the enhanced post-upload NSFW scan. */
+export interface NsfwScanResult {
+  severity: NsfwSeverity
   category?: ModerationCategory
   flaggedWord?: string
   message: string
@@ -71,15 +88,23 @@ const VIOLENCE_PATTERNS = [
   "rape threat", "acid attack", "lynch them", "burn them alive",
 ]
 
-// 5. Explicit NSFW & sexual solicitation
-const EXPLICIT_WORDS = [
-  "nsfw", "porn", "porno", "pornography", "xxx", "blowjob", "handjob", "deepthroat",
-  "orgasm", "masturbate", "masturbation", "erotic", "nude pics", "send nudes",
+// 5. Explicit NSFW & sexual solicitation — FULL severity (always delete)
+const EXPLICIT_WORDS_FULL = [
+  "porn", "porno", "pornography", "xxx", "blowjob", "handjob", "deepthroat",
+  "orgasm", "masturbate", "masturbation", "nude pics", "send nudes",
   "sexting", "escort service", "call girls", "sex chat", "striptease",
   "onlyfans leak", "hardcore porn", "xvideos", "pornhub",
 ]
 
-// 6. Scam / illegal promotion spam
+// 6. Partial NSFW — words that are borderline / sometimes used in legitimate discussion
+// These get auto-blurred instead of deleted when the topic is trending or important.
+const EXPLICIT_WORDS_PARTIAL = [
+  "nsfw", "erotic", "nude", "nudes", "naked", "boobs", "breasts",
+  "sexy", "seductive", "intimate", "sensual", "provocative",
+  "adult content", "18+", "xxx rated",
+]
+
+// 7. Scam / illegal promotion spam
 const SPAM_PATTERNS = [
   "free money hack", "crypto double", "earn 10000 daily fast",
   "whatsapp sex chat", "telegram leak link", "hack exam portal", "buy fake degree",
@@ -150,8 +175,8 @@ export function checkInappropriateContent(
   const words = cleanPunctuation.split(/\s+/).filter(Boolean)
   const wordSet = new Set(words)
 
-  // 1. Check Explicit NSFW Content
-  for (const explicit of EXPLICIT_WORDS) {
+  // 1. Check Explicit NSFW Content (full severity)
+  for (const explicit of EXPLICIT_WORDS_FULL) {
     if (wordSet.has(explicit) || normalized.includes(explicit)) {
       return {
         isAllowed: false,
@@ -160,6 +185,20 @@ export function checkInappropriateContent(
         flaggedWord: explicit,
         message:
           "This post contains sexually explicit or NSFW material and cannot be uploaded.",
+      }
+    }
+  }
+
+  // 1b. Check partial NSFW words (block at pre-upload; post-upload uses scanPostContent for smart handling)
+  for (const partial of EXPLICIT_WORDS_PARTIAL) {
+    if (wordSet.has(partial) || normalized.includes(partial)) {
+      return {
+        isAllowed: false,
+        isNsfw: true,
+        category: "nsfw",
+        flaggedWord: partial,
+        message:
+          "This post contains NSFW or adult content. You can mark it as 18+ NSFW using the toggle to proceed.",
       }
     }
   }
@@ -249,6 +288,208 @@ export function checkInappropriateContent(
     isAllowed: true,
     isNsfw: false,
     message: "",
+  }
+}
+
+// ─── Enhanced Post-Upload NSFW Scanning ─────────────────────────────────────
+
+/**
+ * Post-upload NSFW scan that classifies content into three severity tiers:
+ *   - "clean"        → No issues, post stays as-is.
+ *   - "partial_nsfw" → Borderline content; auto-blur if trending topic, else delete.
+ *   - "full_nsfw"    → Explicit content; always auto-delete + strike.
+ *
+ * This scan SKIPS posts where the user already self-tagged NSFW (contentWarning="nsfw").
+ */
+export function scanPostContent(
+  text: string,
+  hashtags: string[] = [],
+  userSelfTaggedNsfw: boolean = false,
+): NsfwScanResult {
+  // If user voluntarily marked as NSFW → trust them, no scan needed
+  if (userSelfTaggedNsfw) {
+    return { severity: "clean", message: "" }
+  }
+
+  const combined = `${text} ${hashtags.join(" ")}`.trim()
+  if (!combined) {
+    return { severity: "clean", message: "" }
+  }
+
+  const normalized = normalizeText(combined)
+  const cleanPunctuation = normalized.replace(/[^\w\s]/g, " ")
+  const words = cleanPunctuation.split(/\s+/).filter(Boolean)
+  const wordSet = new Set(words)
+
+  // Check FULL NSFW (always delete)
+  for (const explicit of EXPLICIT_WORDS_FULL) {
+    if (wordSet.has(explicit) || normalized.includes(explicit)) {
+      return {
+        severity: "full_nsfw",
+        category: "nsfw",
+        flaggedWord: explicit,
+        message: "Your post was automatically removed because it contains explicit NSFW content that violates community guidelines.",
+      }
+    }
+  }
+
+  // Check harassment / violence / hate speech (always delete)
+  for (const phrase of HARASSMENT_PATTERNS) {
+    if (normalized.includes(phrase)) {
+      return {
+        severity: "full_nsfw",
+        category: "harassment",
+        flaggedWord: phrase,
+        message: "Your post was removed for containing harassment or threats.",
+      }
+    }
+  }
+  for (const phrase of VIOLENCE_PATTERNS) {
+    if (normalized.includes(phrase)) {
+      return {
+        severity: "full_nsfw",
+        category: "violence",
+        flaggedWord: phrase,
+        message: "Your post was removed for containing violent threats.",
+      }
+    }
+  }
+  for (const slur of HATE_SPEECH_WORDS) {
+    if (wordSet.has(slur) || normalized.includes(` ${slur} `)) {
+      return {
+        severity: "full_nsfw",
+        category: "hate_speech",
+        flaggedWord: slur,
+        message: "Your post was removed for containing hate speech.",
+      }
+    }
+  }
+  for (const spam of SPAM_PATTERNS) {
+    if (normalized.includes(spam)) {
+      return {
+        severity: "full_nsfw",
+        category: "spam",
+        flaggedWord: spam,
+        message: "Your post was removed for containing spam or scams.",
+      }
+    }
+  }
+
+  // Check PARTIAL NSFW (borderline — blur instead of delete for trending topics)
+  for (const partial of EXPLICIT_WORDS_PARTIAL) {
+    if (wordSet.has(partial) || normalized.includes(partial)) {
+      return {
+        severity: "partial_nsfw",
+        category: "nsfw",
+        flaggedWord: partial,
+        message: "Your post contains partially sensitive content and has been auto-blurred with an NSFW warning.",
+      }
+    }
+  }
+
+  // Check profanity (always delete)
+  for (const badWord of PROFANITY_WORDS) {
+    if (wordSet.has(badWord)) {
+      return {
+        severity: "full_nsfw",
+        category: "profanity",
+        flaggedWord: badWord,
+        message: "Your post was removed for containing abusive or vulgar language.",
+      }
+    }
+    if (badWord.includes(" ") && normalized.includes(badWord)) {
+      return {
+        severity: "full_nsfw",
+        category: "profanity",
+        flaggedWord: badWord,
+        message: "Your post was removed for containing abusive or vulgar language.",
+      }
+    }
+  }
+
+  return { severity: "clean", message: "" }
+}
+
+/**
+ * Checks if a topic (hashtag) is currently trending by examining the post store.
+ * A topic is considered trending if it has 3+ posts from different authors in the last 48 hours.
+ */
+export function isTopicTrending(hashtags: string[]): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    const posts = usePostStore.getState().posts
+    const now = Date.now()
+    const cutoff48h = now - 48 * 60 * 60 * 1000
+    const hashtagsLower = new Set(hashtags.map((t) => t.toLowerCase()))
+
+    for (const tag of hashtagsLower) {
+      const matchingPosts = posts.filter(
+        (p) =>
+          new Date(p.createdAt).getTime() >= cutoff48h &&
+          p.hashtags.some((h) => h.toLowerCase() === tag),
+      )
+      const uniqueAuthors = new Set(matchingPosts.map((p) => p.authorId))
+      if (matchingPosts.length >= 3 && uniqueAuthors.size >= 2) {
+        return true
+      }
+    }
+  } catch {}
+  return false
+}
+
+// ─── In-App Moderation Notification ─────────────────────────────────────────
+
+/**
+ * Sends an in-app notification to the post author about a moderation action.
+ * Creates a row in the `notifications` table with the moderation details.
+ */
+export async function sendModerationNotification(
+  userId: string,
+  type: "content_warning" | "post_removed",
+  postId: string | null,
+  metadata: {
+    reason: string
+    strikeCount?: number
+    action: "blurred" | "removed"
+    category?: string
+  },
+): Promise<void> {
+  try {
+    const supabase = createSupabaseBrowserClient()
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type,
+      actor_id: userId, // system action, actor = self
+      post_id: postId,
+      read: false,
+      metadata: JSON.stringify(metadata),
+    })
+  } catch (err) {
+    console.error("Failed to send moderation notification:", err)
+  }
+}
+
+/**
+ * Auto-blurs a post by setting its content_warning to "nsfw" in Supabase.
+ * Used for partial NSFW posts on trending topics instead of deleting them.
+ */
+export async function autoBlurPost(postId: string): Promise<void> {
+  try {
+    const supabase = createSupabaseBrowserClient()
+    await supabase
+      .from("posts")
+      .update({ content_warning: "nsfw" })
+      .eq("id", postId)
+
+    // Update local store too
+    const { posts } = usePostStore.getState()
+    usePostStore.setState({
+      posts: posts.map((p) =>
+        p.id === postId ? { ...p, contentWarning: "nsfw" } : p,
+      ),
+    })
+  } catch (err) {
+    console.error("Failed to auto-blur post:", err)
   }
 }
 
@@ -348,6 +589,14 @@ export async function processPostViolation(
       localStorage.setItem(`krantind_banned_${userId}`, JSON.stringify({ isBanned, bannedUntil, banReason }))
     }
   }
+
+  // 5. Send in-app notification about the removal
+  await sendModerationNotification(userId, "post_removed", null, {
+    reason,
+    strikeCount: newStrikes,
+    action: "removed",
+    category: "violation",
+  })
 
   // Refresh current user auth profile
   useAuthStore.getState().refreshProfile().catch(() => {})

@@ -12,7 +12,7 @@ import { FEED_PAGE_SIZE } from "@/constants"
 import { useUserStore } from "./useUserStore"
 import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
 import { categoryFromHashtags } from "@/lib/utils"
-import { checkInappropriateContent, processPostViolation, checkUserBanStatus } from "@/lib/moderation"
+import { checkInappropriateContent, processPostViolation, checkUserBanStatus, scanPostContent, isTopicTrending, autoBlurPost, sendModerationNotification } from "@/lib/moderation"
 import { rowToPost, rowToComment, type PostRow, type CommentRow } from "@/lib/mappers"
 
 // Represents a row from the `profiles` table.
@@ -367,12 +367,43 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     if (error || !data) throw new Error(error?.message ?? "Could not publish post")
 
-    // 3. Post-upload NSFW / Inappropriate Content Detection Scan
-    const moderation = checkInappropriateContent(input.text, input.hashtags)
-    if (!moderation.isAllowed) {
-      // Offending post detected post-upload: automatically remove post & record strike
-      const strikeRes = await processPostViolation(data.id, input.authorId, moderation.message)
+    // 3. Enhanced Post-Upload NSFW / Inappropriate Content Detection Scan
+    //    - User self-tagged NSFW (contentWarning="nsfw") → SKIP scan, keep post as-is
+    //    - Full NSFW / profanity / hate speech → auto-DELETE + strike + in-app notification
+    //    - Partial NSFW on trending/important topic → auto-BLUR (not delete) + notify (no strike)
+    //    - Partial NSFW on non-trending topic → auto-DELETE + strike + notify
+    const userSelfTaggedNsfw = input.contentWarning === "nsfw"
+    const scan = scanPostContent(input.text, input.hashtags, userSelfTaggedNsfw)
+
+    if (scan.severity === "full_nsfw") {
+      // Full NSFW: always delete + strike + notify
+      const strikeRes = await processPostViolation(data.id, input.authorId, scan.message)
       throw new Error(strikeRes.message)
+    }
+
+    if (scan.severity === "partial_nsfw") {
+      // Check if the topic is trending/important
+      const trending = isTopicTrending(input.hashtags)
+
+      if (trending) {
+        // Trending topic: auto-blur the post instead of deleting
+        await autoBlurPost(data.id)
+        // Send content_warning notification (no strike)
+        await sendModerationNotification(input.authorId, "content_warning", data.id, {
+          reason: scan.message,
+          action: "blurred",
+          category: scan.category ?? "nsfw",
+        })
+        // Return the post with contentWarning applied
+        const post = rowToPost(data as PostRow)
+        const blurredPost = { ...post, contentWarning: "nsfw" }
+        set((s) => ({ posts: [blurredPost, ...s.posts] }))
+        return blurredPost
+      } else {
+        // Non-trending: delete + strike + notify
+        const strikeRes = await processPostViolation(data.id, input.authorId, scan.message)
+        throw new Error(strikeRes.message)
+      }
     }
 
     const post = rowToPost(data as PostRow)

@@ -88,6 +88,8 @@ export type NotificationType =
   | "offer_help"
   | "verification_approved"
   | "follow_request"
+  | "content_warning"
+  | "post_removed"
 
 export interface Notification {
   id: string
@@ -97,6 +99,8 @@ export interface Notification {
   postId?: string
   read: boolean
   createdAt: string // ISO
+  // Optional metadata for moderation notifications (reason, strike count, etc.)
+  metadata?: string
 }
 
 export type MediaType = "photo" | "video" | null

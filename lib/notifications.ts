@@ -7,6 +7,8 @@ import {
   HeartHandshake,
   MessageCircle,
   UserPlus,
+  ShieldAlert,
+  EyeOff,
   type LucideIcon,
 } from "lucide-react"
 
@@ -67,6 +69,10 @@ export function notificationIcon(type: NotificationType): LucideIcon {
       return HeartHandshake
     case "verification_approved":
       return BadgeCheck
+    case "content_warning":
+      return EyeOff
+    case "post_removed":
+      return ShieldAlert
     default:
       return Heart
   }
