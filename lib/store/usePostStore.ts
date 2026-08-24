@@ -104,7 +104,7 @@ interface PostState {
     mediaUrl?: string | null
     mediaType: MediaType
     mediaAspectRatio?: number | null
-    state: string
+    state?: string
     hashtags: string[]
     eventAt?: string | null
     eventLocation?: string | null
@@ -421,7 +421,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
         media_url: input.mediaUrl ?? null,
         media_type: input.mediaType ?? null,
         media_aspect_ratio: input.mediaAspectRatio ?? null,
-        state: input.state,
+        state: input.state ?? previous?.state ?? "",
         category: categoryFromHashtags(input.hashtags),
         hashtags: input.hashtags,
         updated_at: new Date().toISOString(),

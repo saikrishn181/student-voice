@@ -143,6 +143,7 @@ export default function EditPostPage({
       await updatePost(postId, {
         text: text.trim(),
         hashtags: previewTags.tags,
+        state: post?.state ?? currentUser?.state ?? "",
         contentWarning: effectiveContentWarning || null,
         mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
         mediaType: finalUrls.length > 0 ? mediaType : null,
