@@ -10,7 +10,7 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { MAX_POST_CHARS } from "@/constants"
 import { uploadPostMedia } from "@/lib/supabase/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
-import { parseHashtags } from "@/lib/utils"
+import { cn, parseHashtags } from "@/lib/utils"
 import { checkInappropriateContent, scanImageFile } from "@/lib/moderation"
 import s from "@/lib/strings"
 
