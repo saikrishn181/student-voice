@@ -43,7 +43,7 @@ export default function ImpactPage() {
     >()
 
     posts.forEach((p) => {
-      const author = users.find((u) => u.id === p.authorId)
+      const author = users[p.authorId]
       const collegeName = author?.collegeName?.trim()
       if (!collegeName) return
 
