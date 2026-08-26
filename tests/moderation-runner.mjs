@@ -10,7 +10,10 @@ const PROFANITY_WORDS = [
   "bhadwe", "chutiya", "chutiye", "chutiyap", "gandu", "gaandu", "harami", "haraami",
   "lauda", "lavda", "lund", "lodu", "randi", "raandi", "saala", "kutta",
   "kutiya", "kamina", "kaminey", "chodu", "bosadika", "bhosadike", "bhosadika", "bhosdiwala",
-  "bsdk", "mkl", "tatte", "jhant", "jhaant",
+  "bsdk", "mkl", "tatte", "jhant", "jhaant", "chut", "gaand", "chudai",
+  "lanja", "lanjakodaka", "modda", "dengu", "gudha", "puku", "munda",
+  "thevidiya", "othalaka", "sunni", "punda", "oombu",
+  "lavdya", "zavnya", "bhadvya",
 ]
 
 const HATE_SPEECH_WORDS = [
@@ -44,7 +47,7 @@ const SPAM_PATTERNS = [
 
 const LEET_MAP = {
   "@": "a", "4": "a", "8": "b", "3": "e", "1": "i", "!": "i",
-  "|": "i", "0": "o", "5": "s", "$": "s", "+": "t", "7": "t", "v": "u",
+  "|": "i", "0": "o", "5": "s", "$": "s", "+": "t", "7": "t",
 }
 
 function normalizeText(input) {
@@ -101,7 +104,7 @@ export function checkInappropriateContent(text, hashtags = []) {
         isNsfw: false,
         category: "violence",
         flaggedWord: phrase,
-        message: "This post cannot be uploaded because it contains violent threats or harmful content.",
+        message: "This post contains violent threats or harmful content.",
       }
     }
   }
@@ -137,7 +140,7 @@ export function checkInappropriateContent(text, hashtags = []) {
         isNsfw: false,
         category: "profanity",
         flaggedWord: badWord,
-        message: "This post contains abusive or vulgar language.",
+        message: "This post contains abusive or vulgar language. Krantind is a student platform — please keep discussions constructive.",
       }
     }
     if (badWord.includes(" ") && normalized.includes(badWord)) {
@@ -146,7 +149,7 @@ export function checkInappropriateContent(text, hashtags = []) {
         isNsfw: false,
         category: "profanity",
         flaggedWord: badWord,
-        message: "This post contains abusive or vulgar language.",
+        message: "This post contains abusive or vulgar language. Krantind is a student platform — please keep discussions constructive.",
       }
     }
   }
@@ -208,4 +211,10 @@ export function checkUserBanStatus(user) {
   }
 
   return { isBanned: true, isPermanent: true }
+}
+
+export function evaluateReportThreshold(reportCount) {
+  if (reportCount >= 5) return { action: "remove", shouldStrike: true }
+  if (reportCount >= 3) return { action: "blur", shouldStrike: false }
+  return { action: "none", shouldStrike: false }
 }

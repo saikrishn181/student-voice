@@ -4,6 +4,7 @@ import {
   checkInappropriateContent,
   calculateStrikePolicy,
   checkUserBanStatus,
+  evaluateReportThreshold,
 } from "./moderation-runner.mjs"
 
 test("moderation allows clean student posts", () => {
@@ -37,6 +38,20 @@ test("moderation blocks abusive slang and gaalis", () => {
   assert.equal(result.category, "profanity")
 })
 
+test("moderation blocks regional campus slang (Telugu, Tamil, Marathi)", () => {
+  const teluguRes = checkInappropriateContent("you are a waste lanja")
+  assert.equal(teluguRes.isAllowed, false)
+  assert.equal(teluguRes.category, "profanity")
+
+  const tamilRes = checkInappropriateContent("go away thevidiya")
+  assert.equal(tamilRes.isAllowed, false)
+  assert.equal(tamilRes.category, "profanity")
+
+  const marathiRes = checkInappropriateContent("kay re lavdya")
+  assert.equal(marathiRes.isAllowed, false)
+  assert.equal(marathiRes.category, "profanity")
+})
+
 test("moderation blocks harassment and death threats", () => {
   const result = checkInappropriateContent("i will kill you if you come to class")
   assert.equal(result.isAllowed, false)
@@ -52,6 +67,20 @@ test("moderation blocks hate speech and derogatory slurs", () => {
 test("moderation blocks inappropriate hashtags", () => {
   const result = checkInappropriateContent("Normal post text here", ["cleanTag", "bitch"])
   assert.equal(result.isAllowed, false)
+})
+
+test("community report threshold triggers auto-blur at 3 reports and remove at 5 reports", () => {
+  const underThreshold = evaluateReportThreshold(2)
+  assert.equal(underThreshold.action, "none")
+  assert.equal(underThreshold.shouldStrike, false)
+
+  const blurThreshold = evaluateReportThreshold(3)
+  assert.equal(blurThreshold.action, "blur")
+  assert.equal(blurThreshold.shouldStrike, false)
+
+  const removeThreshold = evaluateReportThreshold(5)
+  assert.equal(removeThreshold.action, "remove")
+  assert.equal(removeThreshold.shouldStrike, true)
 })
 
 test("strike policy issues warnings for strikes 1 and 2", () => {

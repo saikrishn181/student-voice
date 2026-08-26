@@ -13,7 +13,7 @@ import { useUserStore } from "./useUserStore"
 import { useAuthStore } from "./useAuthStore"
 import type { Category, Comment, Follow, FollowRequest, MediaType, Post, ReportReason } from "@/lib/types"
 import { categoryFromHashtags } from "@/lib/utils"
-import { checkInappropriateContent, processPostViolation, checkUserBanStatus, scanPostContent, isTopicTrending, autoBlurPost, sendModerationNotification } from "@/lib/moderation"
+import { checkInappropriateContent, processPostViolation, checkUserBanStatus, scanPostContent, isTopicTrending, autoBlurPost, sendModerationNotification, evaluatePostReportsAndAutoAction, checkPostRateLimit, recordPostTimestamp } from "@/lib/moderation"
 import { rowToPost, rowToComment, type PostRow, type CommentRow } from "@/lib/mappers"
 
 // Represents a row from the `profiles` table.
@@ -309,6 +309,12 @@ export const usePostStore = create<PostState>()((set, get) => ({
   addPost: async (input) => {
     const supabase = createSupabaseBrowserClient()
 
+    // 0. Anti-spam rate limit check (15-second cooldown between posts)
+    const rateLimit = checkPostRateLimit(input.authorId)
+    if (!rateLimit.allowed) {
+      throw new Error(`Please wait ${rateLimit.waitSeconds}s before publishing another post.`)
+    }
+
     // 1. Pre-check ban status
     const { data: authorProfile } = await supabase
       .from("profiles")
@@ -407,6 +413,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
       }
     }
 
+    recordPostTimestamp(input.authorId)
     const post = rowToPost(data as PostRow)
     set((s) => ({ posts: [post, ...s.posts] }))
     return post
@@ -793,6 +800,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
       }
       throw new Error(error.message || "Could not submit the report — please try again")
     }
+
+    // Community-driven auto-action: evaluates report threshold and applies auto-blur / auto-quarantine for $0 cost
+    void evaluatePostReportsAndAutoAction(postId)
   },
 
   startRealtime: (currentUserId) => {
