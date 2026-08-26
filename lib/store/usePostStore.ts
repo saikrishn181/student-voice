@@ -99,6 +99,7 @@ interface PostState {
     eventLocation?: string | null
     poll?: Post["poll"]
     contentWarning?: string | null
+    isAnonymous?: boolean
   }) => Promise<Post>
   updatePost: (id: string, input: {
     text: string
@@ -111,7 +112,10 @@ interface PostState {
     eventLocation?: string | null
     poll?: Post["poll"]
     contentWarning?: string | null
+    isResolved?: boolean
+    resolutionNote?: string | null
   }) => Promise<void>
+  markPostResolved: (postId: string, resolutionNote?: string) => Promise<void>
   deletePost: (id: string) => Promise<void>
   toggleSave: (postId: string, currentUserId: string) => Promise<void>
   setPostPinned: (postId: string, pinned: boolean) => Promise<void>
@@ -361,6 +365,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
         event_at: input.eventAt ?? null,
         event_location: input.eventLocation ?? null,
         content_warning: input.contentWarning ?? null,
+        is_anonymous: Boolean(input.isAnonymous),
         poll_json: input.poll
           ? {
               question: input.poll.question,
@@ -436,6 +441,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
         event_at: input.eventAt ?? null,
         event_location: input.eventLocation ?? null,
         content_warning: input.contentWarning ?? null,
+        is_resolved: input.isResolved ?? previous?.isResolved ?? false,
+        resolution_note: input.resolutionNote ?? previous?.resolutionNote ?? null,
         poll_json: input.poll
           ? {
               question: input.poll.question,
@@ -456,6 +463,32 @@ export const usePostStore = create<PostState>()((set, get) => ({
     set((s) => ({
       posts: s.posts.map((p) => (p.id === id ? post : p)),
       comments: s.comments, // unchanged
+    }))
+  },
+
+  markPostResolved: async (postId, resolutionNote) => {
+    const supabase = createSupabaseBrowserClient()
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from("posts")
+      .update({
+        is_resolved: true,
+        resolved_at: now,
+        resolution_note: resolutionNote?.trim() || null,
+      })
+      .eq("id", postId)
+    if (error) throw new Error("Could not mark issue as resolved")
+    set((s) => ({
+      posts: s.posts.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              isResolved: true,
+              resolvedAt: now,
+              resolutionNote: resolutionNote?.trim() || undefined,
+            }
+          : p,
+      ),
     }))
   },
 

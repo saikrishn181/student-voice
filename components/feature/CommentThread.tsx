@@ -11,7 +11,7 @@ import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { useUserById } from "@/hooks"
 import s from "@/lib/strings"
-import { timeAgo } from "@/lib/utils"
+import { cn, timeAgo } from "@/lib/utils"
 import type { Comment } from "@/lib/types"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { MAX_COMMENT_CHARS } from "@/constants"
@@ -71,13 +71,19 @@ function CommentItem({ comment }: { comment: Comment }) {
     }
   }
 
+  const isVerifiedOrg = author?.accountType === "organization" && author?.verificationStatus === "verified"
+  const isOfficial = comment.isOfficialResponse || isVerifiedOrg
+
   return (
     <div
-      className={
-        comment.isOrgHelp
-          ? "rounded-card border border-accent-200 bg-accent-50 p-3"
-          : "rounded-card bg-slate-50 p-3"
-      }
+      className={cn(
+        "rounded-card p-3 transition-colors",
+        isOfficial
+          ? "border border-blue-300 bg-blue-50/70 shadow-xs"
+          : comment.isOrgHelp
+          ? "border border-accent-200 bg-accent-50"
+          : "bg-slate-50 border border-slate-100",
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -86,7 +92,15 @@ function CommentItem({ comment }: { comment: Comment }) {
             {author?.name ?? s["post.unknownName"]}
           </span>
         </div>
-        {comment.isOrgHelp ? <Badge tone="accent">{s["comment.offeringHelp"]}</Badge> : null}
+        <div className="flex items-center gap-1.5">
+          {isOfficial ? (
+            <span className="rounded-pill bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-xs flex items-center gap-1">
+              <span>🏛️</span> Official Response
+            </span>
+          ) : comment.isOrgHelp ? (
+            <Badge tone="accent">{s["comment.offeringHelp"]}</Badge>
+          ) : null}
+        </div>
       </div>
 
       {editing ? (
@@ -187,10 +201,15 @@ function CommentItem({ comment }: { comment: Comment }) {
 
 export function CommentThread({ postId, loading = false }: CommentThreadProps) {
   const allComments = usePostStore((s) => s.comments)
-  const comments = useMemo(
-    () => allComments.filter((c) => c.postId === postId),
-    [allComments, postId],
-  )
+  const comments = useMemo(() => {
+    const list = allComments.filter((c) => c.postId === postId)
+    return [...list].sort((a, b) => {
+      const aOfficial = a.isOfficialResponse || a.isOrgHelp ? 1 : 0
+      const bOfficial = b.isOfficialResponse || b.isOrgHelp ? 1 : 0
+      if (aOfficial !== bOfficial) return bOfficial - aOfficial
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    })
+  }, [allComments, postId])
 
   if (loading) {
     return (

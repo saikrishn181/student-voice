@@ -25,6 +25,10 @@ export interface PostRow {
   event_location: string | null
   poll_json: unknown | null
   content_warning: string | null
+  is_anonymous?: boolean | null
+  is_resolved?: boolean | null
+  resolved_at?: string | null
+  resolution_note?: string | null
   created_at: string
 }
 
@@ -65,6 +69,10 @@ export function rowToPost(row: PostRow): Post {
         : null,
     savedByCurrentUser: false,
     contentWarning: row.content_warning ?? undefined,
+    isAnonymous: Boolean(row.is_anonymous),
+    isResolved: Boolean(row.is_resolved),
+    resolvedAt: row.resolved_at ?? undefined,
+    resolutionNote: row.resolution_note ?? undefined,
   }
 }
 
@@ -103,6 +111,7 @@ export interface CommentRow {
   author_id: string
   content: string
   is_org_help: boolean
+  is_official_response?: boolean | null
   created_at: string
 }
 
@@ -114,6 +123,7 @@ export function rowToComment(row: CommentRow): Comment {
     authorId: row.author_id,
     text: row.content,
     isOrgHelp: row.is_org_help,
+    isOfficialResponse: Boolean(row.is_official_response),
     createdAt: row.created_at,
   }
 }

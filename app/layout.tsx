@@ -3,6 +3,7 @@ import { Fraunces, Manrope } from "next/font/google"
 import "./globals.css"
 import { AppShell } from "@/components/layout/AppShell"
 import { ServiceWorkerRegistrar } from "@/components/layout/ServiceWorkerRegistrar"
+import { PwaInstallPrompt } from "@/components/feature/PwaInstallPrompt"
 import { Toaster } from "@/components/ui/Toast"
 
 // Warm editorial serif for headlines — human, not template-y.
@@ -66,12 +67,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.json",
 }
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1F4E78",
+  themeColor: "#16a34a",
 }
 
 export default function RootLayout({
@@ -120,6 +122,7 @@ export default function RootLayout({
         <Toaster />
         {/* Offline support (progressive web app) */}
         <ServiceWorkerRegistrar />
+        <PwaInstallPrompt />
       </body>
     </html>
   )

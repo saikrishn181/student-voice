@@ -29,6 +29,8 @@ import {
   TriangleAlert,
   Heart,
   Sparkles,
+  CheckCircle2,
+  FileText,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -43,6 +45,7 @@ import type { Post, ReportReason } from "@/lib/types"
 import { MediaDisplay } from "./MediaDisplay"
 import { VerifiedBadge, RegionTag, CollegeBadge } from "./Badges"
 import { SupportButton } from "./SupportButton"
+import { FormalLetterModal } from "./FormalLetterModal"
 import { FollowButton } from "./FollowButton"
 import { PollDisplay } from "./PollDisplay"
 import { RsvpButton } from "./RsvpButton"
@@ -74,6 +77,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const blockUser = usePostStore((s) => s.blockUser)
   const reportPost = usePostStore((s) => s.reportPost)
   const toggleSave = usePostStore((s) => s.toggleSave)
+  const markPostResolved = usePostStore((s) => s.markPostResolved)
   const setPostPinned = usePostStore((s) => s.setPostPinned)
   const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const showToast = useToastStore((s) => s.show)
@@ -91,6 +95,10 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const [saving, setSaving] = useState(false)
   const [warningRevealed, setWarningRevealed] = useState(false)
   const [heartPop, setHeartPop] = useState(false)
+  const [resolveModalOpen, setResolveModalOpen] = useState(false)
+  const [resolutionNote, setResolutionNote] = useState("")
+  const [resolving, setResolving] = useState(false)
+  const [letterModalOpen, setLetterModalOpen] = useState(false)
 
   const tapCountRef = useRef<number>(0)
   const tapTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -250,6 +258,20 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     }
   }
 
+  const handleResolve = async () => {
+    setResolving(true)
+    try {
+      await markPostResolved(post.id, resolutionNote)
+      showToast("🎉 Issue marked as resolved! Great news for the campus.", "success")
+      setResolveModalOpen(false)
+      setResolutionNote("")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not mark as resolved", "error")
+    } finally {
+      setResolving(false)
+    }
+  }
+
   const isOrgAuthor = author?.accountType === "organization"
   const isEvent = Boolean(post.eventAt)
 
@@ -403,28 +425,44 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href={`/profile/${post.authorId}`} aria-label={s["post.viewProfile"]}>
-            <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
-          </Link>
+          {post.isAnonymous ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-sm font-bold shadow-xs select-none border border-purple-200">
+              🎭
+            </div>
+          ) : (
+            <Link href={`/profile/${post.authorId}`} aria-label={s["post.viewProfile"]}>
+              <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
+            </Link>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <Link
-                href={`/profile/${post.authorId}`}
-                className="truncate text-sm font-semibold text-slate-900 hover:underline"
-              >
-                {author?.name ?? s["post.unknownName"]}
-              </Link>
-              {isVerifiedOrg ? <VerifiedBadge /> : null}
-              {author?.collegeVerified ? <CollegeBadge /> : null}
+              {post.isAnonymous ? (
+                <span className="truncate text-sm font-semibold text-purple-950 flex items-center gap-1">
+                  <span>Anonymous Student</span>
+                  {isOwnPost ? (
+                    <span className="text-[11px] font-medium text-purple-600">(You)</span>
+                  ) : null}
+                </span>
+              ) : (
+                <Link
+                  href={`/profile/${post.authorId}`}
+                  className="truncate text-sm font-semibold text-slate-900 hover:underline"
+                >
+                  {author?.name ?? s["post.unknownName"]}
+                </Link>
+              )}
+              {!post.isAnonymous && isVerifiedOrg ? <VerifiedBadge /> : null}
+              {!post.isAnonymous && author?.collegeVerified ? <CollegeBadge /> : null}
             </div>
             <div className="mt-0.5 text-body-sm text-slate-500">
-              {author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]} ·{" "}
-              {timeAgo(post.createdAt)}
+              {post.isAnonymous
+                ? `${author?.collegeName || "Verified College"} · ${timeAgo(post.createdAt)}`
+                : `${author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]} · ${timeAgo(post.createdAt)}`}
             </div>
           </div>
         </div>
 
-        {showFollow && !isOwnPost && author ? (
+        {showFollow && !isOwnPost && !post.isAnonymous && author ? (
           <FollowButton
             followerId={currentUser?.id ?? ""}
             followingId={author.id}
@@ -455,10 +493,34 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                 <div
                   role="menu"
                   aria-orientation="vertical"
-                  className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-card border border-slate-200 bg-white shadow-modal"
+                  className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-card border border-slate-200 bg-white shadow-modal"
                 >
                   {isOwnPost ? (
                     <>
+                      {!post.isResolved ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false)
+                            setResolveModalOpen(true)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <CheckCircle2 size={16} className="text-emerald-600" />
+                          Mark as Resolved
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          setLetterModalOpen(true)
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <FileText size={16} className="text-slate-400" />
+                        Formal Letter to Dean
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -506,6 +568,30 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                     </>
                   ) : (
                     <>
+                      {(isAdmin || currentUser?.accountType === "organization") && !post.isResolved ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false)
+                            setResolveModalOpen(true)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                        >
+                          <CheckCircle2 size={16} className="text-emerald-600" />
+                          Mark as Resolved
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          setLetterModalOpen(true)
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <FileText size={16} className="text-slate-400" />
+                        Formal Letter to Dean
+                      </button>
                       {isAdmin ? (
                         <button
                           type="button"
@@ -577,6 +663,28 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           </div>
         )}
       </div>
+
+      {/* Resolved Issue Victory Banner */}
+      {post.isResolved ? (
+        <div className="flex items-start gap-2.5 rounded-card border border-emerald-300 bg-emerald-50/90 p-3 text-emerald-950 shadow-xs">
+          <CheckCircle2 size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="rounded-pill bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white uppercase tracking-wider">
+                Issue Resolved
+              </span>
+              {post.resolvedAt && (
+                <span className="text-[11px] text-emerald-700">
+                  {timeAgo(post.resolvedAt)}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs font-medium text-emerald-900 leading-snug">
+              {post.resolutionNote || "This campus grievance has been successfully addressed and resolved."}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* Region/Category/Time tags */}
       {meta}
@@ -685,6 +793,18 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           <Share2 size={18} aria-hidden />
         </button>
 
+        {/* Dean Representation Letter button */}
+        <button
+          type="button"
+          onClick={() => setLetterModalOpen(true)}
+          aria-label="Formal letter to dean"
+          title="Generate Formal Letter to Dean"
+          className="transition-app inline-flex h-11 min-h-11 items-center gap-1 rounded-card px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:h-9 sm:min-h-0"
+        >
+          <FileText size={15} aria-hidden />
+          <span className="hidden md:inline">Dean Letter</span>
+        </button>
+
         {/* Report button */}
         {!isOwnPost && (
           <button
@@ -774,6 +894,49 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           </div>
         </div>
       </Modal>
+
+      {/* Mark as Resolved Modal */}
+      <Modal
+        open={resolveModalOpen}
+        onClose={() => setResolveModalOpen(false)}
+        title="🎉 Mark Issue as Resolved"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body-sm text-slate-600">
+            Has this campus grievance been addressed by the college administration or student union? Add a victory summary to notify the community.
+          </p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Resolution Outcome / Action Taken (Optional)
+            </label>
+            <textarea
+              value={resolutionNote}
+              onChange={(e) => setResolutionNote(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="e.g. Mess committee met the dean — caterer vendor changed and refund issued to all hostellers."
+              className="w-full resize-y rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-app placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="outline" onClick={() => setResolveModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={resolving} onClick={handleResolve}>
+              <CheckCircle2 size={16} />
+              Confirm Resolved
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Formal Representation Letter Modal */}
+      <FormalLetterModal
+        open={letterModalOpen}
+        onClose={() => setLetterModalOpen(false)}
+        post={post}
+        author={author ?? null}
+      />
     </Card>
   )
 }

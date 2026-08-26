@@ -144,6 +144,12 @@ export interface Post {
   savedByCurrentUser: boolean
   // Optional content warning; media + text stay blurred until revealed.
   contentWarning?: string
+  // Anonymous whistleblower mode: hides author name & profile from public view.
+  isAnonymous?: boolean
+  // Issue resolution: marks problem as resolved with a celebration badge & note.
+  isResolved?: boolean
+  resolvedAt?: string
+  resolutionNote?: string
 }
 
 export interface Comment {
@@ -153,6 +159,8 @@ export interface Comment {
   text: string
   // True when an organization is offering help (not just a student reply).
   isOrgHelp: boolean
+  // True when a verified student council/union leaves an official pinned response.
+  isOfficialResponse?: boolean
   createdAt: string // ISO
 }
 

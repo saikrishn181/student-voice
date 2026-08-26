@@ -50,6 +50,7 @@ export default function CreatePostPage() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduledFor, setScheduledFor] = useState("")
   const [contentWarning, setContentWarning] = useState("")
+  const [isAnonymous, setIsAnonymous] = useState(false)
 
   const state = currentUser?.state ?? ""
   const isOrg = currentUser?.accountType === "organization"
@@ -196,6 +197,7 @@ export default function CreatePostPage() {
         eventLocation: eventLocation.trim() || null,
         poll,
         contentWarning: effectiveContentWarning || null,
+        isAnonymous,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
@@ -489,6 +491,42 @@ export default function CreatePostPage() {
           </select>
           <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>
+
+        {/* Anonymous whistleblower mode (students only) */}
+        {!isOrg && (
+          <Card className={cn(
+            "flex flex-col gap-3 p-4 transition-colors",
+            isAnonymous ? "border-purple-300 bg-purple-50/50" : "border-slate-200",
+          )}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                  <span>🎭</span> Post Anonymously (Whistleblower Mode)
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Hides your identity from public view to protect you from campus retaliation.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAnonymous((prev) => !prev)}
+                className={cn(
+                  "rounded-pill border px-3 py-1 text-xs font-semibold transition-app flex items-center gap-1.5 shrink-0 ml-3",
+                  isAnonymous
+                    ? "border-purple-600 bg-purple-600 text-white shadow-xs"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                )}
+              >
+                {isAnonymous ? "🎭 Anonymous Active" : "Enable Anonymous"}
+              </button>
+            </div>
+            {isAnonymous && (
+              <p className="text-xs text-purple-800 bg-purple-100/70 p-2.5 rounded-card border border-purple-200">
+                🔒 <strong>Identity Protected:</strong> In feeds and searches, this post will appear as <em>"Anonymous Student • {currentUser?.collegeName || 'Verified College'}"</em>. Your name and profile link will not be visible to anyone.
+              </p>
+            )}
+          </Card>
+        )}
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
           <Send size={18} aria-hidden />

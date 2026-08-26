@@ -1,90 +1,48 @@
-// Krantind service worker: offline-first app shell + runtime caching.
-// - Navigation requests: network-first, falling back to the cached shell so
-//   the app still opens offline.
-// - Static assets: network-first with cache fallback or cache-first for hashed Next.js chunks.
-const CACHE_NAME = "krantind-v2"
-const PRECACHE = ["/", "/login", "/signup", "/about"]
+// Krantind Offline & Asset Caching Service Worker
+const CACHE_NAME = "krantind-cache-v1"
+const STATIC_ASSETS = ["/", "/feed", "/search", "/manifest.json", "/favicon.ico"]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(() => {})
+    })
   )
+  self.skipWaiting()
 })
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key)),
-        ),
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       )
-      .then(() => self.clients.claim()),
+    })
   )
+  self.clients.claim()
 })
 
 self.addEventListener("fetch", (event) => {
-  const req = event.request
-  if (req.method !== "GET") return
-  const url = new URL(req.url)
-  if (url.origin !== self.location.origin) return
+  // Only cache GET requests
+  if (event.request.method !== "GET") return
 
-  // Page navigations: always try the network first, fall back to cache so the
-  // app shell loads even when offline.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res.status === 200) {
-            const copy = res.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
-          }
-          return res
-        })
-        .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match("/")),
-        ),
-    )
+  // Skip Supabase API / auth requests from cache to ensure fresh data
+  const url = new URL(event.request.url)
+  if (url.origin.includes("supabase.co") || url.pathname.startsWith("/api/")) {
     return
   }
 
-  // Next static chunks (immutable with hash): cache first
-  if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached
-        return fetch(req).then((res) => {
-          if (res.status === 200) {
-            const copy = res.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
-          }
-          return res
-        })
-      }),
-    )
-    return
-  }
-
-  // Other static assets (images/fonts): stale while revalidate
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((res) => {
-          if (res.status === 200) {
-            const copy = res.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy))
-          }
-          return res
-        })
-        .catch(() => cached)
-
-      return cached || fetchPromise
-    }),
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
+          const responseClone = networkResponse.clone()
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone).catch(() => {})
+          })
+        }
+        return networkResponse
+      })
+      .catch(() => caches.match(event.request))
   )
 })
