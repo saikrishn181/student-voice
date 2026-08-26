@@ -30,7 +30,6 @@ import {
   Heart,
   Sparkles,
   CheckCircle2,
-  FileText,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -45,7 +44,6 @@ import type { Post, ReportReason } from "@/lib/types"
 import { MediaDisplay } from "./MediaDisplay"
 import { VerifiedBadge, RegionTag, CollegeBadge } from "./Badges"
 import { SupportButton } from "./SupportButton"
-import { FormalLetterModal } from "./FormalLetterModal"
 import { FollowButton } from "./FollowButton"
 import { PollDisplay } from "./PollDisplay"
 import { RsvpButton } from "./RsvpButton"
@@ -98,7 +96,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const [resolveModalOpen, setResolveModalOpen] = useState(false)
   const [resolutionNote, setResolutionNote] = useState("")
   const [resolving, setResolving] = useState(false)
-  const [letterModalOpen, setLetterModalOpen] = useState(false)
 
   const tapCountRef = useRef<number>(0)
   const tapTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -514,17 +511,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                         type="button"
                         onClick={() => {
                           setMenuOpen(false)
-                          setLetterModalOpen(true)
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        <FileText size={16} className="text-slate-400" />
-                        Formal Letter to Dean
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuOpen(false)
                           router.push(`/post/${post.id}/edit`)
                         }}
                         className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -581,17 +567,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                           Mark as Resolved
                         </button>
                       ) : null}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuOpen(false)
-                          setLetterModalOpen(true)
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        <FileText size={16} className="text-slate-400" />
-                        Formal Letter to Dean
-                      </button>
                       {isAdmin ? (
                         <button
                           type="button"
@@ -793,18 +768,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           <Share2 size={18} aria-hidden />
         </button>
 
-        {/* Dean Representation Letter button */}
-        <button
-          type="button"
-          onClick={() => setLetterModalOpen(true)}
-          aria-label="Formal letter to dean"
-          title="Generate Formal Letter to Dean"
-          className="transition-app inline-flex h-11 min-h-11 items-center gap-1 rounded-card px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:h-9 sm:min-h-0"
-        >
-          <FileText size={15} aria-hidden />
-          <span className="hidden md:inline">Dean Letter</span>
-        </button>
-
         {/* Report button */}
         {!isOwnPost && (
           <button
@@ -929,14 +892,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           </div>
         </div>
       </Modal>
-
-      {/* Formal Representation Letter Modal */}
-      <FormalLetterModal
-        open={letterModalOpen}
-        onClose={() => setLetterModalOpen(false)}
-        post={post}
-        author={author ?? null}
-      />
     </Card>
   )
 }
