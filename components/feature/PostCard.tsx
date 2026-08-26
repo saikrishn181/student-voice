@@ -48,12 +48,12 @@ import { PollDisplay } from "./PollDisplay"
 import { RsvpButton } from "./RsvpButton"
 import { MentionText } from "./MentionText"
 
-const REPORT_OPTIONS: { value: ReportReason; label: string }[] = [
-  { value: "spam", label: "Spam or scam" },
-  { value: "harassment", label: "Harassment or abuse" },
-  { value: "misinformation", label: "Misinformation" },
-  { value: "inappropriate", label: "Inappropriate content" },
-  { value: "other", label: "Something else" },
+const REPORT_OPTIONS: { value: ReportReason; label: string; desc: string; icon: string }[] = [
+  { value: "inappropriate", label: "Inappropriate / NSFW", desc: "Sexual content, nudity, violence, or explicit material", icon: "🔞" },
+  { value: "harassment", label: "Harassment or Hate Speech", desc: "Bullying, personal attacks, abuse, slurs, or threats", icon: "⚠️" },
+  { value: "spam", label: "Spam or Scam", desc: "Commercial advertising, phishing, or deceptive links", icon: "🚫" },
+  { value: "misinformation", label: "False Information", desc: "Misleading news, fake exam/hostel/fee notices", icon: "❌" },
+  { value: "other", label: "Other Violation", desc: "Other issue violating Krantind community guidelines", icon: "🚩" },
 ]
 
 interface PostCardProps {
@@ -202,7 +202,22 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     }
   }
 
+  const handleOpenReport = () => {
+    setMenuOpen(false)
+    if (!currentUser) {
+      showToast(s["validation.loginRequired"], "error")
+      router.push("/login")
+      return
+    }
+    setReportOpen(true)
+  }
+
   const handleReport = async () => {
+    if (!currentUser) {
+      showToast(s["validation.loginRequired"], "error")
+      router.push("/login")
+      return
+    }
     if (!reportReason) return
     setReporting(true)
     try {
@@ -537,13 +552,10 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setMenuOpen(false)
-                          setReportOpen(true)
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        onClick={handleOpenReport}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-amber-700 hover:bg-amber-50"
                       >
-                        <Flag size={16} className="text-slate-400" />
+                        <Flag size={16} className="text-amber-500" />
                         {s["post.report"]}
                       </button>
                       <button
@@ -672,6 +684,20 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
         >
           <Share2 size={18} aria-hidden />
         </button>
+
+        {/* Report button */}
+        {!isOwnPost && (
+          <button
+            type="button"
+            onClick={handleOpenReport}
+            aria-label={s["post.report"]}
+            title={s["post.report"]}
+            className="transition-app ml-auto inline-flex h-11 min-h-11 items-center gap-1.5 rounded-card px-2.5 text-xs font-medium text-slate-400 hover:bg-red-50 hover:text-red-600 sm:h-9 sm:min-h-0"
+          >
+            <Flag size={15} aria-hidden />
+            <span className="hidden sm:inline">{s["post.report"]}</span>
+          </button>
+        )}
       </div>
 
       {/* Delete confirmation */}
@@ -701,13 +727,17 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                 onClick={() => setReportReason(opt.value)}
                 aria-pressed={reportReason === opt.value}
                 className={cn(
-                  "rounded-card border px-3 py-2.5 text-left text-sm font-medium transition-app",
+                  "flex flex-col gap-0.5 rounded-card border p-3 text-left transition-app",
                   reportReason === opt.value
-                    ? "border-primary-600 bg-primary-50 text-primary-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                    ? "border-red-500 bg-red-50/80 text-red-900 ring-1 ring-red-500"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
                 )}
               >
-                {opt.label}
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <span>{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </span>
+                <span className="text-xs text-slate-500 pl-6">{opt.desc}</span>
               </button>
             ))}
           </div>
@@ -723,7 +753,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
             <Button variant="outline" onClick={() => setReportOpen(false)}>
               {s["report.cancel"]}
             </Button>
-            <Button loading={reporting} disabled={!reportReason} onClick={handleReport}>
+            <Button variant="danger" loading={reporting} disabled={!reportReason} onClick={handleReport}>
               {s["report.submit"]}
             </Button>
           </div>

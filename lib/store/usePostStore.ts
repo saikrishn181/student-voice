@@ -780,14 +780,19 @@ export const usePostStore = create<PostState>()((set, get) => ({
   reportPost: async (postId, reason, details) => {
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
-    if (!currentUserId) return
+    if (!currentUserId) throw new Error("Please log in to report a post")
     const { error } = await supabase.from("reports").insert({
       reporter_id: currentUserId,
       post_id: postId,
       reason,
       details: details?.trim() || null,
     })
-    if (error) throw new Error("Could not submit the report — please try again")
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error("You have already reported this post. Our moderation team is reviewing it.")
+      }
+      throw new Error(error.message || "Could not submit the report — please try again")
+    }
   },
 
   startRealtime: (currentUserId) => {
