@@ -35,26 +35,16 @@ export default function ImpactPage() {
     [posts],
   )
 
-  // Calculate college engagement stats
+  // Calculate college engagement stats from real posts
   const collegeStats = useMemo(() => {
     const map = new Map<
       string,
       { college: string; totalPosts: number; resolvedPosts: number; supports: number }
     >()
 
-    // Default active college hubs across India for a vibrant campus leaderboard
-    const DEFAULT_HUBS = [
-      { college: "JNTU Hyderabad", totalPosts: 8, resolvedPosts: 3, supports: 42 },
-      { college: "Osmania University", totalPosts: 6, resolvedPosts: 2, supports: 35 },
-      { college: "Delhi University", totalPosts: 9, resolvedPosts: 4, supports: 58 },
-      { college: "Anna University Chennai", totalPosts: 5, resolvedPosts: 2, supports: 29 },
-      { college: "IIT Bombay", totalPosts: 4, resolvedPosts: 3, supports: 64 },
-      { college: "Andhra University", totalPosts: 3, resolvedPosts: 1, supports: 18 },
-    ]
-
     posts.forEach((p) => {
       const author = users[p.authorId]
-      const collegeName = author?.collegeName?.trim() || (p.state ? `${p.state} Central Campus` : null)
+      const collegeName = author?.collegeName?.trim()
       if (!collegeName) return
 
       const existing = map.get(collegeName) || {
@@ -71,21 +61,10 @@ export default function ImpactPage() {
       map.set(collegeName, existing)
     })
 
-    // Merge default active hubs if user data is still growing
-    if (map.size < 4) {
-      DEFAULT_HUBS.forEach((hub) => {
-        if (!map.has(hub.college)) {
-          map.set(hub.college, hub)
-        }
-      })
-    }
-
     return Array.from(map.values()).sort(
       (a, b) => b.resolvedPosts * 10 + b.supports - (a.resolvedPosts * 10 + a.supports),
     )
   }, [posts, users])
-
-  const totalCollegesCount = Math.max(collegeStats.length, 18)
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 py-4">
@@ -151,7 +130,7 @@ export default function ImpactPage() {
               <span>Active Campuses</span>
             </div>
             <p className="mt-1 text-2xl font-bold text-white font-serif">
-              {totalCollegesCount}+
+              {collegeStats.length}
             </p>
           </div>
         </div>
@@ -200,8 +179,11 @@ export default function ImpactPage() {
 
           <Card className="flex flex-col divide-y divide-slate-100 p-0 overflow-hidden">
             {collegeStats.length === 0 ? (
-              <div className="p-5 text-center text-xs text-slate-400">
-                Join your college on Krantind to rank your campus on the leaderboard!
+              <div className="p-6 text-center text-xs text-slate-500 space-y-1">
+                <p className="font-semibold text-slate-700">No campus rankings yet</p>
+                <p className="text-slate-400">
+                  Verify your college email in Settings or post a grievance to rank your campus here.
+                </p>
               </div>
             ) : (
               collegeStats.slice(0, 8).map((stat, idx) => (
