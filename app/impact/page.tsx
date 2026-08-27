@@ -91,16 +91,27 @@ export default function ImpactPage() {
     <div className="mx-auto flex max-w-4xl flex-col gap-6 py-4">
       {/* Hero Header */}
       <div className="rounded-card border border-primary-200 bg-linear-to-r from-primary-900 via-primary-800 to-slate-900 p-6 text-white shadow-lift sm:p-8">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary-300">
-          <Trophy size={16} className="text-amber-400" />
-          <span>Real-World Campus Impact</span>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary-300">
+              <Trophy size={16} className="text-amber-400" />
+              <span>Real-World Campus Impact</span>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold font-serif sm:text-3xl text-white">
+              Where Student Voices Turn Into Campus Solutions
+            </h1>
+            <p className="mt-2 text-sm text-primary-100/90 max-w-xl">
+              Track issues resolved by student unions, hostel committees, and college administrations across India.
+            </p>
+          </div>
+
+          {/* Top Right Action Button */}
+          <Link href="/post/create" className="shrink-0">
+            <Button size="md" className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold border-0 shadow-lift">
+              + Voice a Grievance
+            </Button>
+          </Link>
         </div>
-        <h1 className="mt-2 text-2xl font-bold font-serif sm:text-3xl text-white">
-          Where Student Voices Turn Into Campus Solutions
-        </h1>
-        <p className="mt-2 text-sm text-primary-100/90 max-w-xl">
-          Track issues resolved by student unions, hostel committees, and college administrations across India.
-        </p>
 
         {/* Top 4 Stats */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -231,20 +242,6 @@ export default function ImpactPage() {
                 🎓 Verify your College Email to represent your campus &rarr;
               </Link>
             </div>
-          </Card>
-
-          {/* Whistleblower & Dean Representation Promo Card */}
-          <Card className="border border-purple-200 bg-linear-to-br from-purple-50 to-indigo-50/50 p-4">
-            <div className="flex items-center gap-2 text-purple-900 font-bold text-sm">
-              <span>🎭</span>
-              <span>Anonymous Whistleblower</span>
-            </div>
-            <p className="text-xs text-purple-800/90 mt-1">
-              Fear of attendance deduction or retaliation? Use Krantind&apos;s Anonymous Whistleblower mode to voice sensitive grievances safely.
-            </p>
-            <Link href="/post/create" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:underline">
-              Create Anonymous Post <ArrowRight size={13} />
-            </Link>
           </Card>
         </div>
       </div>
