@@ -22,6 +22,7 @@ import s from "@/lib/strings"
 const PUBLIC_ROUTES = [
   "/",
   "/about",
+  "/legal",
   "/terms",
   "/privacy",
   "/grievance",
