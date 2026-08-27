@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 // One-time onboarding after a fresh sign-up / first Google sign-in.
 //
@@ -12,6 +12,7 @@
 // straight to the feed once a region is set.
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { MapPin } from "lucide-react"
 import { Button, Input, Select, Tabs, Textarea } from "@/components/ui"
 import { Logo } from "@/components/feature"
@@ -41,6 +42,8 @@ export default function OnboardingProfilePage() {
   const [password, setPassword] = useState("")
   const [nameError, setNameError] = useState<string | undefined>()
   const [passwordError, setPasswordError] = useState<string | undefined>()
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [termsError, setTermsError] = useState("")
 
   // Detect the sign-up origin once: Google accounts carry no `account_type`
   // in auth metadata, email sign-ups do.
@@ -102,6 +105,11 @@ export default function OnboardingProfilePage() {
     }
     if (accountType === "organization" && !organizationType) {
       showToast(s["validation.orgTypeRequired"], "error")
+      return
+    }
+    if (!acceptedTerms) {
+      setTermsError("You must agree to the Terms of Service and Privacy Policy to continue.")
+      showToast("Please agree to the Terms of Service and Privacy Policy", "error")
       return
     }
 
@@ -262,6 +270,46 @@ export default function OnboardingProfilePage() {
               rows={3}
               maxLength={280}
             />
+
+            {/* Statutory Terms & Privacy Policy Acceptance */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => {
+                    setAcceptedTerms(e.target.checked)
+                    if (e.target.checked) setTermsError("")
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  aria-invalid={Boolean(termsError)}
+                />
+                <span className="text-xs text-slate-600 leading-snug">
+                  I have read and agree to Krantind&apos;s{" "}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="font-semibold text-primary-700 underline hover:text-primary-800"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    className="font-semibold text-primary-700 underline hover:text-primary-800"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+              {termsError ? (
+                <p className="text-[11px] font-semibold text-red-600 pl-6.5 animate-fade-in">
+                  ⚠️ {termsError}
+                </p>
+              ) : null}
+            </div>
 
             <Button
               type="submit"

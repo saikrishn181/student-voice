@@ -31,6 +31,8 @@ export default function SignupPage() {
   const [nameError, setNameError] = useState("")
   const [emailError, setEmailError] = useState("")
   const [inviteCode, setInviteCode] = useState("")
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [termsError, setTermsError] = useState("")
 
   // Prefill from an invite link like /signup?invite=ABC12345.
   useEffect(() => {
@@ -38,9 +40,18 @@ export default function SignupPage() {
     if (code) setInviteCode(code.trim())
   }, [])
 
-  const clearErrors = () => { setNameError(""); setEmailError("") }
+  const clearErrors = () => {
+    setNameError("")
+    setEmailError("")
+    setTermsError("")
+  }
 
   const handleGoogle = async () => {
+    if (!acceptedTerms) {
+      setTermsError("Please agree to the Terms of Service and Privacy Policy before continuing with Google.")
+      showToast("Please agree to the Terms of Service and Privacy Policy", "error")
+      return
+    }
     setGoogleLoading(true)
     const result = await signInWithGoogle()
     setGoogleLoading(false)
@@ -71,6 +82,11 @@ export default function SignupPage() {
     }
     if (accountType === "organization" && !organizationType) {
       showToast(s["validation.orgTypeRequired"], "error")
+      hasError = true
+    }
+    if (!acceptedTerms) {
+      setTermsError("You must agree to the Terms of Service and Privacy Policy to create an account.")
+      showToast("Please agree to the Terms of Service and Privacy Policy", "error")
       hasError = true
     }
     if (hasError) return
@@ -192,6 +208,46 @@ export default function SignupPage() {
                 required
               />
             ) : null}
+
+            {/* Statutory Terms & Privacy Policy Acceptance */}
+            <div className="flex flex-col gap-1.5 pt-1">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => {
+                    setAcceptedTerms(e.target.checked)
+                    if (e.target.checked) setTermsError("")
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  aria-invalid={Boolean(termsError)}
+                />
+                <span className="text-xs text-slate-600 leading-snug">
+                  I have read and agree to Krantind&apos;s{" "}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="font-semibold text-primary-700 underline hover:text-primary-800"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    className="font-semibold text-primary-700 underline hover:text-primary-800"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+              {termsError ? (
+                <p className="text-[11px] font-semibold text-red-600 pl-6.5 animate-fade-in">
+                  ⚠️ {termsError}
+                </p>
+              ) : null}
+            </div>
 
             <Button type="submit" size="lg" fullWidth loading={loading}>
               {accountType === "organization" ? s["auth.signup.orgButton"] : s["auth.signup.studentButton"]}
