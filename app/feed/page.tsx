@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles } from "lucide-react"
-import { PostCard } from "@/components/feature"
+import { PostCard, LogoLoader } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { FollowButton } from "@/components/feature/FollowButton"
@@ -32,6 +32,9 @@ export default function FeedPage() {
   const loadError = status === "error"
   const [retrying, setRetrying] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [pullDistance, setPullDistance] = useState(0)
+  const touchStartRef = useRef(0)
   const [filter, setFilter] = useState<"forYou" | "all" | "local" | "trending" | "topics">("forYou")
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -44,6 +47,44 @@ export default function FeedPage() {
       usePostStore.getState().stopRealtime()
     }
   }, [currentUser?.id])
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        loadAll(currentUser?.id),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Guarantee at least 1 full second logo visibility
+      ])
+    } finally {
+      setIsRefreshing(false)
+      setPullDistance(0)
+    }
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY <= 5) {
+      touchStartRef.current = e.touches[0].clientY
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartRef.current > 0 && window.scrollY <= 5) {
+      const distance = e.touches[0].clientY - touchStartRef.current
+      if (distance > 0) {
+        setPullDistance(Math.min(distance * 0.45, 90))
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (pullDistance > 45) {
+      void handleManualRefresh()
+    } else {
+      setPullDistance(0)
+    }
+    touchStartRef.current = 0
+  }
 
   const handleRetry = () => {
     setRetrying(true)
@@ -95,15 +136,41 @@ export default function FeedPage() {
   const localState = currentUser?.state
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]"
+    >
       {/* Main feed column */}
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-h2 text-slate-900">{s["feed.title"]}</h1>
-          <p className="text-body-sm text-slate-500">
-            {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-h2 text-slate-900">{s["feed.title"]}</h1>
+            <p className="text-body-sm text-slate-500">
+              {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleManualRefresh()}
+            disabled={isRefreshing}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-xs hover:bg-slate-50 hover:text-primary-700 active:scale-95 transition-all"
+            title="Refresh Feed"
+          >
+            <RefreshCw size={16} className={cn(isRefreshing && "animate-spin text-primary-600")} />
+          </button>
         </div>
+
+        {/* Pull-to-refresh & Animated Logo Loader indicator */}
+        {(isRefreshing || pullDistance > 0) && (
+          <div
+            className="flex flex-col items-center justify-center overflow-hidden transition-all duration-300 rounded-card bg-paper-deep/60 my-1"
+            style={{ minHeight: isRefreshing ? 100 : Math.max(pullDistance, 40) }}
+          >
+            <LogoLoader size="sm" label={isRefreshing ? "Refreshing Krantind..." : "Pull down to refresh"} />
+          </div>
+        )}
 
         {/* 🔥 Hot Issues Banner — Campus Heatmap */}
         {!initialLoading && hotIssues.length > 0 ? (
@@ -136,8 +203,12 @@ export default function FeedPage() {
           ))}
         </div>
 
-        {/* Loading skeleton */}
-        {initialLoading && !loadError ? <PostCardSkeleton count={3} /> : null}
+        {/* Loading state with animated Krantind Logo */}
+        {initialLoading && !loadError ? (
+          <div className="flex flex-col items-center justify-center py-10">
+            <LogoLoader size="md" label="Loading student grievances..." />
+          </div>
+        ) : null}
 
         {/* Error state */}
         {loadError ? (

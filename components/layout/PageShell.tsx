@@ -19,7 +19,7 @@ export function PageShell({ children }: PageShellProps) {
       </a>
       <Navbar />
 
-      {/* Mobile Top Header with Plus (Post) on Top Left and Impact on Top Right (< 1024px) */}
+      {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
       <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
         <Link
           href="/post/create"
@@ -29,6 +29,14 @@ export function PageShell({ children }: PageShellProps) {
           <Plus size={16} strokeWidth={2.5} />
           <span>Post</span>
         </Link>
+
+        {/* Platform Name in Middle */}
+        <Link href="/feed" className="flex items-center justify-center transition-opacity hover:opacity-90">
+          <span className="font-serif text-xl font-bold tracking-tight text-slate-900 lowercase">
+            krantind
+          </span>
+        </Link>
+
         <Link
           href="/impact"
           className="flex items-center gap-1.5 rounded-pill border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"

@@ -13,7 +13,7 @@ import { usePostStore } from "@/lib/store/usePostStore"
 import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { PageShell } from "./PageShell"
-import { BannedUserScreen } from "@/components/feature"
+import { BannedUserScreen, LogoLoader } from "@/components/feature"
 import { checkUserBanStatus } from "@/lib/moderation"
 import { Spinner } from "@/components/ui/Spinner"
 import { validateEnv } from "@/lib/env"
@@ -88,8 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   // While restoring the session, avoid flash of the login redirect.
   if (bootstrapping) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center">
-        <Spinner size={28} />
+      <div className="flex min-h-dvh w-full items-center justify-center bg-paper">
+        <LogoLoader size="lg" label="Loading Krantind..." />
       </div>
     )
   }
