@@ -19,6 +19,13 @@ import {
   GraduationCap,
   Ticket,
   Copy,
+  Scale,
+  ShieldCheck,
+  HelpCircle,
+  FileText,
+  ChevronDown,
+  BookOpen,
+  AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, Avatar, EmptyState, Skeleton, Button, Input, Modal } from "@/components/ui"
@@ -200,6 +207,7 @@ export default function SettingsPage() {
   const [collegeEmail, setCollegeEmail] = useState("")
   const [verifying, setVerifying] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [openFaq, setOpenFaq] = useState<string | null>(null)
 
   // Incoming follow requests (sent TO me) for the accept/reject list.
   const myIncoming = followRequests.filter((r) => r.targetId === currentUser?.id)
@@ -577,6 +585,141 @@ export default function SettingsPage() {
               </ul>
             </>
           )}
+        </Card>
+
+        {/* Legal, Rules & Platform Trust Hub */}
+        <Card className="flex flex-col gap-4 p-4 sm:p-5 border-l-4 border-l-primary-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Scale size={20} className="text-primary-600" aria-hidden />
+              <h2 className="text-h4">Legal, Rules & Platform Trust</h2>
+            </div>
+            <span className="rounded-pill bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+              100% Legally Protected
+            </span>
+          </div>
+          <p className="text-body-sm text-slate-600">
+            Learn about your constitutional rights, how Krantind protects student whistleblowers under Indian law, and our platform terms.
+          </p>
+
+          {/* Legal Quick Links Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Link
+              href="/terms"
+              className="flex flex-col items-center justify-center p-2.5 rounded-card border border-slate-200 bg-slate-50 text-center hover:bg-primary-50 hover:border-primary-300 transition-colors"
+            >
+              <FileText size={18} className="text-primary-700 mb-1" />
+              <span className="text-xs font-bold text-slate-800">Terms of Service</span>
+            </Link>
+
+            <Link
+              href="/privacy"
+              className="flex flex-col items-center justify-center p-2.5 rounded-card border border-slate-200 bg-slate-50 text-center hover:bg-primary-50 hover:border-primary-300 transition-colors"
+            >
+              <ShieldCheck size={18} className="text-emerald-700 mb-1" />
+              <span className="text-xs font-bold text-slate-800">Privacy Policy</span>
+            </Link>
+
+            <Link
+              href="/grievance"
+              className="flex flex-col items-center justify-center p-2.5 rounded-card border border-slate-200 bg-slate-50 text-center hover:bg-primary-50 hover:border-primary-300 transition-colors"
+            >
+              <Scale size={18} className="text-amber-700 mb-1" />
+              <span className="text-xs font-bold text-slate-800">Grievance Redressal</span>
+            </Link>
+
+            <Link
+              href="/guidelines"
+              className="flex flex-col items-center justify-center p-2.5 rounded-card border border-slate-200 bg-slate-50 text-center hover:bg-primary-50 hover:border-primary-300 transition-colors"
+            >
+              <BookOpen size={18} className="text-purple-700 mb-1" />
+              <span className="text-xs font-bold text-slate-800">Campus Rules</span>
+            </Link>
+          </div>
+
+          {/* Interactive FAQs Accordion */}
+          <div className="mt-2 flex flex-col gap-2">
+            {/* FAQ 1 */}
+            <div className="rounded-card border border-slate-200 bg-slate-50/70 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOpenFaq(openFaq === "legal" ? null : "legal")}
+                className="flex w-full items-center justify-between p-3 text-left text-xs font-bold text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🏛️</span> Is Krantind fully legal under Indian law?
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={cn("text-slate-400 transition-transform", openFaq === "legal" && "rotate-180")}
+                />
+              </button>
+              {openFaq === "legal" ? (
+                <div className="border-t border-slate-200 bg-white p-3 text-xs text-slate-600 leading-relaxed space-y-1.5">
+                  <p>
+                    <strong>Yes, 100%.</strong> Krantind is protected under <strong>Article 19(1)(a) of the Constitution of India</strong> (Freedom of Speech and Expression). Students have the constitutional right to discuss campus problems, fee transparency, hostel conditions, and educational welfare.
+                  </p>
+                  <p>
+                    Furthermore, under <strong>Section 79 of the Information Technology Act, 2000</strong>, Krantind operates as a protected Intermediary, with zero civil or criminal platform liability for third-party student posts.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            {/* FAQ 2 */}
+            <div className="rounded-card border border-slate-200 bg-slate-50/70 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOpenFaq(openFaq === "anonymous" ? null : "anonymous")}
+                className="flex w-full items-center justify-between p-3 text-left text-xs font-bold text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🎭</span> How does Anonymous Whistleblower mode protect me from college retaliation?
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={cn("text-slate-400 transition-transform", openFaq === "anonymous" && "rotate-180")}
+                />
+              </button>
+              {openFaq === "anonymous" ? (
+                <div className="border-t border-slate-200 bg-white p-3 text-xs text-slate-600 leading-relaxed space-y-1.5">
+                  <p>
+                    When you post in Anonymous Mode, your name, profile photo, username, and profile link are completely stripped from public view and college administrators. It displays simply as <em>&ldquo;Anonymous Student • [College Name]&rdquo;</em>.
+                  </p>
+                  <p>
+                    College principals or professors cannot demand your identity from Krantind without a formal judicial subpoena from an Indian High Court.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            {/* FAQ 3 */}
+            <div className="rounded-card border border-slate-200 bg-slate-50/70 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOpenFaq(openFaq === "college" ? null : "college")}
+                className="flex w-full items-center justify-between p-3 text-left text-xs font-bold text-slate-900 hover:bg-slate-100 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🏫</span> What happens if my college threatens legal action over a post?
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={cn("text-slate-400 transition-transform", openFaq === "college" && "rotate-180")}
+                />
+              </button>
+              {openFaq === "college" ? (
+                <div className="border-t border-slate-200 bg-white p-3 text-xs text-slate-600 leading-relaxed space-y-1.5">
+                  <p>
+                    Colleges often send cease-and-desist letters to suppress criticism. However, highlighting institutional issues (mess food quality, broken lab equipment, fee receipts, late buses) is legitimate student feedback and not defamation under Indian law.
+                  </p>
+                  <p>
+                    If college authorities have a genuine legal takedown notice (e.g. for personal slurs or unverified claims), they must submit it formally to our <Link href="/grievance" className="text-primary-600 underline font-semibold">Grievance Portal</Link> under Rule 3(2) of the IT Rules 2021.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
         </Card>
 
         {/* Log out */}

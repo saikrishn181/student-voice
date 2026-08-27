@@ -6,6 +6,7 @@
 // user's profile (not editable) so the post lands in their home state feed.
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert } from "lucide-react"
 import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
@@ -527,6 +528,15 @@ export default function CreatePostPage() {
             )}
           </Card>
         )}
+
+        {/* Statutory Compliance Notice */}
+        <p className="text-[11px] text-slate-500 text-center sm:text-left leading-relaxed">
+          By posting, you confirm this grievance complies with the{" "}
+          <Link href="/guidelines" className="text-primary-600 underline font-semibold">
+            Campus Guidelines
+          </Link>{" "}
+          and Indian IT Rules (2021). Focus on institutional issues; do not post personal defamation, hate speech, or fake notices.
+        </p>
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
           <Send size={18} aria-hidden />

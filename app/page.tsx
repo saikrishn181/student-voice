@@ -116,18 +116,50 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-[#E8E1D6]">
-        <div className="mx-auto flex w-full max-w-content flex-col items-center gap-2 px-4 py-10 text-center sm:px-6 lg:px-8">
+      <footer className="w-full border-t border-[#E8E1D6] bg-[#FDFBF7]">
+        <div className="mx-auto flex w-full max-w-content flex-col items-center gap-3 px-4 py-10 text-center sm:px-6 lg:px-8">
           <Logo size="sm" />
-          <Link
-            href="/about"
-            className="mt-1 rounded-pill border border-[#E8E1D6] bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700"
-          >
-            {s["footer.about"]}
-          </Link>
-          <p className="max-w-md text-body-sm text-slate-500">{s["footer.tagline"]}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
+            <Link
+              href="/about"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              {s["footer.about"]}
+            </Link>
+            <Link
+              href="/impact"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              🏆 Impact
+            </Link>
+            <Link
+              href="/terms"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              href="/privacy"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/grievance"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              Grievance Officer
+            </Link>
+            <Link
+              href="/guidelines"
+              className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
+            >
+              Campus Rules
+            </Link>
+          </div>
+          <p className="max-w-md text-body-sm text-slate-500 mt-1">{s["footer.tagline"]}</p>
           <p className="text-xs text-slate-400">{s["footer.madeBy"]}</p>
-          <p className="mt-2 text-xs font-medium text-slate-500">{s["footer.copyright"]}</p>
+          <p className="text-xs font-medium text-slate-500">{s["footer.copyright"]}</p>
         </div>
       </footer>
     </div>
