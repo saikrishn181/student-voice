@@ -72,6 +72,8 @@ interface PostState {
 
   status: "idle" | "loading" | "ready" | "error"
   loadErrorMessage: string | null
+  isRefreshing: boolean
+  setIsRefreshing: (isRefreshing: boolean) => void
   // True when the last page returned fewer rows than the page size (no more).
   hasMore: boolean
   // How many posts are already loaded (for range() pagination).
@@ -147,6 +149,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
   status: "idle",
   loadErrorMessage: null,
+  isRefreshing: false,
+  setIsRefreshing: (isRefreshing) => set({ isRefreshing }),
   hasMore: false,
   loadedCount: 0,
 
