@@ -17,7 +17,6 @@ import {
   LogOut,
   ShieldCheck,
   MessageSquare,
-  Trophy,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -30,7 +29,6 @@ import { Logo } from "@/components/feature"
 const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
   { href: "/search", label: s["nav.search"], icon: Search },
-  { href: "/impact", label: "Impact", icon: Trophy },
   { href: "/post/create", label: s["nav.create"], icon: PlusSquare },
   { href: "/messages", label: s["nav.messages"], icon: MessageSquare },
   { href: "/notifications", label: s["nav.notifications"], icon: Bell },
