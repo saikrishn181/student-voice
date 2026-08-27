@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { Trophy } from "lucide-react"
+import { Trophy, Plus } from "lucide-react"
 import { Navbar } from "./Navbar"
-import { Logo } from "@/components/feature"
 import s from "@/lib/strings"
 
 interface PageShellProps {
@@ -20,10 +19,15 @@ export function PageShell({ children }: PageShellProps) {
       </a>
       <Navbar />
 
-      {/* Mobile Top Header with Logo on Left and Impact on Top Right (< 1024px) */}
+      {/* Mobile Top Header with Plus (Post) on Top Left and Impact on Top Right (< 1024px) */}
       <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
-        <Link href="/feed" className="flex items-center transition-app hover:opacity-90">
-          <Logo size="sm" />
+        <Link
+          href="/post/create"
+          aria-label="Create Post"
+          className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all"
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Post</span>
         </Link>
         <Link
           href="/impact"
