@@ -25,11 +25,14 @@ export default function SignupPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [organizationType, setOrganizationType] = useState<OrganizationType | "">("")
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [nameError, setNameError] = useState("")
   const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+  const [confirmPasswordError, setConfirmPasswordError] = useState("")
   const [inviteCode, setInviteCode] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [termsError, setTermsError] = useState("")
@@ -43,6 +46,8 @@ export default function SignupPage() {
   const clearErrors = () => {
     setNameError("")
     setEmailError("")
+    setPasswordError("")
+    setConfirmPasswordError("")
     setTermsError("")
   }
 
@@ -77,7 +82,17 @@ export default function SignupPage() {
       hasError = true
     }
     if (!password) {
-      showToast("Password is required", "error")
+      setPasswordError("Password is required")
+      hasError = true
+    } else if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters")
+      hasError = true
+    }
+    if (!confirmPassword) {
+      setConfirmPasswordError("Please confirm your password")
+      hasError = true
+    } else if (password && password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match")
       hasError = true
     }
     if (accountType === "organization" && !organizationType) {
@@ -145,7 +160,7 @@ export default function SignupPage() {
             <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-5" noValidate>
+          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4" noValidate>
             <Tabs<AccountType>
               tabs={[
                 { value: "student", label: s["auth.signup.studentTab"] },
@@ -179,14 +194,31 @@ export default function SignupPage() {
               error={emailError || undefined}
             />
 
+            <div>
+              <Input
+                label="Create Password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setPasswordError("") }}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+                error={passwordError || undefined}
+              />
+              {!passwordError ? (
+                <p className="mt-1 text-[11px] text-slate-500 font-medium">Must be at least 6 characters long</p>
+              ) : null}
+            </div>
+
             <Input
-              label="Password"
+              label="Confirm Password"
               type="password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={s["auth.signup.passwordPlaceholder"]}
+              value={confirmPassword}
+              onChange={(e) => { setConfirmPassword(e.target.value); setConfirmPasswordError("") }}
+              placeholder="Re-enter your password"
               autoComplete="new-password"
+              error={confirmPasswordError || undefined}
             />
 
             <Input
@@ -196,7 +228,7 @@ export default function SignupPage() {
               onChange={(e) => setInviteCode(e.target.value)}
               placeholder={s["auth.signup.invitePlaceholder"]}
             />
-            <p className="-mt-3 text-body-sm text-slate-500">{s["auth.signup.inviteHint"]}</p>
+            <p className="-mt-2 text-xs text-slate-500">{s["auth.signup.inviteHint"]}</p>
 
             {accountType === "organization" ? (
               <Select

@@ -36,19 +36,26 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [emailError, setEmailError] = useState("")
+  const [passwordError, setPasswordError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setEmailError("")
+    setPasswordError("")
 
-    if (!email.trim() || !password) {
-      showToast(s["validation.emailPassword"], "error")
-      return
-    }
-    if (!EMAIL_RE.test(email.trim())) {
+    let hasError = false
+    if (!email.trim()) {
+      setEmailError("Email is required")
+      hasError = true
+    } else if (!EMAIL_RE.test(email.trim())) {
       setEmailError("Please enter a valid email address")
-      return
+      hasError = true
     }
+    if (!password) {
+      setPasswordError("Password is required")
+      hasError = true
+    }
+    if (hasError) return
 
     setLoading(true)
     const result = await login(email.trim(), password)
@@ -125,9 +132,10 @@ function LoginForm() {
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setPasswordError("") }}
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                error={passwordError || undefined}
                 leftAdornment={<Lock size={18} className="text-slate-400" />}
               />
               <div className="flex justify-end">
