@@ -146,9 +146,9 @@ export default function TermsPage() {
             In accordance with Rule 3(2) of the Information Technology Rules, 2021, Krantind has appointed a designated <strong>Resident Grievance Officer</strong> for receiving grievances and legal takedown notices:
           </p>
           <div className="rounded-card border border-slate-200 bg-slate-50 p-4 text-xs space-y-1">
-            <p><strong>Grievance Officer:</strong> N. S. Rao</p>
-            <p><strong>Email for Legal Notices & Takedowns:</strong> <a href="mailto:grievance@krantind.xyz" className="text-primary-600 font-semibold underline">grievance@krantind.xyz</a></p>
-            <p><strong>Response Timeline:</strong> Acknowledgement within 24 hours; Redressal within 15 days (24 hours for non-consensual intimate imagery).</p>
+            <p><strong>Grievance & Legal Desk:</strong> Krantind Legal & Compliance Cell</p>
+            <p><strong>Email for Legal Notices & Takedowns:</strong> <a href="mailto:1krantind@gmail.com" className="text-primary-600 font-semibold underline">1krantind@gmail.com</a></p>
+            <p><strong>Response Timeline:</strong> Acknowledgement within 24 hours; Redressal within 15 days (24 hours for emergency safety issues).</p>
             <p><strong>Grievance Portal:</strong> <Link href="/grievance" className="text-primary-600 font-semibold underline">krantind.xyz/grievance</Link></p>
           </div>
         </section>

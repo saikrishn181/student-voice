@@ -104,7 +104,7 @@ export function BannedUserScreen({ user }: BannedUserScreenProps) {
               <LogOut size={16} /> Log Out
             </Button>
             <a
-              href="mailto:support@krantind.xyz?subject=Account%20Ban%20Appeal"
+              href="mailto:1krantind@gmail.com?subject=Account%20Ban%20Appeal"
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-card border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-200 transition-app hover:bg-slate-700 hover:text-white"
             >
               <Mail size={16} /> Appeal Support

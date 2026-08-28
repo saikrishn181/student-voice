@@ -76,16 +76,16 @@ export default function GrievancePage() {
           <div className="flex items-start gap-3">
             <Mail size={22} className="text-primary-600 shrink-0 mt-0.5" />
             <div className="text-xs space-y-1.5">
-              <h2 className="text-sm font-bold text-slate-900">Designated Resident Grievance Officer</h2>
-              <p className="text-slate-600"><strong>Name:</strong> N. S. Rao</p>
-              <p className="text-slate-600"><strong>Designation:</strong> Resident Grievance & Compliance Officer</p>
+              <h2 className="text-sm font-bold text-slate-900">Designated Grievance & Compliance Desk</h2>
+              <p className="text-slate-600"><strong>Authority:</strong> Krantind Legal & Compliance Cell</p>
+              <p className="text-slate-600"><strong>Designation:</strong> Grievance Redressal Desk</p>
               <p className="text-slate-600">
                 <strong>Direct Email:</strong>{" "}
-                <a href="mailto:grievance@krantind.xyz" className="text-primary-600 font-semibold underline">
-                  grievance@krantind.xyz
+                <a href="mailto:1krantind@gmail.com" className="text-primary-600 font-semibold underline">
+                  1krantind@gmail.com
                 </a>
               </p>
-              <p className="text-slate-600"><strong>Physical Address for Service:</strong> Krantind Digital Platform, India</p>
+              <p className="text-slate-600"><strong>Service Channel:</strong> Digital Grievance Portal (IT Rules 2021)</p>
             </div>
           </div>
         </Card>

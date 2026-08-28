@@ -292,12 +292,12 @@ export default function LegalTrustPage() {
         <div className="flex items-start gap-3">
           <Mail size={24} className="text-primary-700 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <h3 className="text-sm font-extrabold text-slate-950">Resident Grievance & Compliance Officer</h3>
+            <h3 className="text-sm font-extrabold text-slate-950">Grievance & Legal Compliance Desk</h3>
             <p className="text-slate-800 font-medium">
               For law enforcement notices, formal legal communications, or statutory grievance escalations:
             </p>
             <p className="text-slate-950 font-bold pt-1">
-              N. S. Rao &bull; Email: <a href="mailto:grievance@krantind.xyz" className="text-primary-700 underline font-extrabold">grievance@krantind.xyz</a>
+              Krantind Legal &bull; Email: <a href="mailto:1krantind@gmail.com" className="text-primary-700 underline font-extrabold">1krantind@gmail.com</a>
             </p>
             <p className="text-slate-600 text-xs font-semibold">
               Response SLA: Acknowledged within 24 hours &bull; Redressal within 15 days (IT Rules 2021 Rule 3(2))

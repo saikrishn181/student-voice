@@ -136,8 +136,8 @@ export default function PrivacyPage() {
             If you have any questions, concerns, or grievances regarding the processing of your personal data or wish to exercise your data principal rights under the DPDP Act 2023, please contact our Data Protection Grievance Officer:
           </p>
           <div className="rounded-card border border-slate-200 bg-slate-50 p-4 text-xs space-y-1">
-            <p><strong>Grievance / Data Protection Officer:</strong> N. S. Rao</p>
-            <p><strong>Email:</strong> <a href="mailto:grievance@krantind.xyz" className="text-primary-600 font-semibold underline">grievance@krantind.xyz</a></p>
+            <p><strong>Grievance & Data Protection Cell:</strong> Krantind Legal & Compliance Desk</p>
+            <p><strong>Email:</strong> <a href="mailto:1krantind@gmail.com" className="text-primary-600 font-semibold underline">1krantind@gmail.com</a></p>
             <p><strong>Subject Line:</strong> &ldquo;DPDP Act Data Request / Grievance&rdquo;</p>
             <p><strong>Resolution SLA:</strong> Acknowledged within 24 hours, resolved within 15 business days.</p>
           </div>
