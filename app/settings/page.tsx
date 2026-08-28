@@ -581,30 +581,30 @@ export default function SettingsPage() {
         </Card>
 
         {/* Legal, Rules & Platform Trust - 1-Line Navigation Row */}
-        <Card className="p-0 overflow-hidden transition-app hover:border-primary-300">
+        <Card className="p-0 overflow-hidden transition-app hover:border-primary-400 border border-slate-200 shadow-xs">
           <Link
             href="/legal"
             className="flex items-center justify-between gap-3 p-4 hover:bg-slate-50 transition-colors"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card bg-primary-50 text-primary-700">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-800">
                 <Scale size={18} aria-hidden />
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-body-sm font-semibold text-slate-900 truncate">
+                  <h2 className="text-sm font-bold text-slate-950 truncate">
                     Legal, Rules & Platform Trust
                   </h2>
-                  <span className="rounded-pill bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700 shrink-0">
+                  <span className="rounded-full bg-emerald-100 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold text-emerald-900 shrink-0">
                     Safe Harbor
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 truncate">
+                <p className="text-xs text-slate-700 font-medium truncate">
                   Constitutional rights, whistleblower safety, terms & grievance redressal
                 </p>
               </div>
             </div>
-            <ChevronRight size={18} className="text-slate-400 shrink-0" aria-hidden />
+            <ChevronRight size={18} className="text-slate-500 shrink-0" aria-hidden />
           </Link>
         </Card>
 
