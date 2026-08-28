@@ -135,42 +135,44 @@ export function Navbar() {
         ) : null}
       </aside>
 
-      {/* Mobile floating pill tab bar (< 1024px) */}
-      <nav
-        aria-label="Mobile navigation"
-        className="fixed inset-x-4 bottom-4 z-30 flex justify-around rounded-full border border-[#E8E1D6] bg-white/90 shadow-lift backdrop-blur-md lg:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              className={cn(
-                "transition-app flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-medium",
-                active ? "text-primary-700" : "text-slate-500 hover:text-slate-700",
-              )}
-              style={{ minHeight: 52 }}
-            >
-              <span
+      {/* Mobile floating pill tab bar (< 1024px) - hidden on active chat threads so composer is unobstructed */}
+      {!pathname.startsWith("/messages/") || pathname === "/messages" ? (
+        <nav
+          aria-label="Mobile navigation"
+          className="fixed inset-x-4 bottom-4 z-30 flex justify-around rounded-full border border-[#E8E1D6] bg-white/90 shadow-lift backdrop-blur-md lg:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.label}
                 className={cn(
-                  "relative transition-app flex h-8 w-11 items-center justify-center rounded-full",
-                  active && "bg-primary-50",
+                  "transition-app flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-2 text-[10px] font-medium",
+                  active ? "text-primary-700" : "text-slate-500 hover:text-slate-700",
                 )}
+                style={{ minHeight: 52 }}
               >
-                <item.icon size={21} aria-hidden />
-                {item.href === "/notifications" && unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[9px] font-semibold leading-none text-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                ) : null}
-              </span>
-            </Link>
-          )
-        })}
-      </nav>
+                <span
+                  className={cn(
+                    "relative transition-app flex h-8 w-11 items-center justify-center rounded-full",
+                    active && "bg-primary-50",
+                  )}
+                >
+                  <item.icon size={21} aria-hidden />
+                  {item.href === "/notifications" && unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[9px] font-semibold leading-none text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            )
+          })}
+        </nav>
+      ) : null}
     </>
   )
 }

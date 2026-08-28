@@ -345,9 +345,9 @@ export default function ConversationPage({
       : null
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-7rem)] w-full max-w-2xl flex-col px-4 lg:h-[calc(100dvh-2rem)]">
+    <div className="flex h-dvh w-full max-w-3xl flex-col px-2 sm:px-6 mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-slate-200 py-3">
+      <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-paper/95 py-3 backdrop-blur-md">
         <button
           type="button"
           onClick={() => router.push("/messages")}
@@ -364,8 +364,8 @@ export default function ConversationPage({
           <Avatar name={partner!.name} src={partner!.avatarUrl ?? null} size="md" />
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{headerName}</p>
-          {headerSub ? <p className="text-xs text-slate-400">{headerSub}</p> : null}
+          <p className="truncate text-sm font-bold text-slate-950">{headerName}</p>
+          {headerSub ? <p className="text-xs text-slate-500">{headerSub}</p> : null}
         </div>
         <span
           className="inline-flex shrink-0 items-center gap-1 rounded-pill bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
@@ -376,7 +376,7 @@ export default function ConversationPage({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 space-y-2 overflow-y-auto py-4">
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-1 py-4">
         {messages.map((m) => {
           const mine = m.senderId === currentUser?.id
           // Read receipt: recipient opened the conversation after this message.
@@ -406,10 +406,10 @@ export default function ConversationPage({
                 onTouchCancel={handleTouchEnd}
                 onContextMenu={(e) => handleContextMenu(m, e)}
                 className={cn(
-                  "max-w-[78%] select-none rounded-card px-3.5 py-2 text-body-sm transition-transform active:scale-[0.98]",
+                  "max-w-[85%] select-none rounded-2xl px-4 py-2.5 text-body-sm transition-transform active:scale-[0.98] shadow-2xs",
                   mine
-                    ? "rounded-br-sm bg-primary-600 text-white"
-                    : "rounded-bl-sm border border-slate-200 bg-white text-slate-800",
+                    ? "rounded-br-xs bg-primary-600 text-white"
+                    : "rounded-bl-xs border border-slate-200 bg-white text-slate-900",
                 )}
               >
                 {m.attachmentType === "video" && m.attachmentUrl ? (
@@ -448,7 +448,7 @@ export default function ConversationPage({
                   </div>
                 ) : null}
                 {m.content ? (
-                  <p className="break-words whitespace-pre-wrap">{m.content}</p>
+                  <p className="break-words whitespace-pre-wrap leading-relaxed">{m.content}</p>
                 ) : null}
                 <p
                   className={cn(
@@ -461,9 +461,14 @@ export default function ConversationPage({
                       ({s["chat.edited"]})
                     </span>
                   ) : null}
-                  {timeAgo(m.createdAt)}
+                  <span>{timeAgo(m.createdAt)}</span>
                   {mine ? (
-                    <span className="ml-1">{read ? s["chat.read"] : s["chat.sent"]}</span>
+                    <span
+                      className={cn("ml-1 font-bold text-xs tracking-tighter", read ? "text-emerald-200" : "opacity-75")}
+                      title={read ? "Read" : "Sent"}
+                    >
+                      {read ? "✓✓" : "✓"}
+                    </span>
                   ) : null}
                 </p>
               </div>
@@ -544,7 +549,7 @@ export default function ConversationPage({
       {/* Composer */}
       <form
         className={cn(
-          "flex items-end gap-2 py-3",
+          "sticky bottom-0 z-20 flex items-end gap-2 bg-paper py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
           editingMessage ? "border-x border-b border-primary-200 rounded-b-card bg-primary-50/30 px-2 pb-2" : "border-t border-slate-200"
         )}
         onSubmit={(e) => {

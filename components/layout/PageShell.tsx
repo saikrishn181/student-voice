@@ -1,14 +1,21 @@
+"use client"
+
 import type { ReactNode } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Trophy, Plus } from "lucide-react"
 import { Navbar } from "./Navbar"
 import s from "@/lib/strings"
+import { cn } from "@/lib/utils"
 
 interface PageShellProps {
   children: ReactNode
 }
 
 export function PageShell({ children }: PageShellProps) {
+  const pathname = usePathname()
+  const isChatThread = pathname.startsWith("/messages/") && pathname !== "/messages"
+
   return (
     <div className="min-h-dvh w-full bg-paper">
       <a
@@ -20,52 +27,66 @@ export function PageShell({ children }: PageShellProps) {
       <Navbar />
 
       {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
-      <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
-        <Link
-          href="/post/create"
-          aria-label="Create Post"
-          className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span>Post</span>
-        </Link>
+      {!isChatThread ? (
+        <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
+          <Link
+            href="/post/create"
+            aria-label="Create Post"
+            className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Post</span>
+          </Link>
 
-        {/* Platform Name in Middle */}
-        <Link href="/feed" className="flex items-center justify-center transition-opacity hover:opacity-90">
-          <span className="font-serif text-xl font-bold tracking-tight text-slate-900 lowercase">
-            krantind
-          </span>
-        </Link>
+          {/* Platform Name in Middle */}
+          <Link href="/feed" className="flex items-center justify-center transition-opacity hover:opacity-90">
+            <span className="font-serif text-xl font-bold tracking-tight text-slate-900 lowercase">
+              krantind
+            </span>
+          </Link>
 
-        <Link
-          href="/impact"
-          className="flex items-center gap-1.5 rounded-pill border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
-        >
-          <Trophy size={14} className="text-amber-600" />
-          <span>Impact</span>
-        </Link>
-      </header>
+          <Link
+            href="/impact"
+            className="flex items-center gap-1.5 rounded-pill border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
+          >
+            <Trophy size={14} className="text-amber-600" />
+            <span>Impact</span>
+          </Link>
+        </header>
+      ) : null}
 
       {/* Content: leaves room for the fixed sidebar on desktop and the bottom bar on mobile */}
       <main id="main-content" className="lg:pl-64">
         {/* Desktop Top Bar with Top-Right Impact Link (>= 1024px) */}
-        <div className="hidden lg:flex w-full items-center justify-end px-8 pt-4">
-          <Link
-            href="/impact"
-            className="flex items-center gap-2 rounded-pill border border-amber-300 bg-amber-50/90 px-3.5 py-1.5 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
-          >
-            <Trophy size={15} className="text-amber-600" />
-            <span>Campus Impact & Leaderboard</span>
-          </Link>
-        </div>
+        {!isChatThread ? (
+          <div className="hidden lg:flex w-full items-center justify-end px-8 pt-4">
+            <Link
+              href="/impact"
+              className="flex items-center gap-2 rounded-pill border border-amber-300 bg-amber-50/90 px-3.5 py-1.5 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
+            >
+              <Trophy size={15} className="text-amber-600" />
+              <span>Campus Impact & Leaderboard</span>
+            </Link>
+          </div>
+        ) : null}
 
-        <div className="mx-auto w-full max-w-content px-4 pb-28 pt-3 sm:px-6 lg:px-8 lg:pb-12">
+        <div
+          className={cn(
+            "mx-auto w-full",
+            isChatThread
+              ? "p-0 h-dvh flex flex-col max-w-3xl"
+              : "max-w-content px-4 pb-28 pt-3 sm:px-6 lg:px-8 lg:pb-12"
+          )}
+        >
           {children}
-          <footer className="mt-16 border-t border-[#E8E1D6] pt-6 text-center">
-            <p className="text-xs font-medium text-slate-400">{s["footer.copyright"]}</p>
-          </footer>
+          {!isChatThread ? (
+            <footer className="mt-16 border-t border-[#E8E1D6] pt-6 text-center">
+              <p className="text-xs font-medium text-slate-400">{s["footer.copyright"]}</p>
+            </footer>
+          ) : null}
         </div>
       </main>
     </div>
   )
 }
+

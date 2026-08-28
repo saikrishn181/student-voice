@@ -306,19 +306,65 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const currentUserId = useAuthStore.getState().currentUser?.id
     if (!currentUserId || otherUserId === currentUserId) return null
 
-    const { data, error } = await supabase.rpc("get_or_create_conversation", {
-      p_other: otherUserId,
-    })
-    if (error) {
-      // Private accounts reject non-followers at the DB layer.
-      if (error.message.includes("PRIVATE_ACCOUNT_NOT_ALLOWED")) {
+    try {
+      const { data, error } = await supabase.rpc("get_or_create_conversation", {
+        p_other: otherUserId,
+      })
+      if (!error && typeof data === "string") {
+        await get().loadConversations()
+        return data
+      }
+      if (error && error.message.includes("PRIVATE_ACCOUNT_NOT_ALLOWED")) {
         throw new Error("This account is private — follow them first to send a message.")
       }
-      throw new Error("Could not start a conversation — please try again.")
+    } catch (rpcErr) {
+      if (rpcErr instanceof Error && rpcErr.message.includes("private")) {
+        throw rpcErr
+      }
     }
 
-    await get().loadConversations()
-    return typeof data === "string" ? data : null
+    // Direct fallback if RPC is not present
+    try {
+      const { data: myConvs } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", currentUserId)
+      const myConvIds = (myConvs ?? []).map((c) => c.conversation_id)
+
+      if (myConvIds.length > 0) {
+        const { data: matched } = await supabase
+          .from("conversation_participants")
+          .select("conversation_id")
+          .eq("user_id", otherUserId)
+          .in("conversation_id", myConvIds)
+          .limit(1)
+        if (matched && matched.length > 0) {
+          await get().loadConversations()
+          return matched[0].conversation_id
+        }
+      }
+
+      // Create new 1:1 conversation
+      const { data: newConv, error: createErr } = await supabase
+        .from("conversations")
+        .insert({ is_group: false })
+        .select("id")
+        .single()
+      if (createErr || !newConv) {
+        throw new Error("Could not start a conversation — please try again.")
+      }
+
+      await supabase.from("conversation_participants").insert([
+        { conversation_id: newConv.id, user_id: currentUserId },
+        { conversation_id: newConv.id, user_id: otherUserId },
+      ])
+
+      await get().loadConversations()
+      return newConv.id
+    } catch (fallbackErr) {
+      if (fallbackErr instanceof Error) throw fallbackErr
+      throw new Error("Could not start a conversation — please try again.")
+    }
   },
 
   loadMessages: async (conversationId) => {
@@ -346,7 +392,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendMessage: async (conversationId, content, attachment) => {
     const trimmed = content.trim()
-    if (!trimmed && !attachment) return false
+    const effectiveContent = trimmed || (attachment ? (attachment.type === "video" ? "📹 Video" : "📷 Photo") : "")
+    if (!effectiveContent) return false
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
     if (!currentUserId) {
@@ -356,7 +403,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: currentUserId,
-      content: trimmed,
+      content: effectiveContent,
       attachment_url: attachment?.url ?? null,
       attachment_type: attachment?.type ?? null,
     })
@@ -467,12 +514,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       unreadByConversation: { ...s.unreadByConversation, [conversationId]: 0 },
     }))
     const supabase = createSupabaseBrowserClient()
-    // DB marks incoming messages read + bumps last_read_at (chat-v2 RPC).
-    // No-op until the chat-v2 migration is applied.
+    const nowIso = new Date().toISOString()
     const { error } = await supabase.rpc("mark_messages_read", {
       p_conversation: conversationId,
     })
-    if (!error) {
+    if (error) {
+      // Direct fallback: update last_read_at on conversation_participants
+      void supabase
+        .from("conversation_participants")
+        .update({ last_read_at: nowIso })
+        .eq("conversation_id", conversationId)
+        .eq("user_id", currentUserId)
+    } else {
       // Read receipts: my sent messages are now "read" for the other side too —
       // mark them locally so the UI reflects it without waiting for realtime.
       const me = useAuthStore.getState().currentUser?.id
@@ -480,7 +533,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messagesByConversation: {
           ...s.messagesByConversation,
           [conversationId]: (s.messagesByConversation[conversationId] ?? []).map((m) =>
-            m.senderId === me ? { ...m, readAt: new Date().toISOString() } : m,
+            m.senderId === me ? { ...m, readAt: nowIso } : m,
           ),
         },
       }))
