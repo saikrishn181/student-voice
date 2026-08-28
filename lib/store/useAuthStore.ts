@@ -25,6 +25,7 @@ export interface SignupPayload {
 export interface AuthResult {
   ok: boolean
   error?: string
+  requiresOtp?: boolean
 }
 
 interface AuthState {
@@ -36,6 +37,8 @@ interface AuthState {
   bootstrap: () => void
   login: (email: string, password: string) => Promise<AuthResult>
   signup: (payload: SignupPayload) => Promise<AuthResult>
+  verifySignupOtp: (email: string, token: string) => Promise<AuthResult>
+  resendSignupOtp: (email: string) => Promise<AuthResult>
   signInWithGoogle: (next?: string) => Promise<AuthResult>
   setRegion: (state: string) => Promise<void>
   // One-time onboarding: name, region, account type (Google users), privacy
@@ -117,12 +120,57 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       password: payload.password,
       options: { data: meta },
     })
-    // Supabase signs the user in immediately when email confirmation is off.
+    if (error) {
+      return { ok: false, error: normalizeErrorMessage(error.message) }
+    }
+    // If session exists immediately (instant sign-in when confirmation is off):
+    if (data.session) {
+      const user = await fetchProfile(data.session.user.id)
+      set({ isLoggedIn: true, currentUser: user ?? null })
+      return { ok: true, requiresOtp: false }
+    }
+    // If user created and confirmation OTP was dispatched to email:
+    if (data.user) {
+      return { ok: true, requiresOtp: true }
+    }
+    return { ok: false, error: "Unable to create your account. Please try again." }
+  },
+
+  verifySignupOtp: async (email, token) => {
+    const supabase = createSupabaseBrowserClient()
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: token.trim(),
+      type: "signup",
+    })
     if (error || !data.session) {
-      return { ok: false, error: normalizeErrorMessage(error?.message) }
+      // Fallback attempt with type: 'email'
+      const fallback = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type: "email",
+      })
+      if (fallback.error || !fallback.data.session) {
+        return { ok: false, error: normalizeErrorMessage(fallback.error?.message || error?.message) }
+      }
+      const user = await fetchProfile(fallback.data.session.user.id)
+      set({ isLoggedIn: true, currentUser: user ?? null })
+      return { ok: true }
     }
     const user = await fetchProfile(data.session.user.id)
     set({ isLoggedIn: true, currentUser: user ?? null })
+    return { ok: true }
+  },
+
+  resendSignupOtp: async (email) => {
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+    })
+    if (error) {
+      return { ok: false, error: normalizeErrorMessage(error.message) }
+    }
     return { ok: true }
   },
 

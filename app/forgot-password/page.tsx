@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 // Forgot Password: two free options, both powered by Supabase's built-in
 // email (no paid SMS provider needed):
@@ -6,19 +6,20 @@
 //     enters it here with a new password, we verify the OTP, set the new
 //     password, and log them straight in.
 //  2. "Reset link" — Supabase emails a link that opens /reset-password.
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { MailCheck, KeyRound } from "lucide-react"
+import { MailCheck, KeyRound, Lock } from "lucide-react"
 import { Button, Input, Tabs } from "@/components/ui"
 import { Logo } from "@/components/feature"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { LOGGED_IN_HOME } from "@/constants"
 import s from "@/lib/strings"
+import { cn } from "@/lib/utils"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-type Method = "link" | "otp"
+type Method = "otp" | "link"
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -27,10 +28,22 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
   const [code, setCode] = useState("")
+  const [codeError, setCodeError] = useState("")
   const [newPassword, setNewPassword] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [confirmError, setConfirmError] = useState("")
   const [codeSent, setCodeSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [otpCountdown, setOtpCountdown] = useState(0)
+
+  // 60-second countdown for resending OTP
+  useEffect(() => {
+    if (otpCountdown <= 0) return
+    const timer = setInterval(() => setOtpCountdown((c) => c - 1), 1000)
+    return () => clearInterval(timer)
+  }, [otpCountdown])
 
   const validateEmail = () => {
     setEmailError("")
@@ -60,7 +73,7 @@ export default function ForgotPasswordPage() {
     setSent(true)
   }
 
-  // OTP step 1: request a 6-digit code (Supabase sends it by email — free).
+  // OTP step 1: request a 6-digit code via email
   const handleRequestCode = async () => {
     if (!validateEmail()) return
     setLoading(true)
@@ -71,40 +84,65 @@ export default function ForgotPasswordPage() {
     })
     setLoading(false)
     if (error) {
-      showToast(error.message || "Something went wrong. Please try again.", "error")
+      showToast(error.message || "Could not send verification code. Please check your email and try again.", "error")
       return
     }
     setCodeSent(true)
+    setOtpCountdown(60)
+    showToast("Verification code sent to your email!", "success")
   }
 
-  // OTP step 2: verify the code (establishes a session), set the password,
-  // and log the user straight in.
+  // OTP step 2: verify the code, set the new password, and log the user in
   const handleVerifyCode = async () => {
-    if (!code.trim()) {
-      showToast(s["auth.forgotPassword.codeRequired"], "error")
-      return
+    setCodeError("")
+    setPasswordError("")
+    setConfirmError("")
+
+    let hasError = false
+    const cleanCode = code.trim()
+    if (!cleanCode) {
+      setCodeError("Please enter the 6-digit verification code")
+      hasError = true
+    } else if (cleanCode.length < 6) {
+      setCodeError("Code must be 6 digits")
+      hasError = true
     }
-    if (newPassword.length < 6) {
-      showToast(s["auth.forgotPassword.passwordTooShort"], "error")
-      return
+
+    if (!newPassword) {
+      setPasswordError("New password is required")
+      hasError = true
+    } else if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters")
+      hasError = true
     }
+
+    if (!confirmPassword) {
+      setConfirmError("Please confirm your new password")
+      hasError = true
+    } else if (newPassword && newPassword !== confirmPassword) {
+      setConfirmError("Passwords do not match")
+      hasError = true
+    }
+
+    if (hasError) return
+
     setLoading(true)
     const supabase = createSupabaseBrowserClient()
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),
-      token: code.trim(),
+      token: cleanCode,
       type: "email",
     })
     if (verifyError) {
       setLoading(false)
-      showToast(
-        verifyError.message?.includes("Token")
-          ? s["auth.forgotPassword.codeInvalid"]
-          : verifyError.message,
-        "error",
-      )
+      const msg = verifyError.message?.includes("Token")
+        ? "Invalid or expired verification code."
+        : verifyError.message
+      setCodeError(msg)
+      showToast(msg, "error")
       return
     }
+
     const { error: updateError } = await supabase.auth.updateUser({
       password: newPassword,
     })
@@ -113,7 +151,8 @@ export default function ForgotPasswordPage() {
       showToast(updateError.message || "Could not update your password", "error")
       return
     }
-    showToast(s["auth.forgotPassword.passwordUpdated"], "success")
+
+    showToast("Password updated successfully!", "success")
     router.push(LOGGED_IN_HOME)
   }
 
@@ -137,7 +176,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center bg-paper px-4 py-8">
       <div className="w-full max-w-sm text-center">
         <div className="mb-4 flex justify-center">
           <Link href="/" className="transition-app hover:opacity-90">
@@ -156,12 +195,16 @@ export default function ForgotPasswordPage() {
               { value: "link", label: s["auth.forgotPassword.tabLink"] },
             ]}
             value={method}
-            onChange={setMethod}
+            onChange={(m) => {
+              setMethod(m)
+              setCodeSent(false)
+              setEmailError("")
+            }}
           />
         </div>
 
         <form
-          className="mt-4 flex flex-col gap-4"
+          className="mt-4 flex flex-col gap-4 text-left"
           onSubmit={(e) => {
             e.preventDefault()
             if (method === "link") handleSendLink()
@@ -183,25 +226,71 @@ export default function ForgotPasswordPage() {
             />
           ) : (
             <>
+              <div className="rounded-card border border-primary-200 bg-primary-50/60 p-3 text-xs text-slate-700 text-center">
+                <p>
+                  We sent a 6-digit OTP code to <strong>{email.trim()}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setCodeSent(false); setCode(""); setCodeError("") }}
+                  className="mt-1 font-semibold text-primary-700 hover:underline"
+                >
+                  Change Email
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5 text-center">
+                  Enter 6-Digit OTP Code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  autoFocus
+                  required
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, ""))
+                    setCodeError("")
+                  }}
+                  placeholder="000000"
+                  className={cn(
+                    "w-full rounded-card border bg-white px-4 py-2.5 text-center font-mono text-xl font-bold tracking-[0.3em] text-slate-900 placeholder:text-slate-300 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-100",
+                    codeError ? "border-red-500" : "border-slate-200"
+                  )}
+                  aria-label="6-digit reset code"
+                />
+                {codeError ? (
+                  <p className="mt-1 text-center text-xs font-semibold text-red-600">
+                    ⚠️ {codeError}
+                  </p>
+                ) : null}
+              </div>
+
               <Input
-                label={s["auth.forgotPassword.codeLabel"]}
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\s/g, ""))}
-                placeholder={s["auth.forgotPassword.codePlaceholder"]}
-                maxLength={6}
-              />
-              <Input
-                label={s["auth.forgotPassword.newPasswordLabel"]}
+                label="New Password"
                 type="password"
                 required
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={s["auth.forgotPassword.newPasswordPlaceholder"]}
+                onChange={(e) => { setNewPassword(e.target.value); setPasswordError("") }}
+                placeholder="At least 6 characters"
                 autoComplete="new-password"
+                error={passwordError || undefined}
+                leftAdornment={<Lock size={17} className="text-slate-400" />}
+              />
+
+              <Input
+                label="Confirm New Password"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError("") }}
+                placeholder="Re-enter your new password"
+                autoComplete="new-password"
+                error={confirmError || undefined}
+                leftAdornment={<Lock size={17} className="text-slate-400" />}
               />
             </>
           )}
@@ -210,16 +299,28 @@ export default function ForgotPasswordPage() {
             {method === "link"
               ? s["auth.forgotPassword.sendLink"]
               : codeSent
-                ? s["auth.forgotPassword.verifyButton"]
+                ? "Update Password & Log In"
                 : s["auth.forgotPassword.sendCode"]}
           </Button>
-        </form>
 
-        {codeSent ? (
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-body-sm text-slate-500">
-            <KeyRound size={14} aria-hidden /> {s["auth.forgotPassword.codeSentTo"](email.trim())}
-          </p>
-        ) : null}
+          {codeSent && method === "otp" ? (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                disabled={otpCountdown > 0}
+                onClick={handleRequestCode}
+                className={cn(
+                  "text-xs font-semibold transition-colors",
+                  otpCountdown > 0
+                    ? "text-slate-400 cursor-not-allowed"
+                    : "text-primary-700 hover:text-primary-800 underline"
+                )}
+              >
+                {otpCountdown > 0 ? `Resend code in ${otpCountdown}s` : "Resend OTP Code"}
+              </button>
+            </div>
+          ) : null}
+        </form>
 
         <div className="mt-5">
           <Link href="/login" className="text-sm font-medium text-primary-700 hover:underline">
