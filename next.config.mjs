@@ -28,16 +28,29 @@ const nextConfig = {
   },
   async headers() {
     return [
+      // 1. Dynamic & Authenticated Endpoints: Prevent Web Cache Deception & Cache Poisoning
+      {
+        source: '/(api|messages|notifications|settings|profile)/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+      // 2. Global Security Headers for all routes
       {
         source: '/:path*',
         headers: [
           // Prevent MIME type sniffing
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          // Prevent clickjacking
+          // Prevent clickjacking / UI redressing
           { key: 'X-Frame-Options', value: 'DENY' },
-          // Referrer policy: no referrer sent to external sites
+          // Cross-Origin Isolation & Opener Policy
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+          // Referrer policy: strict origin when cross-origin
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          // Content Security Policy - restrict scripts/styles to self, allow Supabase and Google Fonts
+          // Content Security Policy - strict script/style restriction with object-src none
           {
             key: 'Content-Security-Policy',
             value: [
@@ -48,13 +61,14 @@ const nextConfig = {
               "img-src 'self' data: blob: https: https://*.supabase.co https://lh3.googleusercontent.com https://platform-lookaside.fbsbx.com",
               "connect-src 'self' https://*.supabase.co https://apis.google.com https://accounts.google.com wss://*.supabase.co",
               "frame-src 'self' https://accounts.google.com",
+              "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'none'",
               "upgrade-insecure-requests",
             ].join('; '),
           },
-          // Permissions Policy - restrict powerful features
+          // Permissions Policy - restrict powerful browser sensors & hardware APIs
           {
             key: 'Permissions-Policy',
             value: [
@@ -68,7 +82,7 @@ const nextConfig = {
               'accelerometer=()',
             ].join(', '),
           },
-          // HSTS (only on HTTPS - Vercel provides HTTPS)
+          // HSTS (HTTP Strict Transport Security)
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
           // Prevent Adobe Flash & PDF cross-domain
           { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
