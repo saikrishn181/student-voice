@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { Trophy, Plus } from "lucide-react"
 import { Navbar } from "./Navbar"
-import { HeaderBrand } from "./HeaderBrand"
 import s from "@/lib/strings"
 
 interface PageShellProps {
@@ -20,7 +19,7 @@ export function PageShell({ children }: PageShellProps) {
       </a>
       <Navbar />
 
-      {/* Mobile Top Header with Plus (Post) on Top Left, HeaderBrand in Middle, and Impact on Top Right (< 1024px) */}
+      {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
       <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
         <Link
           href="/post/create"
@@ -31,8 +30,12 @@ export function PageShell({ children }: PageShellProps) {
           <span>Post</span>
         </Link>
 
-        {/* Snapchat / Instagram style morphing Logo & Brand in Middle */}
-        <HeaderBrand />
+        {/* Platform Name in Middle */}
+        <Link href="/feed" className="flex items-center justify-center transition-opacity hover:opacity-90">
+          <span className="font-serif text-xl font-bold tracking-tight text-slate-900 lowercase">
+            krantind
+          </span>
+        </Link>
 
         <Link
           href="/impact"
