@@ -31,7 +31,7 @@ const variantClasses: Record<Variant, string> = {
   danger:
     "bg-red-600 text-white shadow-card hover:shadow-lift hover:brightness-110 active:shadow-press focus-visible:ring-red-400",
   ghost:
-    "bg-transparent text-gray-600 hover:bg-slate-100 text-gray-800 focus-visible:ring-primary-400",
+    "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-primary-400",
 }
 
 // Tap-target: sm keeps a compact chip on desktop, 44px minimum on mobile touch.
