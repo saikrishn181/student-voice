@@ -124,7 +124,39 @@ const MANIFEST_DATA = {
       url: "/impact",
       icons: [{ src: "/icon-192.png", sizes: "192x192" }]
     }
-  ]
+  ],
+  file_handlers: [
+    {
+      action: "/post/create",
+      name: "Campus Problem Image",
+      accept: {
+        "image/*": [".jpg", ".jpeg", ".png", ".webp"]
+      }
+    }
+  ],
+  launch_handler: {
+    client_mode: ["navigate-existing", "auto"]
+  },
+  protocol_handlers: [
+    {
+      protocol: "web+krantind",
+      url: "/feed?action=%s"
+    }
+  ],
+  share_target: {
+    action: "/post/create",
+    method: "GET",
+    params: {
+      title: "title",
+      text: "text",
+      url: "url"
+    }
+  },
+  related_applications: [],
+  handle_links: "preferred",
+  edge_side_panel: {
+    preferred_width: 480
+  }
 }
 
 export function GET() {
