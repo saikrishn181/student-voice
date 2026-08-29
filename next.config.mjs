@@ -37,7 +37,16 @@ const nextConfig = {
           { key: 'Expires', value: '0' },
         ],
       },
-      // 2. Global Security Headers for all routes
+      // 2. Web App Manifest MIME Type & Caching
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/manifest+json; charset=utf-8' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+        ],
+      },
+      // 3. Global Security Headers for all routes
       {
         source: '/:path*',
         headers: [
