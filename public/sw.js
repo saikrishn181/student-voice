@@ -1,6 +1,16 @@
 // Krantind Offline & Asset Caching Service Worker
-const CACHE_NAME = "krantind-cache-v1"
-const STATIC_ASSETS = ["/", "/feed", "/search", "/manifest.json", "/favicon.ico"]
+const CACHE_NAME = "krantind-cache-v2"
+const STATIC_ASSETS = [
+  "/",
+  "/feed",
+  "/search",
+  "/manifest.json",
+  "/favicon.ico",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-192.png",
+  "/icon-maskable-512.png",
+]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -23,10 +33,10 @@ self.addEventListener("activate", (event) => {
 })
 
 self.addEventListener("fetch", (event) => {
-  // Only cache GET requests
+  // Only handle GET requests
   if (event.request.method !== "GET") return
 
-  // Skip Supabase API / auth requests from cache to ensure fresh data
+  // Skip Supabase API, realtime websockets, and external auth requests
   const url = new URL(event.request.url)
   if (url.origin.includes("supabase.co") || url.pathname.startsWith("/api/")) {
     return
@@ -43,6 +53,19 @@ self.addEventListener("fetch", (event) => {
         }
         return networkResponse
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cached = await caches.match(event.request)
+        if (cached) return cached
+        // If navigating to a page while offline, fallback to cached feed or home
+        if (event.request.mode === "navigate") {
+          const fallback = await caches.match("/feed") || await caches.match("/")
+          if (fallback) return fallback
+        }
+        return new Response("Offline - Krantind", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: new Headers({ "Content-Type": "text/plain" }),
+        })
+      })
   )
 })

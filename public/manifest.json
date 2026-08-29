@@ -13,6 +13,7 @@
   "lang": "en-IN",
   "dir": "ltr",
   "categories": ["education", "social", "community", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/favicon.ico",
@@ -20,14 +21,50 @@
       "type": "image/x-icon"
     },
     {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icon.png",
       "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
-      "sizes": "256x256",
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
@@ -36,12 +73,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Krantind Feed and Issue Tracker on Desktop"
     },
     {
-      "src": "/logo.png",
-      "sizes": "512x512",
+      "src": "/screenshots/mobile.png",
+      "sizes": "750x1334",
       "type": "image/png",
-      "purpose": "maskable"
+      "form_factor": "narrow",
+      "label": "Krantind Mobile Student Community"
     }
   ],
   "shortcuts": [
@@ -50,28 +97,28 @@
       "short_name": "Feed",
       "description": "View the latest campus issues in your state",
       "url": "/feed",
-      "icons": [{ "src": "/icon.png", "sizes": "256x256" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Post a Problem",
       "short_name": "Post",
       "description": "Create and post a new campus problem",
       "url": "/post/create",
-      "icons": [{ "src": "/icon.png", "sizes": "256x256" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Messages",
       "short_name": "Chat",
       "description": "Direct student messaging and discussions",
       "url": "/messages",
-      "icons": [{ "src": "/icon.png", "sizes": "256x256" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Impact Tracker",
       "short_name": "Impact",
       "description": "See resolved campus issues and community impact",
       "url": "/impact",
-      "icons": [{ "src": "/icon.png", "sizes": "256x256" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
