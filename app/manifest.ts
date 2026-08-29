@@ -17,7 +17,6 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "en-IN",
     dir: "ltr",
     categories: ["education", "social", "community", "productivity"],
-    prefer_related_applications: false,
     icons: [
       {
         src: "/icon-48.png",
