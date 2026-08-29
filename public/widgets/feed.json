@@ -1,0 +1,25 @@
+{
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Krantind Campus Voice",
+      "size": "Medium",
+      "weight": "Bolder",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Latest problems and updates from students in your state.",
+      "wrap": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open Feed",
+      "url": "https://www.krantind.xyz/feed"
+    }
+  ]
+}

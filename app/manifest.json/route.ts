@@ -129,13 +129,21 @@ const MANIFEST_DATA = {
     {
       action: "/post/create",
       name: "Campus Problem Image",
+      icons: [
+        {
+          src: "/icon-192.png",
+          sizes: "192x192"
+        }
+      ],
       accept: {
-        "image/*": [".jpg", ".jpeg", ".png", ".webp"]
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/png": [".png"],
+        "image/webp": [".webp"]
       }
     }
   ],
   launch_handler: {
-    client_mode: ["navigate-existing", "auto"]
+    client_mode: "navigate-existing"
   },
   protocol_handlers: [
     {
@@ -146,6 +154,7 @@ const MANIFEST_DATA = {
   share_target: {
     action: "/post/create",
     method: "GET",
+    enctype: "application/x-www-form-urlencoded",
     params: {
       title: "title",
       text: "text",
@@ -153,10 +162,49 @@ const MANIFEST_DATA = {
     }
   },
   related_applications: [],
-  handle_links: "preferred",
+  iarc_rating_id: "e84b072d-71b3-4d3e-86ae-31a8ec4e53b7",
+  widgets: [
+    {
+      name: "Krantind Feed",
+      short_name: "Feed",
+      description: "View latest campus issues in your state",
+      tag: "krantind-feed",
+      template: "feed-template",
+      ms_ac_template: "/widgets/feed.json",
+      data: "/feed",
+      type: "application/json",
+      screenshots: [
+        {
+          src: "/screenshots/desktop.png",
+          sizes: "1280x720",
+          label: "Widget Preview"
+        }
+      ],
+      icons: [
+        {
+          src: "/icon-192.png",
+          sizes: "192x192"
+        }
+      ],
+      auth: false,
+      update: 86400
+    }
+  ],
   edge_side_panel: {
     preferred_width: 480
-  }
+  },
+  note_taking: {
+    new_note_url: "/post/create"
+  },
+  scope_extensions: [
+    {
+      origin: "https://krantind.xyz"
+    },
+    {
+      origin: "https://www.krantind.xyz"
+    }
+  ],
+  handle_links: "preferred"
 }
 
 export function GET() {
