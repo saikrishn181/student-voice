@@ -1,0 +1,10 @@
+{
+  "web_apps": [
+    {
+      "manifest": "https://www.krantind.xyz/manifest.json",
+      "details": {
+        "paths": ["/*"]
+      }
+    }
+  ]
+}
