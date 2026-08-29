@@ -12,10 +12,35 @@ const PUBLIC_ROUTES = [
   "/login",
   "/signup",
   "/auth/callback",
+  "/manifest.json",
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/privacy",
+  "/terms",
+  "/guidelines",
+  "/contact",
+  "/faq",
 ]
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
+
+  const path = request.nextUrl.pathname
+
+  // Fast path for PWA assets, static files, and icons
+  if (
+    path === "/manifest.json" ||
+    path === "/manifest.webmanifest" ||
+    path === "/sw.js" ||
+    path.startsWith("/screenshots/") ||
+    path.startsWith("/_next/") ||
+    path.startsWith("/api/") ||
+    /\.(?:json|js|png|ico|svg|jpg|jpeg|webp|txt|xml|html)$/i.test(path)
+  ) {
+    return response
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +61,6 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  const path = request.nextUrl.pathname
   const isPublicRoute = PUBLIC_ROUTES.includes(path)
 
   // Important: always call getUser() so the session cookie is refreshed.
@@ -65,5 +89,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html|json|js)$).*)",
+  ],
 }

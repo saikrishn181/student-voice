@@ -39,11 +39,20 @@ const nextConfig = {
       },
       // 2. Web App Manifest MIME Type & Caching
       {
-        source: '/manifest.json',
+        source: '/(manifest.json|manifest.webmanifest)',
         headers: [
           { key: 'Content-Type', value: 'application/manifest+json; charset=utf-8' },
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+        ],
+      },
+      // 3. Service Worker Headers
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
         ],
       },
       // 3. Global Security Headers for all routes
