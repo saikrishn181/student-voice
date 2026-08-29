@@ -371,9 +371,9 @@ const s = {
   // ─── PostCard labels ────────────────────────────────────────────────────────
   "post.authorType.org": "Organization",
   "post.authorType.student": "Student",
-  "post.unknownName": "Unknown",
+  "post.unknownName": "Student Member",
   "post.viewPost": "View post",
-  "post.unknownAuthor": "Someone",
+  "post.unknownAuthor": "A community member",
   "post.edit": "Edit post",
   "post.delete": "Delete post",
   "post.deleteConfirm.title": "Delete this post?",
