@@ -168,7 +168,6 @@ const MANIFEST_DATA = {
       url: "url"
     }
   },
-  related_applications: [],
   iarc_rating_id: "e84b072d-71b3-4d3e-86ae-31a8ec4e53b7",
   widgets: [
     {
@@ -203,14 +202,6 @@ const MANIFEST_DATA = {
   note_taking: {
     new_note_url: "/post/create"
   },
-  scope_extensions: [
-    {
-      origin: "https://krantind.xyz"
-    },
-    {
-      origin: "https://www.krantind.xyz"
-    }
-  ],
   handle_links: "preferred"
 }
 
