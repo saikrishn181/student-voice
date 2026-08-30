@@ -610,37 +610,27 @@ export default function SettingsPage() {
           </Link>
         </Card>
 
-        {/* Multi-Account Management */}
-        <Card className="flex flex-col gap-3 p-4 sm:p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 shrink-0">
-                <Users size={20} aria-hidden />
+        {/* Multiple Accounts (Single-line row redirecting to /settings/accounts) */}
+        <Card className="transition-app hover:border-slate-300">
+          <Link href="/settings/accounts" className="flex items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-800">
+                <Users size={18} aria-hidden />
               </span>
-              <div>
-                <h2 className="text-h4">Multiple Accounts</h2>
-                <p className="text-body-sm text-slate-500">Switch or add student and organization accounts on this device</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-950 truncate">Multiple Accounts</h2>
+                  <span className="rounded-full bg-primary-100 border border-primary-300 px-2 py-0.5 text-[10px] font-bold text-primary-900 shrink-0">
+                    Switch & Add
+                  </span>
+                </div>
+                <p className="text-xs text-slate-700 font-medium truncate">
+                  Switch between saved accounts or add another account on this device
+                </p>
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSwitcherOpen(true)}
-              className="font-semibold text-primary-700 hover:bg-primary-50 border-primary-200"
-            >
-              <Users size={16} className="mr-1.5" />
-              Switch Account
-            </Button>
-            <Link href="/login?add_account=true">
-              <Button variant="outline" size="sm" className="font-semibold text-slate-700">
-                <UserPlus size={16} className="mr-1.5 text-primary-600" />
-                Add Account
-              </Button>
-            </Link>
-          </div>
+            <ChevronRight size={18} className="text-slate-500 shrink-0" aria-hidden />
+          </Link>
         </Card>
 
         {/* Log out */}

@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   MessageSquare,
   Users,
-  UserPlus,
+  Plus,
+  ChevronRight,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -25,7 +26,7 @@ import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/components/ui/Avatar"
-import { Logo, AccountSwitcherModal } from "@/components/feature"
+import { Logo } from "@/components/feature"
 
 const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
@@ -43,7 +44,6 @@ export function Navbar() {
   const showToast = useToastStore((s) => s.show)
   const notifications = useNotificationStore((s) => s.notifications)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
-  const [switcherOpen, setSwitcherOpen] = useState(false)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -110,6 +110,17 @@ export function Navbar() {
               {s["nav.admin"]}
             </Link>
           ) : null}
+
+          {/* Create Post Button in Sidebar */}
+          <div className="pt-3 px-1">
+            <Link
+              href="/post/create"
+              className="transition-app flex w-full items-center justify-center gap-2 rounded-card bg-primary-600 px-3.5 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95"
+            >
+              <Plus size={18} strokeWidth={2.5} />
+              <span>Create Post</span>
+            </Link>
+          </div>
         </nav>
 
         {currentUser ? (
@@ -127,23 +138,16 @@ export function Navbar() {
               </span>
             </Link>
 
-            {/* Switch Account */}
-            <button
-              type="button"
-              onClick={() => setSwitcherOpen(true)}
-              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
-            >
-              <Users size={18} aria-hidden className="text-primary-600 shrink-0" />
-              Switch Account
-            </button>
-
-            {/* Add Account */}
+            {/* Multiple Accounts (Single-line row redirecting to /settings/accounts) */}
             <Link
-              href="/login?add_account=true"
-              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
+              href="/settings/accounts"
+              className="transition-app flex w-full items-center justify-between gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
             >
-              <UserPlus size={18} aria-hidden className="text-primary-600 shrink-0" />
-              Add Account
+              <div className="flex items-center gap-3 min-w-0">
+                <Users size={18} aria-hidden className="text-primary-600 shrink-0" />
+                <span className="truncate">Multiple Accounts</span>
+              </div>
+              <ChevronRight size={16} className="text-slate-400 shrink-0" aria-hidden />
             </Link>
 
             {/* Logout */}
@@ -158,9 +162,6 @@ export function Navbar() {
           </div>
         ) : null}
       </aside>
-
-      {/* Account Switcher Modal */}
-      <AccountSwitcherModal open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
 
       {/* Mobile floating pill tab bar (< 1024px) - hidden on active chat threads so composer is unobstructed */}
       {!pathname.startsWith("/messages/") || pathname === "/messages" ? (

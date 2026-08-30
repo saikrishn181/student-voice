@@ -8,7 +8,7 @@
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles } from "lucide-react"
+import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
@@ -163,6 +163,26 @@ export default function FeedPage() {
             <RefreshCw size={16} className={cn(isRefreshing && "animate-spin text-primary-600")} />
           </button>
         </div>
+
+        {/* Create Post Prompt Card */}
+        {currentUser && !initialLoading ? (
+          <Card className="flex items-center gap-3 p-3.5 border-[#E8E1D6] bg-white shadow-xs hover:border-primary-300 transition-all">
+            <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="md" />
+            <Link
+              href="/post/create"
+              className="flex-1 rounded-pill border border-slate-200 bg-slate-50/80 px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            >
+              Share an issue or problem on campus...
+            </Link>
+            <Link
+              href="/post/create"
+              className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all shrink-0"
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              <span>Post</span>
+            </Link>
+          </Card>
+        ) : null}
 
         {/* 🔥 Hot Issues Banner — Campus Heatmap */}
         {!initialLoading && hotIssues.length > 0 ? (
