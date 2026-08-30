@@ -14,7 +14,6 @@ import {
   AlertCircle,
   User as UserIcon,
 } from "lucide-react"
-import { PageShell } from "@/components/layout/PageShell"
 import { Card, Button, Modal } from "@/components/ui"
 import { Avatar } from "@/components/ui/Avatar"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -129,8 +128,7 @@ export default function AccountsManagementPage() {
   }
 
   return (
-    <PageShell>
-      <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-4">
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-4">
         {/* Top Header with Back Navigation */}
         <div className="flex items-center gap-3">
           <Link
@@ -412,6 +410,6 @@ export default function AccountsManagementPage() {
           </div>
         )}
       </Modal>
-    </PageShell>
+    </div>
   )
 }
