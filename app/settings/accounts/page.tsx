@@ -143,7 +143,7 @@ export default function AccountsManagementPage() {
           <div>
             <h1 className="text-h2 font-bold text-slate-900 leading-tight">Multiple Accounts</h1>
             <p className="text-body-sm text-slate-500">
-              Manage, switch, and add accounts on this device
+              Switch or add student and organization accounts on this device
             </p>
           </div>
         </div>

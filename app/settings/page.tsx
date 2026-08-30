@@ -625,7 +625,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-700 font-medium truncate">
-                  Switch between saved accounts or add another account on this device
+                  Switch or add student and organization accounts on this device
                 </p>
               </div>
             </div>
