@@ -76,9 +76,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // A signed-in user hitting an auth page is bounced to the feed instead.
+  // A signed-in user hitting an auth page is bounced to the feed instead,
+  // unless they are explicitly adding another account (?add_account=true).
   const AUTH_ONLY_GUEST_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password"]
-  if (AUTH_ONLY_GUEST_PAGES.includes(path) && isAuthenticated) {
+  const isAddAccount = request.nextUrl.searchParams.get("add_account") === "true"
+  if (AUTH_ONLY_GUEST_PAGES.includes(path) && isAuthenticated && !isAddAccount) {
     const url = request.nextUrl.clone()
     url.pathname = "/feed"
     url.search = ""
