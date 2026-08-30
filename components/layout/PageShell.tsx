@@ -34,7 +34,7 @@ export function PageShell({ children }: PageShellProps) {
 
       {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
       {!isDedicatedSubPage ? (
-        <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/95 px-4 sm:px-6 backdrop-blur-md lg:hidden shadow-xs">
+        <header className="sticky top-0 z-20 flex w-full items-center justify-between bg-paper pt-4 pb-2 px-4 sm:px-6 lg:hidden">
           <Link
             href="/post/create"
             aria-label="Create Post"
