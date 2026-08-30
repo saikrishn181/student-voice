@@ -3,10 +3,10 @@
 // Login: email + password, validate empty fields, then sign in via Supabase
 // through the auth store and redirect to /feed (a returning user already has
 // a region set).
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Mail, Lock } from "lucide-react"
+import { Mail, Lock, UserPlus } from "lucide-react"
 import { Button, Input, Spinner } from "@/components/ui"
 import { GoogleIcon, Logo } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -37,6 +37,15 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
+
+  const isAddAccount = searchParams.get("add_account") === "true"
+
+  useEffect(() => {
+    const qEmail = searchParams.get("email")
+    if (qEmail) {
+      setEmail(qEmail.trim())
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,8 +100,25 @@ function LoginForm() {
         </div>
 
         <div className="surface-card p-6 sm:p-8">
-          <h1 className="text-h2 text-slate-900">{s["auth.login.title"]}</h1>
-          <p className="mt-1 text-body-sm text-slate-500">{s["auth.login.subtitle"]}</p>
+          {isAddAccount && (
+            <div className="mb-5 flex items-start justify-between gap-3 rounded-card border border-primary-200 bg-primary-50 p-3 text-xs text-primary-950">
+              <div className="flex items-start gap-2">
+                <UserPlus size={16} className="mt-0.5 shrink-0 text-primary-700" />
+                <div>
+                  <p className="font-bold">Add another account</p>
+                  <p className="text-slate-600 mt-0.5">Sign in to add this account to your device.</p>
+                </div>
+              </div>
+              <Link href="/feed" className="text-xs font-semibold text-primary-700 hover:underline shrink-0">
+                Cancel
+              </Link>
+            </div>
+          )}
+
+          <h1 className="text-h2 text-slate-900">{isAddAccount ? "Add Account" : s["auth.login.title"]}</h1>
+          <p className="mt-1 text-body-sm text-slate-500">
+            {isAddAccount ? "Sign into an existing student or organization account" : s["auth.login.subtitle"]}
+          </p>
 
           <Button
             type="button"

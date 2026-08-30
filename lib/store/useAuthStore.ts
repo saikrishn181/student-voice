@@ -14,6 +14,7 @@ import { rowToUser } from "@/lib/mappers"
 import { useUserStore } from "./useUserStore"
 import { useNotificationStore } from "./useNotificationStore"
 import { useChatStore } from "./useChatStore"
+import { saveAccount, getSavedAccounts } from "@/lib/savedAccounts"
 
 export interface SignupPayload {
   name: string
@@ -58,6 +59,7 @@ interface AuthState {
   updateProfile: (patch: ProfilePatch) => Promise<AuthResult>
   // Sets (or changes) the account password via Supabase auth.
   setPassword: (password: string) => Promise<AuthResult>
+  switchAccount: (accountId: string) => Promise<AuthResult & { email?: string }>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -100,6 +102,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return { ok: false, error: normalizeErrorMessage(error?.message) }
     }
     const user = await fetchProfile(data.session.user.id)
+    if (user) {
+      saveAccount(user, {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+    }
     set({ isLoggedIn: true, currentUser: user ?? null })
     return { ok: true }
   },
@@ -128,6 +136,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // If session exists immediately (instant sign-in when confirmation is off):
     if (data.session) {
       const user = await fetchProfile(data.session.user.id)
+      if (user) {
+        saveAccount(user, {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
+      }
       set({ isLoggedIn: true, currentUser: user ?? null })
       return { ok: true, requiresOtp: false }
     }
@@ -156,10 +170,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return { ok: false, error: normalizeErrorMessage(fallback.error?.message || error?.message) }
       }
       const user = await fetchProfile(fallback.data.session.user.id)
+      if (user) {
+        saveAccount(user, {
+          access_token: fallback.data.session.access_token,
+          refresh_token: fallback.data.session.refresh_token,
+        })
+      }
       set({ isLoggedIn: true, currentUser: user ?? null })
       return { ok: true }
     }
     const user = await fetchProfile(data.session.user.id)
+    if (user) {
+      saveAccount(user, {
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+    }
     set({ isLoggedIn: true, currentUser: user ?? null })
     return { ok: true }
   },
@@ -343,6 +369,57 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoggedIn: true, currentUser: user })
   },
 
+  switchAccount: async (accountId: string) => {
+    const accounts = getSavedAccounts()
+    const target = accounts.find((a) => a.id === accountId)
+    if (!target) {
+      return { ok: false, error: "Account not found on this device." }
+    }
+    const supabase = createSupabaseBrowserClient()
+    if (target.session?.access_token && target.session?.refresh_token) {
+      try {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: target.session.access_token,
+          refresh_token: target.session.refresh_token,
+        })
+        if (!error && data.session) {
+          const user = await fetchProfile(data.session.user.id)
+          if (user) {
+            set({ isLoggedIn: true, currentUser: user })
+            try {
+              useNotificationStore.getState().stopRealtime()
+              useNotificationStore.setState({ notifications: [], status: "idle", preferences: null })
+              useNotificationStore.getState().load(user.id)
+            } catch {}
+            try {
+              useChatStore.getState().stopRealtime()
+              useChatStore.setState({
+                conversations: [],
+                messagesByConversation: {},
+                conversationsLoaded: false,
+                unreadByConversation: {},
+                activeConversationId: null,
+                typingByConversation: {},
+                otherLastReadByConversation: {},
+                memberCountByConversation: {},
+              })
+              useChatStore.getState().loadConversations()
+            } catch {}
+            saveAccount(user, {
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            })
+            return { ok: true }
+          }
+        }
+      } catch {}
+    }
+    // If no active session or session expired, log out and return SESSION_EXPIRED
+    await supabase.auth.signOut()
+    set({ isLoggedIn: false, currentUser: null })
+    return { ok: false, error: "SESSION_EXPIRED", email: target.email }
+  },
+
   bootstrap: () => {
     // Restore session synchronously from the client (cookies may already hold
     // a session restored by middleware on first request).
@@ -353,6 +430,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         return
       }
       fetchProfile(data.user.id).then((user) => {
+        if (user) {
+          saveAccount(user)
+        }
         set({
           isLoggedIn: true,
           currentUser: user,
@@ -367,11 +447,17 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       authListenerSubscription = null
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         supabase.auth.getUser().then(({ data }) => {
           if (!data.user) return
           fetchProfile(data.user.id).then((user) => {
+            if (user && session) {
+              saveAccount(user, {
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+              })
+            }
             set({ isLoggedIn: true, currentUser: user, bootstrapping: false })
           })
         })

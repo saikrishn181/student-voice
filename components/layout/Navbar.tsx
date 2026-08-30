@@ -16,6 +16,8 @@ import {
   LogOut,
   ShieldCheck,
   MessageSquare,
+  Users,
+  UserPlus,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -23,7 +25,7 @@ import { useNotificationStore } from "@/lib/store/useNotificationStore"
 import s from "@/lib/strings"
 import { cn } from "@/lib/utils"
 import { Avatar } from "@/components/ui/Avatar"
-import { Logo } from "@/components/feature"
+import { Logo, AccountSwitcherModal } from "@/components/feature"
 
 const NAV_ITEMS = [
   { href: "/feed", label: s["nav.feed"], icon: Home },
@@ -41,6 +43,7 @@ export function Navbar() {
   const showToast = useToastStore((s) => s.show)
   const notifications = useNotificationStore((s) => s.notifications)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -110,10 +113,10 @@ export function Navbar() {
         </nav>
 
         {currentUser ? (
-          <div className="border-t border-[#E8E1D6] p-3">
+          <div className="border-t border-[#E8E1D6] p-3 space-y-1">
             <Link
               href="/profile"
-              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2.5 hover:bg-[#F2ECE1]"
+              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 hover:bg-[#F2ECE1]"
             >
               <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="sm" />
               <span className="min-w-0 flex-1">
@@ -123,17 +126,41 @@ export function Navbar() {
                 <span className="block truncate text-xs text-slate-500">{currentUser.state}</span>
               </span>
             </Link>
+
+            {/* Switch Account */}
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen(true)}
+              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
+            >
+              <Users size={18} aria-hidden className="text-primary-600 shrink-0" />
+              Switch Account
+            </button>
+
+            {/* Add Account */}
+            <Link
+              href="/login?add_account=true"
+              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
+            >
+              <UserPlus size={18} aria-hidden className="text-primary-600 shrink-0" />
+              Add Account
+            </Link>
+
+            {/* Logout */}
             <button
               type="button"
               onClick={handleLogout}
-              className="transition-app mt-1 flex w-full items-center gap-3 rounded-card px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
+              className="transition-app flex w-full items-center gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
             >
-              <LogOut size={20} aria-hidden />
+              <LogOut size={18} aria-hidden className="shrink-0" />
               {s["nav.logout"]}
             </button>
           </div>
         ) : null}
       </aside>
+
+      {/* Account Switcher Modal */}
+      <AccountSwitcherModal open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
 
       {/* Mobile floating pill tab bar (< 1024px) - hidden on active chat threads so composer is unobstructed */}
       {!pathname.startsWith("/messages/") || pathname === "/messages" ? (

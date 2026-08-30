@@ -10,6 +10,7 @@ import {
   User,
   KeyRound,
   UserPlus,
+  Users,
   ShieldBan,
   LogOut,
   Check,
@@ -31,7 +32,7 @@ import { useUserById } from "@/hooks"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
-import { EditProfileModal } from "@/components/feature"
+import { EditProfileModal, AccountSwitcherModal } from "@/components/feature"
 import s from "@/lib/strings"
 
 // One incoming follow request row: shows who wants to follow you, with
@@ -196,6 +197,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [provider, setProvider] = useState<"google" | "email" | null>(null)
   const [collegeEmail, setCollegeEmail] = useState("")
@@ -608,6 +610,39 @@ export default function SettingsPage() {
           </Link>
         </Card>
 
+        {/* Multi-Account Management */}
+        <Card className="flex flex-col gap-3 p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-card bg-primary-50 text-primary-700 shrink-0">
+                <Users size={20} aria-hidden />
+              </span>
+              <div>
+                <h2 className="text-h4">Multiple Accounts</h2>
+                <p className="text-body-sm text-slate-500">Switch or add student and organization accounts on this device</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSwitcherOpen(true)}
+              className="font-semibold text-primary-700 hover:bg-primary-50 border-primary-200"
+            >
+              <Users size={16} className="mr-1.5" />
+              Switch Account
+            </Button>
+            <Link href="/login?add_account=true">
+              <Button variant="outline" size="sm" className="font-semibold text-slate-700">
+                <UserPlus size={16} className="mr-1.5 text-primary-600" />
+                Add Account
+              </Button>
+            </Link>
+          </div>
+        </Card>
+
         {/* Log out */}
         <Card className="flex items-center justify-between gap-3 p-4">
           <div>
@@ -623,6 +658,7 @@ export default function SettingsPage() {
 
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
       <PasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <AccountSwitcherModal open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </div>
   )
 }
