@@ -54,8 +54,8 @@ export function Navbar() {
   const handleLogout = async () => {
     setProfileMenuOpen(false)
     await logout()
-    showToast("Logged out successfully", "info")
-    router.push("/")
+    showToast("Logged out — sign in with another account", "info")
+    router.push("/login")
   }
 
   return (

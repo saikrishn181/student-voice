@@ -77,7 +77,7 @@ const s = {
   "toast.loginSuccess": "Logged in successfully",
   "toast.signupSuccess": "Account created successfully",
   "toast.postPublished": "Post published successfully",
-  "toast.loggedOut": "Logged out successfully",
+  "toast.loggedOut": "You have been logged out",
 
   // ─── Feed ───────────────────────────────────────────────────────────────────
   "feed.title": "Feed",

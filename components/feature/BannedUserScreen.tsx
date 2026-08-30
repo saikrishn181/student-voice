@@ -4,9 +4,12 @@
 // Shown to users whose accounts have been banned after reaching 10 NSFW / community guideline strikes
 // or receiving a temporary suspension.
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ShieldAlert, LogOut, AlertTriangle, HelpCircle, Mail } from "lucide-react"
 import { Button, Card } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
+import { useToastStore } from "@/lib/store/useToastStore"
+import s from "@/lib/strings"
 import type { User } from "@/lib/types"
 
 interface BannedUserScreenProps {
@@ -14,7 +17,9 @@ interface BannedUserScreenProps {
 }
 
 export function BannedUserScreen({ user }: BannedUserScreenProps) {
+  const router = useRouter()
   const logout = useAuthStore((s) => s.logout)
+  const showToast = useToastStore((s) => s.show)
   const [loggingOut, setLoggingOut] = useState(false)
 
   const strikes = user.strikeCount ?? 10
@@ -33,6 +38,9 @@ export function BannedUserScreen({ user }: BannedUserScreenProps) {
   const handleLogout = async () => {
     setLoggingOut(true)
     await logout()
+    setLoggingOut(false)
+    showToast(s["toast.loggedOut"], "info")
+    router.push("/login")
   }
 
   return (

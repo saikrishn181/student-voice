@@ -293,7 +293,7 @@ export default function SettingsPage() {
     setLoggingOut(true)
     await logout()
     setLoggingOut(false)
-    showToast(s["toast.loggedOut"], "success")
+    showToast(s["toast.loggedOut"], "info")
     router.push("/login")
   }
 

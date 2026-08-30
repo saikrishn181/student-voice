@@ -12,6 +12,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { AccountType, OrganizationType, Profile, User } from "@/lib/types"
 import { rowToUser } from "@/lib/mappers"
 import { useUserStore } from "./useUserStore"
+import { useNotificationStore } from "./useNotificationStore"
+import { useChatStore } from "./useChatStore"
 
 export interface SignupPayload {
   name: string
@@ -294,8 +296,33 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout: async () => {
     const supabase = createSupabaseBrowserClient()
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch {}
     set({ isLoggedIn: false, currentUser: null })
+    // Reset notification store realtime and active state
+    try {
+      useNotificationStore.getState().stopRealtime()
+      useNotificationStore.setState({ notifications: [], status: "idle", preferences: null })
+    } catch {}
+    // Reset chat store realtime and conversation cache
+    try {
+      useChatStore.getState().stopRealtime()
+      useChatStore.setState({
+        conversations: [],
+        messagesByConversation: {},
+        conversationsLoaded: false,
+        unreadByConversation: {},
+        activeConversationId: null,
+        typingByConversation: {},
+        otherLastReadByConversation: {},
+        memberCountByConversation: {},
+      })
+    } catch {}
+    // Reset users directory cache
+    try {
+      useUserStore.setState({ users: {} })
+    } catch {}
   },
 
   setPassword: async (password) => {
