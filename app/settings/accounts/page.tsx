@@ -352,12 +352,11 @@ export default function AccountsManagementPage() {
             </div>
           </Card>
         </div>
-      </div>
 
-      {/* Remove Account Confirmation Dialog */}
-      <Modal
-        open={Boolean(accountToDelete)}
-        onClose={() => setAccountToDelete(null)}
+        {/* Remove Account Confirmation Dialog */}
+        <Modal
+          open={Boolean(accountToDelete)}
+          onClose={() => setAccountToDelete(null)}
         title={
           <div className="flex items-center gap-2 text-red-600">
             <AlertCircle size={20} />
