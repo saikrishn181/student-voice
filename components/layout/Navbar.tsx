@@ -138,14 +138,14 @@ export function Navbar() {
               </span>
             </Link>
 
-            {/* Multiple Accounts (Single-line row redirecting to /settings/accounts) */}
+            {/* Manage Accounts (Single-line row redirecting to /settings/accounts) */}
             <Link
               href="/settings/accounts"
               className="transition-app flex w-full items-center justify-between gap-3 rounded-card px-3 py-2 text-sm font-medium text-slate-700 hover:bg-primary-50 hover:text-primary-800"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <Users size={18} aria-hidden className="text-primary-600 shrink-0" />
-                <span className="truncate">Multiple Accounts</span>
+                <span className="truncate">Manage Accounts</span>
               </div>
               <ChevronRight size={16} className="text-slate-400 shrink-0" aria-hidden />
             </Link>

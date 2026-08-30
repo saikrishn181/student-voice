@@ -144,8 +144,8 @@ export function AccountSwitcherModal({ open, onClose }: AccountSwitcherModalProp
               <Users size={18} aria-hidden />
             </span>
             <div>
-              <span className="block text-base font-bold text-slate-900 leading-tight">Switch Account</span>
-              <span className="block text-xs font-normal text-slate-500">Manage multiple accounts on this device</span>
+              <span className="block text-base font-bold text-slate-900 leading-tight">Manage Accounts</span>
+              <span className="block text-xs font-normal text-slate-500">Switch or add student and organization accounts on this device</span>
             </div>
           </div>
         }

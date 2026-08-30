@@ -15,6 +15,12 @@ interface PageShellProps {
 export function PageShell({ children }: PageShellProps) {
   const pathname = usePathname()
   const isChatThread = pathname.startsWith("/messages/") && pathname !== "/messages"
+  const isDedicatedSubPage =
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/accounts") ||
+    pathname.startsWith("/post/create") ||
+    pathname.startsWith("/post/") ||
+    isChatThread
 
   return (
     <div className="min-h-dvh w-full bg-paper">
@@ -27,7 +33,7 @@ export function PageShell({ children }: PageShellProps) {
       <Navbar />
 
       {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
-      {!isChatThread ? (
+      {!isDedicatedSubPage ? (
         <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E8E1D6] bg-[#FDFBF7]/90 px-4 backdrop-blur-md lg:hidden">
           <Link
             href="/post/create"
@@ -58,7 +64,7 @@ export function PageShell({ children }: PageShellProps) {
       {/* Content: leaves room for the fixed sidebar on desktop and the bottom bar on mobile */}
       <main id="main-content" className="lg:pl-64">
         {/* Desktop Top Bar with Top-Right Impact Link (>= 1024px) */}
-        {!isChatThread ? (
+        {!isDedicatedSubPage ? (
           <div className="hidden lg:flex w-full items-center justify-end px-8 pt-4">
             <Link
               href="/impact"

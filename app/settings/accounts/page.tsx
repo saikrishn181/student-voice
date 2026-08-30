@@ -139,7 +139,7 @@ export default function AccountsManagementPage() {
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="text-h2 font-bold text-slate-900 leading-tight">Multiple Accounts</h1>
+            <h1 className="text-h2 font-bold text-slate-900 leading-tight">Manage Accounts</h1>
             <p className="text-body-sm text-slate-500">
               Switch or add student and organization accounts on this device
             </p>

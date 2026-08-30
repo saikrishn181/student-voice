@@ -610,7 +610,7 @@ export default function SettingsPage() {
           </Link>
         </Card>
 
-        {/* Multiple Accounts (Single-line row redirecting to /settings/accounts) */}
+        {/* Manage Accounts (Single-line row redirecting to /settings/accounts) */}
         <Card className="transition-app hover:border-slate-300">
           <Link href="/settings/accounts" className="flex items-center justify-between gap-3 p-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -619,7 +619,7 @@ export default function SettingsPage() {
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-slate-950 truncate">Multiple Accounts</h2>
+                  <h2 className="text-sm font-bold text-slate-950 truncate">Manage Accounts</h2>
                   <span className="rounded-full bg-primary-100 border border-primary-300 px-2 py-0.5 text-[10px] font-bold text-primary-900 shrink-0">
                     Switch & Add
                   </span>
