@@ -50,12 +50,18 @@ function LoginForm() {
   const isLongPressRef = useRef<boolean>(false)
 
   const isAddAccount = searchParams.get("add_account") === "true"
+  const isGoogleConfirm = searchParams.get("google_confirm") === "true"
 
   useEffect(() => {
     setSavedAccounts(getSavedAccounts())
     const qEmail = searchParams.get("email")
     if (qEmail) {
       setEmail(qEmail.trim())
+    }
+    if (searchParams.get("google_confirm") === "true") {
+      setTimeout(() => {
+        passwordInputRef.current?.focus()
+      }, 200)
     }
   }, [searchParams])
 
@@ -181,13 +187,32 @@ function LoginForm() {
             </div>
           )}
 
-          <h1 className="text-h2 text-slate-900">{isAddAccount ? "Add Account" : s["auth.login.title"]}</h1>
+          {isGoogleConfirm && (
+            <div className="mb-5 flex items-start gap-3 rounded-card border border-emerald-300 bg-emerald-50/90 p-3.5 text-xs text-emerald-950">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
+                ✓
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-slate-900">{searchParams.get("name") || email}</p>
+                <p className="text-slate-600">Google identity confirmed ({email})</p>
+                <p className="text-emerald-900 font-semibold mt-1">Please enter your password to safely open your account.</p>
+              </div>
+            </div>
+          )}
+
+          <h1 className="text-h2 text-slate-900">
+            {isGoogleConfirm ? "Confirm Password" : isAddAccount ? "Add Account" : s["auth.login.title"]}
+          </h1>
           <p className="mt-1 text-body-sm text-slate-500">
-            {isAddAccount ? "Sign into an existing student or organization account" : s["auth.login.subtitle"]}
+            {isGoogleConfirm
+              ? "Enter your password to safely unlock and open your account"
+              : isAddAccount
+              ? "Sign into an existing student or organization account"
+              : s["auth.login.subtitle"]}
           </p>
 
           {/* Saved accounts on this device */}
-          {savedAccounts.length > 0 && !isAddAccount && (
+          {savedAccounts.length > 0 && !isAddAccount && !isGoogleConfirm && (
             <div className="mt-5 flex flex-col gap-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Saved on this device

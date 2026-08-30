@@ -14,7 +14,7 @@ import { rowToUser } from "@/lib/mappers"
 import { useUserStore } from "./useUserStore"
 import { useNotificationStore } from "./useNotificationStore"
 import { useChatStore } from "./useChatStore"
-import { saveAccount, getSavedAccounts } from "@/lib/savedAccounts"
+import { saveAccount, getSavedAccounts, removeSavedAccount } from "@/lib/savedAccounts"
 
 export interface SignupPayload {
   name: string
@@ -60,6 +60,8 @@ interface AuthState {
   // Sets (or changes) the account password via Supabase auth.
   setPassword: (password: string) => Promise<AuthResult>
   switchAccount: (accountId: string) => Promise<AuthResult & { email?: string }>
+  deactivateAccount: (password?: string) => Promise<AuthResult>
+  deleteAccountPermanently: (password: string) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -418,6 +420,65 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     await supabase.auth.signOut()
     set({ isLoggedIn: false, currentUser: null })
     return { ok: false, error: "SESSION_EXPIRED", email: target.email }
+  },
+
+  deactivateAccount: async (password?: string) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUser = get().currentUser
+    if (!currentUser) return { ok: false, error: "Not logged in" }
+
+    // If password provided, verify it first
+    if (password && currentUser.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password,
+      })
+      if (error) {
+        return { ok: false, error: "Incorrect password. Please try again." }
+      }
+    }
+
+    try {
+      await supabase
+        .from("profiles")
+        .update({ bio: "[Account Deactivated]", is_private: true })
+        .eq("id", currentUser.id)
+    } catch {}
+
+    removeSavedAccount(currentUser.id)
+    await get().logout()
+    return { ok: true }
+  },
+
+  deleteAccountPermanently: async (password: string) => {
+    const supabase = createSupabaseBrowserClient()
+    const currentUser = get().currentUser
+    if (!currentUser) return { ok: false, error: "Not logged in" }
+    if (!password) return { ok: false, error: "Password is required to delete your account." }
+
+    // Re-authenticate to ensure user authorized this permanent action
+    if (currentUser.email) {
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password,
+      })
+      if (authErr) {
+        return { ok: false, error: "Incorrect password. Please verify your password to delete your account." }
+      }
+    }
+
+    // Delete user's posts, comments, notifications, follows, and profile
+    try {
+      await supabase.from("posts").delete().eq("author_id", currentUser.id)
+      await supabase.from("comments").delete().eq("author_id", currentUser.id)
+      await supabase.from("follows").delete().or(`follower_id.eq.${currentUser.id},following_id.eq.${currentUser.id}`)
+      await supabase.from("notifications").delete().eq("user_id", currentUser.id)
+      await supabase.from("profiles").delete().eq("id", currentUser.id)
+    } catch {}
+
+    removeSavedAccount(currentUser.id)
+    await get().logout()
+    return { ok: true }
   },
 
   bootstrap: () => {

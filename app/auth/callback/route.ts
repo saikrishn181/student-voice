@@ -28,18 +28,26 @@ export async function GET(request: NextRequest) {
   // New Google users have a profile row (created by the DB trigger) but no
   // state yet, so they must pick one before browsing the feed.
   const userId = sessionData.session.user.id
+  const userEmail = sessionData.session.user.email ?? ""
   const { data: profile } = await supabase
     .from("profiles")
-    .select("state")
+    .select("state, name")
     .eq("id", userId)
     .maybeSingle()
 
   const hasRegion = Boolean(profile?.state)
-  const destination = hasRegion
-    ? next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
-      ? next
-      : LOGGED_IN_HOME
-    : POST_SIGNUP_ROUTE
+  if (!hasRegion) {
+    return NextResponse.redirect(new URL(POST_SIGNUP_ROUTE, request.url))
+  }
 
-  return NextResponse.redirect(new URL(destination, request.url))
+  // Returning user: require entering password after selecting Google mail
+  const confirmUrl = new URL("/login", request.url)
+  confirmUrl.searchParams.set("google_confirm", "true")
+  if (userEmail) confirmUrl.searchParams.set("email", userEmail)
+  if (profile?.name) confirmUrl.searchParams.set("name", profile.name)
+  if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
+    confirmUrl.searchParams.set("next", next)
+  }
+
+  return NextResponse.redirect(confirmUrl)
 }
