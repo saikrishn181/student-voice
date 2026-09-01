@@ -324,33 +324,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout: async () => {
     const supabase = createSupabaseBrowserClient()
-    try {
-      await supabase.auth.signOut()
-    } catch {}
+    await supabase.auth.signOut().catch(() => {})
     set({ isLoggedIn: false, currentUser: null })
-    // Reset notification store realtime and active state
-    try {
-      useNotificationStore.getState().stopRealtime()
-      useNotificationStore.setState({ notifications: [], status: "idle", preferences: null })
-    } catch {}
-    // Reset chat store realtime and conversation cache
-    try {
-      useChatStore.getState().stopRealtime()
-      useChatStore.setState({
-        conversations: [],
-        messagesByConversation: {},
-        conversationsLoaded: false,
-        unreadByConversation: {},
-        activeConversationId: null,
-        typingByConversation: {},
-        otherLastReadByConversation: {},
-        memberCountByConversation: {},
-      })
-    } catch {}
-    // Reset users directory cache
-    try {
-      useUserStore.setState({ users: {} })
-    } catch {}
+    useNotificationStore.getState().stopRealtime()
+    useNotificationStore.setState({ notifications: [], status: "idle", preferences: null })
+    useChatStore.getState().stopRealtime()
+    useChatStore.setState({
+      conversations: [],
+      messagesByConversation: {},
+      conversationsLoaded: false,
+      unreadByConversation: {},
+      activeConversationId: null,
+      typingByConversation: {},
+      otherLastReadByConversation: {},
+      memberCountByConversation: {},
+    })
+    useUserStore.setState({ users: {} })
   },
 
   setPassword: async (password) => {

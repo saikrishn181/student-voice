@@ -1,10 +1,8 @@
-// Shared row-to-model mappers for Supabase → app types. Centralised here so
-// every page/store that reads posts, users, or comments uses the same mapping logic.
+// Converts raw Postgres/Supabase DB rows into clean typed objects consumed by state stores.
 
 import type { Category, Comment, MediaType, Post, Profile, User } from "@/lib/types"
 import { categoryFromHashtags } from "@/lib/utils"
 
-// Row shape returned by `supabase.from("posts").select("*")`.
 export interface PostRow {
   id: string
   author_id: string
@@ -32,7 +30,6 @@ export interface PostRow {
   created_at: string
 }
 
-// Map a Supabase `posts` row (snake_case) to the app's Post type (camelCase).
 export function rowToPost(row: PostRow): Post {
   const rawPoll = row.poll_json as {
     question?: string
@@ -76,7 +73,6 @@ export function rowToPost(row: PostRow): Post {
   }
 }
 
-// Map a Supabase `profiles` row to the app's User type.
 export function rowToUser(row: Profile): User {
   return {
     id: row.id,
