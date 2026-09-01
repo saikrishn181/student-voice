@@ -358,7 +358,7 @@ export default function AccountsManagementPage() {
         </div>
 
         <p className="text-center text-[11px] text-slate-400">
-          💡 Tap an account to switch • Long-press or tap <Trash2 size={11} className="inline mx-0.5 text-slate-400" /> to remove from device
+          Tap an account to switch • Long-press or tap <Trash2 size={11} className="inline mx-0.5 text-slate-400" /> to remove from device
         </p>
       </div>
 
@@ -490,7 +490,7 @@ export default function AccountsManagementPage() {
 
             <div className="rounded-card border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-1.5">
               <p className="font-bold flex items-center gap-1 text-amber-900">
-                <span>🛡️</span> Your account is safe and NOT deleted!
+                Your account is safe and NOT deleted!
               </p>
               <p className="text-slate-700">
                 This will only remove <strong>{accountToDelete.name}</strong> from this browser/device. All your posts, profile, and data stay 100% intact online.
@@ -536,13 +536,13 @@ export default function AccountsManagementPage() {
         <form onSubmit={handleDeactivate} className="flex flex-col gap-4 text-left">
           <div className="rounded-card border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-950 space-y-2">
             <p className="font-bold text-amber-900 flex items-center gap-1.5">
-              <span>⏸️</span> Temporary Deactivation
+              Temporary Deactivation
             </p>
             <p className="text-slate-700">
               Deactivating will temporarily hide your profile and posts from other students and organizations.
             </p>
             <p className="text-emerald-800 font-semibold">
-              ✓ You can reactivate anytime simply by logging back in with your email/ID and password!
+              You can reactivate anytime simply by logging back in with your email/ID and password!
             </p>
           </div>
 
@@ -596,7 +596,7 @@ export default function AccountsManagementPage() {
         <form onSubmit={handleDeletePermanently} className="flex flex-col gap-4 text-left">
           <div className="rounded-card border border-red-200 bg-red-50 p-3.5 text-xs text-red-950 space-y-2">
             <p className="font-bold text-red-900 flex items-center gap-1.5">
-              <span>⚠️</span> Permanent Deletion Warning
+              Permanent Deletion Warning
             </p>
             <p className="text-slate-800">
               This action <strong>cannot be undone</strong>. Your account, profile, posts, comments, and followers will be permanently wiped from the database.

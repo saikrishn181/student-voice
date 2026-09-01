@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Mail, Lock, UserPlus, Users, Trash2, ArrowRightLeft, AlertCircle } from "lucide-react"
+import { Mail, Lock, UserPlus, Users, Trash2, ArrowRightLeft, AlertCircle, Check } from "lucide-react"
 import { Button, Input, Spinner, Modal } from "@/components/ui"
 import { Avatar } from "@/components/ui/Avatar"
 import { GoogleIcon, Logo } from "@/components/feature"
@@ -190,7 +190,7 @@ function LoginForm() {
           {isGoogleConfirm && (
             <div className="mb-5 flex items-start gap-3 rounded-card border border-emerald-300 bg-emerald-50/90 p-3.5 text-xs text-emerald-950">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
-                ✓
+                <Check size={14} strokeWidth={3} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-slate-900">{searchParams.get("name") || email}</p>
@@ -373,7 +373,7 @@ function LoginForm() {
 
             <div className="rounded-card border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-1.5">
               <p className="font-bold flex items-center gap-1 text-amber-900">
-                <span>🛡️</span> Your account remains safe online!
+                Your account remains safe online!
               </p>
               <p className="text-slate-700">
                 This will only remove <strong>{accountToDelete.name}</strong> from this browser/device.

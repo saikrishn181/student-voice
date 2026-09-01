@@ -474,7 +474,7 @@ export default function CreatePostPage() {
                   : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
               )}
             >
-              🔞 {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
+              {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
             </button>
           </div>
           <select
@@ -485,10 +485,10 @@ export default function CreatePostPage() {
             className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
           >
             <option value="">{s["createPost.warningNone"]}</option>
-            <option value="nsfw">🔞 18+ NSFW (Not Safe For Work)</option>
-            <option value="spoiler">⚠️ Spoiler</option>
-            <option value="triggering">⚡ Triggering content</option>
-            <option value="graphic">🛑 Graphic content</option>
+            <option value="nsfw">18+ NSFW (Not Safe For Work)</option>
+            <option value="spoiler">Spoiler</option>
+            <option value="triggering">Triggering content</option>
+            <option value="graphic">Graphic content</option>
           </select>
           <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>
@@ -502,7 +502,7 @@ export default function CreatePostPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  <span>🎭</span> Post Anonymously (Whistleblower Mode)
+                  Post Anonymously (Whistleblower Mode)
                 </p>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Hides your identity from public view to protect you from campus retaliation.
@@ -518,12 +518,12 @@ export default function CreatePostPage() {
                     : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                 )}
               >
-                {isAnonymous ? "🎭 Anonymous Active" : "Enable Anonymous"}
+                {isAnonymous ? "Anonymous Active" : "Enable Anonymous"}
               </button>
             </div>
             {isAnonymous && (
               <p className="text-xs text-purple-800 bg-purple-100/70 p-2.5 rounded-card border border-purple-200">
-                🔒 <strong>Identity Protected:</strong> In feeds and searches, this post will appear as <em>"Anonymous Student • {currentUser?.collegeName || 'Verified College'}"</em>. Your name and profile link will not be visible to anyone.
+                <strong>Identity Protected:</strong> In feeds and searches, this post will appear as <em>"Anonymous Student • {currentUser?.collegeName || 'Verified College'}"</em>. Your name and profile link will not be visible to anyone.
               </p>
             )}
           </Card>

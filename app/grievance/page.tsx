@@ -252,7 +252,7 @@ export default function GrievancePage() {
 
       {/* Appellate Notice (GAC) */}
       <div className="rounded-card border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 leading-relaxed">
-        <h3 className="font-bold text-slate-800 mb-1">🏛️ Government Grievance Appellate Committee (GAC) Notice</h3>
+        <h3 className="font-bold text-slate-800 mb-1">Government Grievance Appellate Committee (GAC) Notice</h3>
         <p>
           In accordance with Rule 3A of the Information Technology Rules, 2021, any user or affected party dissatisfied with an order or resolution of our Grievance Officer may prefer an appeal before the <strong>Grievance Appellate Committee (GAC)</strong> constituted by the Central Government of India via <a href="https://gac.gov.in" target="_blank" rel="noopener noreferrer" className="text-primary-600 font-semibold underline">gac.gov.in</a> within 30 days of receiving the order.
         </p>

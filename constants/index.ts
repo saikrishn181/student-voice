@@ -25,20 +25,19 @@ export const ORGANIZATION_TYPES: {
 export const CATEGORIES: {
   value: Category
   label: string
-  emoji: string
 }[] = [
-  { value: "Academic", label: "Academic", emoji: "📚" },
-  { value: "Harassment", label: "Harassment", emoji: "⚠️" },
-  { value: "Mental Health", label: "Mental Health", emoji: "🧠" },
-  { value: "Financial", label: "Financial", emoji: "💰" },
-  { value: "Exams", label: "Exams", emoji: "📝" },
-  { value: "Placements", label: "Placements", emoji: "💼" },
+  { value: "Academic", label: "Academic" },
+  { value: "Harassment", label: "Harassment" },
+  { value: "Mental Health", label: "Mental Health" },
+  { value: "Financial", label: "Financial" },
+  { value: "Exams", label: "Exams" },
+  { value: "Placements", label: "Placements" },
 ]
 
 // Options shape for the Select component (create-post page, filters).
 export const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({
   value: c.value,
-  label: `${c.emoji} ${c.label}`,
+  label: c.label,
 }))
 
 export function labelForCategory(category: Category): string {

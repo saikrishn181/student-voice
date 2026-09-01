@@ -89,7 +89,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
               "text-body-sm font-semibold",
               notification.type === "post_removed" ? "text-red-800" : "text-amber-800",
             )}>
-              {notification.type === "post_removed" ? "🚫 Post Removed" : "⚠️ Content Warning Applied"}
+              {notification.type === "post_removed" ? "Post Removed" : "Content Warning Applied"}
             </p>
             <p className={cn(
               "mt-0.5 text-body-sm",
@@ -104,7 +104,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             ) : null}
             {moderationMeta?.strikeCount ? (
               <p className="mt-1 text-xs font-medium text-red-600">
-                ⚡ Strike {moderationMeta.strikeCount} of 10
+                Strike {moderationMeta.strikeCount} of 10
               </p>
             ) : null}
             {moderationMeta?.action === "blurred" ? (

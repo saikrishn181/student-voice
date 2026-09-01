@@ -43,15 +43,15 @@ export default function PrivacyPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600">
           <div className="rounded-card bg-white p-3 border border-slate-200">
-            <p className="font-bold text-slate-900 mb-1">🎭 Whistleblower Protection</p>
+            <p className="font-bold text-slate-900 mb-1">Whistleblower Protection</p>
             <p>Anonymous posts mask your identity from college admins and peers completely.</p>
           </div>
           <div className="rounded-card bg-white p-3 border border-slate-200">
-            <p className="font-bold text-slate-900 mb-1">🚫 No Third-Party Selling</p>
+            <p className="font-bold text-slate-900 mb-1">No Third-Party Selling</p>
             <p>We never sell, rent, or trade your student data to advertisers or commercial brokers.</p>
           </div>
           <div className="rounded-card bg-white p-3 border border-slate-200">
-            <p className="font-bold text-slate-900 mb-1">🗑️ Right to Erasure</p>
+            <p className="font-bold text-slate-900 mb-1">Right to Erasure</p>
             <p>You can request account and post deletion at any time in your Settings.</p>
           </div>
         </div>

@@ -184,7 +184,7 @@ export default function FeedPage() {
           </Card>
         ) : null}
 
-        {/* 🔥 Hot Issues Banner — Campus Heatmap */}
+        {/* Hot Issues Banner — Campus Heatmap */}
         {!initialLoading && hotIssues.length > 0 ? (
           <HotIssueBanner issues={hotIssues} />
         ) : null}

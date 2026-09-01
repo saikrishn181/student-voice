@@ -264,7 +264,7 @@ export default function ForgotPasswordPage() {
                 />
                 {codeError ? (
                   <p className="mt-1 text-center text-xs font-semibold text-red-600">
-                    ⚠️ {codeError}
+                    {codeError}
                   </p>
                 ) : null}
               </div>

@@ -306,7 +306,7 @@ export default function OnboardingProfilePage() {
               </label>
               {termsError ? (
                 <p className="text-[11px] font-semibold text-red-600 pl-6.5 animate-fade-in">
-                  ⚠️ {termsError}
+                  {termsError}
                 </p>
               ) : null}
             </div>

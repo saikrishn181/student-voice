@@ -88,7 +88,7 @@ const s = {
   "feed.empty.title": "You've seen everything for now",
   "feed.empty.description": "Come back soon — new problems from your region will show up here.",
   "feed.trending": "Trending",
-  "feed.filter.forYou": "✨ For You",
+  "feed.filter.forYou": "For You",
   "feed.filter.all": "All posts",
   "feed.filter.local": "My state",
   "feed.filter.trending": "Trending",
@@ -455,8 +455,8 @@ const s = {
   "notification.type.follow_request": "wants to follow you",
   "notification.type.offer_help": "offered help on your post",
   "notification.type.verification_approved": "your organization verification was approved.",
-  "notification.type.content_warning": "⚠️ Your post was auto-blurred for containing sensitive content. It's still visible with a content warning.",
-  "notification.type.post_removed": "🚫 Your post was removed for violating community guidelines.",
+  "notification.type.content_warning": "Your post was auto-blurred for containing sensitive content. It's still visible with a content warning.",
+  "notification.type.post_removed": "Your post was removed for violating community guidelines.",
 
   // ─── Modal ──────────────────────────────────────────────────────────────────
   "modal.close": "Close",

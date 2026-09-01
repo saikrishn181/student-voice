@@ -392,7 +392,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendMessage: async (conversationId, content, attachment) => {
     const trimmed = content.trim()
-    const effectiveContent = trimmed || (attachment ? (attachment.type === "video" ? "📹 Video" : "📷 Photo") : "")
+    const effectiveContent = trimmed || (attachment ? (attachment.type === "video" ? "Video" : "Photo") : "")
     if (!effectiveContent) return false
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id

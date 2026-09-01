@@ -21,6 +21,7 @@ import {
   Pencil,
   Copy,
   Check,
+  CheckCheck,
   MoreVertical,
 } from "lucide-react"
 import { Avatar, Button, EmptyState, Skeleton, Modal } from "@/components/ui"
@@ -464,10 +465,10 @@ export default function ConversationPage({
                   <span>{timeAgo(m.createdAt)}</span>
                   {mine ? (
                     <span
-                      className={cn("ml-1 font-bold text-xs tracking-tighter", read ? "text-emerald-200" : "opacity-75")}
+                      className={cn("ml-1 font-bold text-xs tracking-tighter inline-flex items-center", read ? "text-emerald-200" : "opacity-75")}
                       title={read ? "Read" : "Sent"}
                     >
-                      {read ? "✓✓" : "✓"}
+                      {read ? <CheckCheck size={14} /> : <Check size={14} />}
                     </span>
                   ) : null}
                 </p>

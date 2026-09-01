@@ -174,7 +174,7 @@ export default function LegalTrustPage() {
               className="flex w-full items-center justify-between p-4 text-left text-sm font-extrabold text-slate-950 hover:bg-slate-50 transition-colors"
             >
               <span className="flex items-center gap-2.5">
-                <span>🏛️</span> Is Krantind 100% legal under the Constitution of India?
+                Is Krantind 100% legal under the Constitution of India?
               </span>
               <ChevronDown
                 size={18}
@@ -204,7 +204,7 @@ export default function LegalTrustPage() {
               className="flex w-full items-center justify-between p-4 text-left text-sm font-extrabold text-slate-950 hover:bg-slate-50 transition-colors"
             >
               <span className="flex items-center gap-2.5">
-                <span>🎭</span> How does Anonymous Whistleblower mode protect me from college retaliation?
+                How does Anonymous Whistleblower mode protect me from college retaliation?
               </span>
               <ChevronDown
                 size={18}
@@ -217,7 +217,7 @@ export default function LegalTrustPage() {
                   Many Indian college administrations use attendance marks, internal exam scores, or disciplinary rustication threats to silence students.
                 </p>
                 <p>
-                  When you select <strong className="text-slate-950 font-extrabold">&ldquo;🎭 Post Anonymously&rdquo;</strong>, Krantind strips your name, avatar, username, and profile link from the public feed, search index, and notifications. It displays simply as <em>&ldquo;Anonymous Student • [College Name]&rdquo;</em>.
+                  When you select <strong className="text-slate-950 font-extrabold">&ldquo;Post Anonymously&rdquo;</strong>, Krantind strips your name, avatar, username, and profile link from the public feed, search index, and notifications. It displays simply as <em>&ldquo;Anonymous Student • [College Name]&rdquo;</em>.
                 </p>
                 <p>
                   College management cannot demand your identity from Krantind. User records are only disclosed when served with a formal, written subpoena issued by an Indian High Court or authorized law enforcement agency under Section 69 of the IT Act.
@@ -234,7 +234,7 @@ export default function LegalTrustPage() {
               className="flex w-full items-center justify-between p-4 text-left text-sm font-extrabold text-slate-950 hover:bg-slate-50 transition-colors"
             >
               <span className="flex items-center gap-2.5">
-                <span>⚖️</span> What if my college management threatens a Defamation Legal Notice?
+                What if my college management threatens a Defamation Legal Notice?
               </span>
               <ChevronDown
                 size={18}
@@ -263,7 +263,7 @@ export default function LegalTrustPage() {
               className="flex w-full items-center justify-between p-4 text-left text-sm font-extrabold text-slate-950 hover:bg-slate-50 transition-colors"
             >
               <span className="flex items-center gap-2.5">
-                <span>🛡️</span> How does Krantind keep the platform clean and safe ($0 Cost)?
+                How does Krantind keep the platform clean and safe ($0 Cost)?
               </span>
               <ChevronDown
                 size={18}

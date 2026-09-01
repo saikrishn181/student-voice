@@ -270,7 +270,7 @@ export default function EditPostPage({
                   : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
               )}
             >
-              🔞 {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
+              {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
             </button>
           </div>
           <select
@@ -281,10 +281,10 @@ export default function EditPostPage({
             className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
           >
             <option value="">{s["createPost.warningNone"]}</option>
-            <option value="nsfw">🔞 18+ NSFW (Not Safe For Work)</option>
-            <option value="spoiler">⚠️ Spoiler</option>
-            <option value="triggering">⚡ Triggering content</option>
-            <option value="graphic">🛑 Graphic content</option>
+            <option value="nsfw">18+ NSFW (Not Safe For Work)</option>
+            <option value="spoiler">Spoiler</option>
+            <option value="triggering">Triggering content</option>
+            <option value="graphic">Graphic content</option>
           </select>
           <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>

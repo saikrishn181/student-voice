@@ -95,7 +95,7 @@ function CommentItem({ comment }: { comment: Comment }) {
         <div className="flex items-center gap-1.5">
           {isOfficial ? (
             <span className="rounded-pill bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-xs flex items-center gap-1">
-              <span>🏛️</span> Official Response
+              Official Response
             </span>
           ) : comment.isOrgHelp ? (
             <Badge tone="accent">{s["comment.offeringHelp"]}</Badge>

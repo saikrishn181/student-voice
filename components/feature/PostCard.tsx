@@ -50,11 +50,11 @@ import { RsvpButton } from "./RsvpButton"
 import { MentionText } from "./MentionText"
 
 const REPORT_OPTIONS: { value: ReportReason; label: string; desc: string; icon: string }[] = [
-  { value: "inappropriate", label: "Inappropriate / NSFW", desc: "Sexual content, nudity, violence, or explicit material", icon: "🔞" },
-  { value: "harassment", label: "Harassment or Hate Speech", desc: "Bullying, personal attacks, abuse, slurs, or threats", icon: "⚠️" },
-  { value: "spam", label: "Spam or Scam", desc: "Commercial advertising, phishing, or deceptive links", icon: "🚫" },
-  { value: "misinformation", label: "False Information", desc: "Misleading news, fake exam/hostel/fee notices", icon: "❌" },
-  { value: "other", label: "Other Violation", desc: "Other issue violating Krantind community guidelines", icon: "🚩" },
+  { value: "inappropriate", label: "Inappropriate / NSFW", desc: "Sexual content, nudity, violence, or explicit material", icon: "" },
+  { value: "harassment", label: "Harassment or Hate Speech", desc: "Bullying, personal attacks, abuse, slurs, or threats", icon: "" },
+  { value: "spam", label: "Spam or Scam", desc: "Commercial advertising, phishing, or deceptive links", icon: "" },
+  { value: "misinformation", label: "False Information", desc: "Misleading news, fake exam/hostel/fee notices", icon: "" },
+  { value: "other", label: "Other Violation", desc: "Other issue violating Krantind community guidelines", icon: "" },
 ]
 
 interface PostCardProps {
@@ -259,7 +259,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     setResolving(true)
     try {
       await markPostResolved(post.id, resolutionNote)
-      showToast("🎉 Issue marked as resolved! Great news for the campus.", "success")
+      showToast("Issue marked as resolved! Great news for the campus.", "success")
       setResolveModalOpen(false)
       setResolutionNote("")
     } catch (err) {
@@ -423,8 +423,8 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           {post.isAnonymous ? (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-sm font-bold shadow-xs select-none border border-purple-200">
-              🎭
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold shadow-xs select-none border border-purple-200">
+              A
             </div>
           ) : (
             <Link href={`/profile/${post.authorId}`} aria-label={s["post.viewProfile"]}>
@@ -862,7 +862,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       <Modal
         open={resolveModalOpen}
         onClose={() => setResolveModalOpen(false)}
-        title="🎉 Mark Issue as Resolved"
+        title="Mark Issue as Resolved"
       >
         <div className="flex flex-col gap-4">
           <p className="text-body-sm text-slate-600">

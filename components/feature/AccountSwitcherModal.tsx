@@ -256,7 +256,7 @@ export function AccountSwitcherModal({ open, onClose }: AccountSwitcherModalProp
           {/* Touch tip */}
           {accounts.length > 0 && (
             <p className="text-center text-[11px] text-slate-400">
-              💡 Tap to switch • Long-press or tap <Trash2 size={11} className="inline mx-0.5 text-slate-400" /> to remove from device
+              Tap to switch • Long-press or tap <Trash2 size={11} className="inline mx-0.5 text-slate-400" /> to remove from device
             </p>
           )}
 
@@ -326,7 +326,7 @@ export function AccountSwitcherModal({ open, onClose }: AccountSwitcherModalProp
 
             <div className="rounded-card border border-amber-200 bg-amber-50/90 p-3 text-xs text-amber-950 space-y-1.5">
               <p className="font-bold flex items-center gap-1 text-amber-900">
-                <span>🛡️</span> Your account is safe and NOT deleted!
+                Your account is safe and NOT deleted!
               </p>
               <p className="text-slate-700">
                 This will only remove <strong>{accountToDelete.name}</strong> from this browser/device. All your posts, profile, and data stay 100% intact online.

@@ -19,7 +19,7 @@ interface HotIssueBannerProps {
 const tierConfig = {
   breaking: {
     icon: Zap,
-    label: "🔥 Breaking Campus Issue",
+    label: "Breaking Campus Issue",
     bg: "bg-gradient-to-r from-red-600 via-orange-500 to-amber-500",
     text: "text-white",
     badge: "bg-white/20 text-white",
@@ -28,7 +28,7 @@ const tierConfig = {
   },
   hot: {
     icon: Flame,
-    label: "🔥 Hot Issue",
+    label: "Hot Issue",
     bg: "bg-gradient-to-r from-orange-500 to-amber-400",
     text: "text-white",
     badge: "bg-white/20 text-white",
@@ -37,7 +37,7 @@ const tierConfig = {
   },
   rising: {
     icon: TrendingUp,
-    label: "📈 Rising Issue",
+    label: "Rising Issue",
     bg: "bg-gradient-to-r from-primary-600 to-primary-400",
     text: "text-white",
     badge: "bg-white/20 text-white",

@@ -219,8 +219,8 @@ export default function ImpactPage() {
             {collegeStats.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-500 space-y-2">
                 <div className="flex justify-center">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600 text-base">
-                    🏛️
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-600 font-bold text-sm">
+                    RANK
                   </span>
                 </div>
                 <p className="font-bold text-slate-800 text-sm">No Campus Rankings Yet</p>
@@ -269,7 +269,7 @@ export default function ImpactPage() {
                 href="/settings"
                 className="text-xs font-bold text-primary-700 hover:text-primary-800 hover:underline inline-flex items-center gap-1"
               >
-                <span>🎓 Verify your College Email</span>
+                <span>Verify your College Email</span>
                 <span>&rarr;</span>
               </Link>
             </div>

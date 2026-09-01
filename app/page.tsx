@@ -60,7 +60,7 @@ export default function LandingPage() {
       <main id="main-content">
       <section className="mx-auto flex w-full max-w-content flex-col items-center px-4 pb-14 pt-14 text-center sm:px-6 md:pt-20 lg:px-8">
         <span className="animate-fade-up inline-flex items-center gap-1.5 rounded-pill border border-accent-200 bg-accent-50 px-3.5 py-1.5 text-xs font-semibold text-accent-700">
-          🇮🇳 {s["hero.builtForIndia"]}
+          {s["hero.builtForIndia"]}
         </span>
         <h1 className="animate-fade-up mt-5 max-w-3xl font-display text-display text-ink [animation-delay:60ms]">
           {s["hero.title"]} <span className="text-primary-700">{s["hero.titleHighlight"]}</span>
@@ -130,7 +130,7 @@ export default function LandingPage() {
               href="/impact"
               className="rounded-pill border border-[#E8E1D6] bg-white px-3 py-1 text-slate-600 transition-app hover:border-primary-300 hover:text-primary-700 font-medium"
             >
-              🏆 Impact
+              Impact
             </Link>
             <Link
               href="/terms"
