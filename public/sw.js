@@ -1,5 +1,5 @@
 // Krantind Offline & Asset Caching Service Worker
-const CACHE_NAME = "krantind-cache-v3"
+const CACHE_NAME = "krantind-cache-v4"
 const STATIC_ASSETS = [
   "/",
   "/feed",

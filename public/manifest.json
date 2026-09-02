@@ -9,7 +9,6 @@
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#FAF7F2",
   "theme_color": "#1F4E78",
-  "orientation": "any",
   "lang": "en-IN",
   "dir": "ltr",
   "categories": ["education", "social", "community", "productivity"],
