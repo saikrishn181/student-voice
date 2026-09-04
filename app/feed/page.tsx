@@ -13,6 +13,7 @@ import { PostCard } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { FollowButton } from "@/components/feature/FollowButton"
+import { FollowerSuggestions } from "@/components/feature/FollowerSuggestions"
 import { EmptyState, Spinner, Card, Avatar, Button } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -215,6 +216,11 @@ export default function FeedPage() {
           ))}
         </div>
 
+        {/* Mobile follower suggestions (horizontal scroll, hidden on desktop) */}
+        {!initialLoading && !loadError ? (
+          <FollowerSuggestions layout="horizontal" />
+        ) : null}
+
         {/* Loading skeleton */}
         {initialLoading && !loadError ? <PostCardSkeleton count={3} /> : null}
 
@@ -375,6 +381,8 @@ export default function FeedPage() {
             ))}
           </div>
         </Card>
+
+        <FollowerSuggestions layout="vertical" />
       </aside>
     </div>
   )

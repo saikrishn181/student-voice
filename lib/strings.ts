@@ -115,6 +115,8 @@ const s = {
   "explore.verified": "Verified",
   "explore.noState": "No region set",
   "feed.suggestedOrgs": "Suggested organizations",
+  "feed.suggestions.title": "People you may know",
+  "feed.suggestions.active": "Active on campus",
   "feed.followers": (n: number) => `${n} followers`,
   "feed.supports": (n: number) => `${n} supports`,
   "feed.error.title": "Couldn't load the feed",
