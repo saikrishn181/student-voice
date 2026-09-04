@@ -69,17 +69,33 @@ export default function PublicProfilePage({
     let cancelled = false
     const supabase = createSupabaseBrowserClient()
     ;(async () => {
-      const { data: row } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", params.id)
-        .maybeSingle()
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id)
+      let query = supabase.from("profiles").select("*")
+      if (isUuid) {
+        query = query.eq("id", params.id)
+      } else {
+        const cleanUser = params.id.replace(/^@+/, "")
+        query = query.ilike("username", cleanUser)
+      }
+
+      const { data: row } = await query.maybeSingle()
       if (cancelled) return
       if (!row) {
         setNotFound(true)
         setLoading(false)
         return
       }
+
+      // If resolved by username, redirect to canonical UUID route
+      if (!isUuid) {
+        if (currentUser?.id === row.id) {
+          router.replace("/profile")
+        } else {
+          router.replace(`/profile/${row.id}`)
+        }
+        return
+      }
+
       useUserStore.getState().loadById(params.id)
       const { data: statsData } = await supabase.rpc("get_profile_stats", {
         p_user: params.id,

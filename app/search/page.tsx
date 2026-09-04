@@ -6,11 +6,13 @@
 // organizations (matched on name/bio).
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Search as SearchIcon, X, Sparkles } from "lucide-react"
-import { Input, Card, EmptyState, Spinner } from "@/components/ui"
-import { PostCard } from "@/components/feature"
+import Link from "next/link"
+import { Search as SearchIcon, X, Users } from "lucide-react"
+import { Input, Card, EmptyState, Spinner, Avatar } from "@/components/ui"
+import { PostCard, VerifiedBadge, CollegeBadge, FollowButton } from "@/components/feature"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
 import { usePostStore } from "@/lib/store/usePostStore"
+import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useSearchStore } from "@/lib/store/useSearchStore"
 import { useDebounce } from "@/hooks"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -22,11 +24,20 @@ import type { Post } from "@/lib/types"
 // Quick state filter chips
 const QUICK_STATES = ["Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", "Uttar Pradesh", "West Bengal"]
 
-interface OrgRow {
+interface AccountResult {
   id: string
   name: string
+  username: string | null
+  avatarUrl: string | null
+  accountType: "student" | "organization"
+  organizationType: string | null
+  verificationStatus: "pending" | "verified" | "rejected" | null
+  collegeName: string | null
+  collegeVerified: boolean
   bio: string | null
   state: string | null
+  followerCount: number
+  isPrivate: boolean
 }
 
 function sanitizeSearchQuery(input: string): string {
@@ -35,11 +46,12 @@ function sanitizeSearchQuery(input: string): string {
 
 interface SearchResults {
   posts: Post[]
-  orgs: OrgRow[]
+  accounts: AccountResult[]
 }
 
 function SearchPage() {
   const searchParams = useSearchParams()
+  const currentUser = useAuthStore((s) => s.currentUser)
   const blockedUserIds = usePostStore((s) => s.blockedUserIds)
   const { recent, pushRecent, clearRecent } = useSearchStore()
   const [query, setQuery] = useState(searchParams.get("q") ?? "")
@@ -51,7 +63,7 @@ function SearchPage() {
   const [loadingDefault, setLoadingDefault] = useState(true)
 
   // Search results
-  const [results, setResults] = useState<SearchResults>({ posts: [], orgs: [] })
+  const [results, setResults] = useState<SearchResults>({ posts: [], accounts: [] })
   const [searching, setSearching] = useState(false)
 
   const isQueryActive = debouncedQuery.trim().length > 0
@@ -103,9 +115,9 @@ function SearchPage() {
 
   // 3. Perform active search query when user types
   useEffect(() => {
-    const q = debouncedQuery.trim()
-    if (!q) {
-      setResults({ posts: [], orgs: [] })
+    const rawQ = debouncedQuery.trim()
+    if (!rawQ) {
+      setResults({ posts: [], accounts: [] })
       setSearching(false)
       return
     }
@@ -114,46 +126,100 @@ function SearchPage() {
     setSearching(true)
 
     const supabase = createSupabaseBrowserClient()
-    const isTag = q.startsWith("#")
-    const tagName = isTag ? sanitizeSearchQuery(q.slice(1).toLowerCase()) : ""
-    const cleanQ = sanitizeSearchQuery(q)
+    const isTag = rawQ.startsWith("#")
+    const tagName = isTag ? sanitizeSearchQuery(rawQ.slice(1).toLowerCase()) : ""
+    const isMention = rawQ.startsWith("@")
+    const cleanUserQ = sanitizeSearchQuery(rawQ.replace(/^@+/, ""))
+    const cleanQ = sanitizeSearchQuery(rawQ)
 
-    if (!cleanQ && !tagName) {
-      setResults({ posts: [], orgs: [] })
+    if (!cleanQ && !tagName && !cleanUserQ) {
+      setResults({ posts: [], accounts: [] })
       setSearching(false)
       return
     }
 
-    const postQuery = supabase
-      .from("posts")
-      .select("*")
-      .or("scheduled_for.is.null,scheduled_for.lte.now")
-      .order("created_at", { ascending: false })
+    // Query posts (unless query is explicitly an @username search)
+    const fetchPosts = async () => {
+      if (isMention) return { data: [] as PostRow[] }
+      let postQuery = supabase
+        .from("posts")
+        .select("*")
+        .or("scheduled_for.is.null,scheduled_for.lte.now")
+        .order("created_at", { ascending: false })
 
-    if (isTag && tagName) {
-      postQuery.contains("hashtags", [tagName])
-    } else {
-      postQuery.or(`text.ilike.%${cleanQ}%,state.ilike.%${cleanQ}%`)
+      if (isTag && tagName) {
+        postQuery = postQuery.contains("hashtags", [tagName])
+      } else {
+        postQuery = postQuery.or(`text.ilike.%${cleanQ}%,state.ilike.%${cleanQ}%`)
+      }
+      if (stateFilter) postQuery = postQuery.eq("state", stateFilter)
+      return await postQuery.limit(30)
     }
-    if (stateFilter) postQuery.eq("state", stateFilter)
-    postQuery.limit(30)
 
-    const orgQuery = supabase
-      .from("profiles")
-      .select("id, name, bio, state")
-      .eq("account_type", "organization")
-      .or(`name.ilike.%${cleanQ}%,bio.ilike.%${cleanQ}%`)
-      .limit(10)
+    // Query accounts: search username, display name, and bio for all accounts (students & orgs)
+    const fetchAccounts = async () => {
+      const userSearchTerm = cleanUserQ || cleanQ
+      let accountQuery = supabase
+        .from("profiles")
+        .select("id, name, username, avatar_url, account_type, organization_type, verification_status, college_name, college_verified, bio, state, follower_count, is_private")
+        .or(`username.ilike.%${userSearchTerm}%,name.ilike.%${userSearchTerm}%,bio.ilike.%${userSearchTerm}%`)
+        .limit(15)
 
-    Promise.all([postQuery, orgQuery]).then(([postRes, orgRes]) => {
+      if (stateFilter && !isMention) {
+        accountQuery = accountQuery.eq("state", stateFilter)
+      }
+      return await accountQuery
+    }
+
+    Promise.all([fetchPosts(), fetchAccounts()]).then(([postRes, accountRes]) => {
       if (cancelled) return
       const blocked = new Set(blockedUserIds)
-      const rows = ((postRes.data ?? []) as PostRow[]).filter(
+      const postRows = ((postRes.data ?? []) as PostRow[]).filter(
         (r) => !blocked.has(r.author_id),
       )
+
+      const rawAccounts = (accountRes.data ?? []).filter(
+        (a: any) => !blocked.has(a.id),
+      )
+
+      // Sort accounts: exact username match first, then username prefix match, then follower count
+      const userSearchTerm = cleanUserQ || cleanQ
+      const qLower = userSearchTerm.toLowerCase()
+      const sortedAccounts = [...rawAccounts].sort((a: any, b: any) => {
+        const aUser = (a.username ?? "").toLowerCase()
+        const bUser = (b.username ?? "").toLowerCase()
+        const aExact = aUser === qLower
+        const bExact = bUser === qLower
+        if (aExact && !bExact) return -1
+        if (!aExact && bExact) return 1
+
+        const aStarts = aUser.startsWith(qLower)
+        const bStarts = bUser.startsWith(qLower)
+        if (aStarts && !bStarts) return -1
+        if (!aStarts && bStarts) return 1
+
+        return (b.follower_count ?? 0) - (a.follower_count ?? 0)
+      })
+
+      const mappedAccounts: AccountResult[] = sortedAccounts.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        username: r.username ?? null,
+        avatarUrl: r.avatar_url ?? null,
+        accountType: r.account_type,
+        organizationType: r.organization_type ?? null,
+        verificationStatus: r.verification_status ?? null,
+        collegeName: r.college_name ?? null,
+        collegeVerified: Boolean(r.college_verified),
+        bio: r.bio ?? null,
+        state: r.state ?? null,
+        followerCount: r.follower_count ?? 0,
+        isPrivate: Boolean(r.is_private),
+      }))
+
       setResults({
-        posts: rows.map(rowToPost),
-        orgs: (orgRes.data ?? []) as OrgRow[],
+        posts: postRows.map(rowToPost),
+        accounts: mappedAccounts,
       })
       setSearching(false)
     })
@@ -163,7 +229,7 @@ function SearchPage() {
     }
   }, [debouncedQuery, stateFilter, blockedUserIds])
 
-  const hasResults = results.posts.length > 0 || results.orgs.length > 0
+  const hasResults = results.posts.length > 0 || results.accounts.length > 0
   const hasFilters = Boolean(stateFilter)
 
   const clearFilters = () => {
@@ -289,22 +355,72 @@ function SearchPage() {
               </div>
             ) : hasResults ? (
               <div className="flex flex-col gap-6">
-                {results.orgs.length > 0 ? (
+                {/* Accounts (matching username, display name, bio) */}
+                {results.accounts.length > 0 ? (
                   <section>
-                    <h2 className="mb-3 text-h4 font-semibold text-slate-900">
-                      {s["search.organizationsHeading"]}
-                    </h2>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-h4 font-semibold text-slate-900 flex items-center gap-2">
+                        <Users size={18} className="text-primary-600" />
+                        {s["search.accountsHeading"]}
+                      </h2>
+                      <span className="text-xs text-slate-400">
+                        {results.accounts.length} {results.accounts.length === 1 ? "account" : "accounts"}
+                      </span>
+                    </div>
                     <div className="flex flex-col gap-2.5">
-                      {results.orgs.map((org) => (
-                        <Card key={org.id} className="flex items-center gap-3 p-3.5">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
-                            {org.name.charAt(0)}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-slate-800">{org.name}</p>
-                            <p className="truncate text-xs text-slate-400">{org.bio ?? org.state}</p>
-                          </div>
-                        </Card>
+                      {results.accounts.map((acc) => (
+                        <div
+                          key={acc.id}
+                          className="flex items-center justify-between gap-3 p-3.5 rounded-card border border-[#E8E1D6] bg-white shadow-xs hover:border-primary-400 hover:shadow-card transition-all"
+                        >
+                          <Link
+                            href={`/profile/${acc.id}`}
+                            className="flex items-center gap-3 min-w-0 flex-1 group"
+                          >
+                            <Avatar name={acc.name} src={acc.avatarUrl} size="md" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="truncate text-sm font-bold text-slate-900 group-hover:text-primary-700 transition-colors">
+                                  {acc.name}
+                                </span>
+                                {acc.accountType === "organization" && acc.verificationStatus === "verified" ? (
+                                  <VerifiedBadge className="text-[11px] py-0 px-1.5" />
+                                ) : null}
+                                {acc.collegeVerified ? (
+                                  <CollegeBadge className="text-[11px] py-0 px-1.5" />
+                                ) : null}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                {acc.username ? (
+                                  <span className="font-semibold text-primary-600">@{acc.username}</span>
+                                ) : (
+                                  <span className="text-slate-400 capitalize">{acc.accountType}</span>
+                                )}
+                                {acc.collegeName ? (
+                                  <span className="truncate text-slate-400">• {acc.collegeName}</span>
+                                ) : acc.state ? (
+                                  <span className="truncate text-slate-400">• {acc.state}</span>
+                                ) : null}
+                                <span className="text-slate-400 shrink-0">
+                                  • {acc.followerCount} {acc.followerCount === 1 ? "follower" : "followers"}
+                                </span>
+                              </div>
+                              {acc.bio ? (
+                                <p className="mt-1 truncate text-xs text-slate-600">{acc.bio}</p>
+                              ) : null}
+                            </div>
+                          </Link>
+
+                          {currentUser?.id !== acc.id ? (
+                            <div className="shrink-0">
+                              <FollowButton
+                                followerId={currentUser?.id ?? ""}
+                                followingId={acc.id}
+                                targetIsPrivate={acc.isPrivate}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
                       ))}
                     </div>
                   </section>
