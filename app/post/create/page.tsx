@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert } from "lucide-react"
+import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert, ShieldCheck, Users, Lock, UserCheck, BookmarkCheck } from "lucide-react"
 import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -52,6 +52,69 @@ export default function CreatePostPage() {
   const [scheduledFor, setScheduledFor] = useState("")
   const [contentWarning, setContentWarning] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)
+
+  // Private account audience controls: "followers" | "anonymous"
+  const [audience, setAudience] = useState<"followers" | "anonymous">("followers")
+  const [friendsAlso, setFriendsAlso] = useState(false)
+  const [alwaysUse, setAlwaysUse] = useState(false)
+
+  // Load saved preference on mount so private accounts don't have to tap every time
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const saved = localStorage.getItem("sv_private_post_pref")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.audience === "followers" || parsed.audience === "anonymous") {
+          setAudience(parsed.audience)
+        }
+        if (typeof parsed.friendsAlso === "boolean") {
+          setFriendsAlso(parsed.friendsAlso)
+        }
+        if (parsed.always) {
+          setAlwaysUse(true)
+        }
+      }
+    } catch {}
+  }, [])
+
+  const handleAudienceChange = (val: "followers" | "anonymous") => {
+    setAudience(val)
+    if (alwaysUse) {
+      try {
+        localStorage.setItem(
+          "sv_private_post_pref",
+          JSON.stringify({ audience: val, friendsAlso, always: true }),
+        )
+      } catch {}
+    }
+  }
+
+  const handleFriendsAlsoChange = (val: boolean) => {
+    setFriendsAlso(val)
+    if (alwaysUse) {
+      try {
+        localStorage.setItem(
+          "sv_private_post_pref",
+          JSON.stringify({ audience, friendsAlso: val, always: true }),
+        )
+      } catch {}
+    }
+  }
+
+  const handleAlwaysChange = (val: boolean) => {
+    setAlwaysUse(val)
+    try {
+      if (val) {
+        localStorage.setItem(
+          "sv_private_post_pref",
+          JSON.stringify({ audience, friendsAlso, always: true }),
+        )
+      } else {
+        localStorage.removeItem("sv_private_post_pref")
+      }
+    } catch {}
+  }
 
   const state = currentUser?.state ?? ""
   const isOrg = currentUser?.accountType === "organization"
@@ -185,6 +248,13 @@ export default function CreatePostPage() {
     }
 
     try {
+      const isPrivate = Boolean(currentUser?.isPrivate)
+      const postIsFollowersOnly = isPrivate && audience === "followers"
+      const postIsAnonymous = isPrivate
+        ? audience === "anonymous"
+        : Boolean(isAnonymous)
+      const postFriendsAlso = isPrivate && audience === "anonymous" && friendsAlso
+
       const post = await addPost({
         authorId: currentUser.id,
         text: text.trim(),
@@ -198,7 +268,9 @@ export default function CreatePostPage() {
         eventLocation: eventLocation.trim() || null,
         poll,
         contentWarning: effectiveContentWarning || null,
-        isAnonymous,
+        isAnonymous: postIsAnonymous,
+        isFollowersOnly: postIsFollowersOnly,
+        friendsAlso: postFriendsAlso,
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)
@@ -493,10 +565,128 @@ export default function CreatePostPage() {
           <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
         </Card>
 
-        {/* Anonymous whistleblower mode (students only) */}
-        {!isOrg && (
+        {/* Private Account Audience Selector OR Public Whistleblower / Anonymous Mode */}
+        {!isOrg && currentUser?.isPrivate ? (
+          <Card className="p-4 flex flex-col gap-3.5 border-purple-200 bg-purple-50/40 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+                  <Lock size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    Private Account Post Audience
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Choose who can see this post and how your profile appears
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-pill bg-purple-100 text-purple-700 border border-purple-200 px-2.5 py-0.5 text-[11px] font-semibold">
+                Private Account
+              </span>
+            </div>
+
+            {/* Audience selection buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Only for followers */}
+              <button
+                type="button"
+                onClick={() => handleAudienceChange("followers")}
+                className={cn(
+                  "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
+                  audience === "followers"
+                    ? "border-primary-600 bg-white ring-2 ring-primary-500/20 shadow-xs"
+                    : "border-slate-200 bg-white/70 hover:bg-white text-slate-600",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                    <Users size={15} className="text-primary-600" />
+                    Only for followers
+                  </span>
+                  {audience === "followers" ? (
+                    <span className="h-2 w-2 rounded-full bg-primary-600" />
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Only your accepted followers can see this post. Your name and profile are visible to them.
+                </p>
+              </button>
+
+              {/* Anonymous (Everyone) */}
+              <button
+                type="button"
+                onClick={() => handleAudienceChange("anonymous")}
+                className={cn(
+                  "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
+                  audience === "anonymous"
+                    ? "border-purple-600 bg-white ring-2 ring-purple-500/20 shadow-xs"
+                    : "border-slate-200 bg-white/70 hover:bg-white text-slate-600",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-purple-950">
+                    <ShieldCheck size={15} className="text-purple-600" />
+                    Anonymous (Everyone)
+                  </span>
+                  {audience === "anonymous" ? (
+                    <span className="h-2 w-2 rounded-full bg-purple-600" />
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Visible to everyone across campus as Anonymous Student. Your username and user ID are completely hidden.
+                </p>
+              </button>
+            </div>
+
+            {/* If anonymous: Show "For your friends also" */}
+            {audience === "anonymous" ? (
+              <div className="pt-2 border-t border-purple-100 flex flex-col gap-2">
+                <label className="flex items-center justify-between gap-3 cursor-pointer p-2.5 rounded-lg bg-white/80 border border-purple-100 hover:bg-white transition-colors">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <UserCheck size={14} className="text-purple-600" />
+                      For your friends also
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Accepted followers see you posted this, while everyone else sees Anonymous Student.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={friendsAlso}
+                    onChange={(e) => handleFriendsAlsoChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {/* "Always" setting so they won't want to tap while posting */}
+            <div className="pt-2 border-t border-purple-100">
+              <label className="flex items-center justify-between gap-3 cursor-pointer p-2.5 rounded-lg bg-white/80 border border-purple-100 hover:bg-white transition-colors">
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <BookmarkCheck size={14} className="text-primary-600" />
+                    Always use this setting
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Remembers your preference so you do not need to tap this every time you post.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={alwaysUse}
+                  onChange={(e) => handleAlwaysChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                />
+              </label>
+            </div>
+          </Card>
+        ) : !isOrg ? (
           <Card className={cn(
-            "flex flex-col gap-3 p-4 transition-colors",
+            "p-4 flex flex-col gap-2.5 transition-app",
             isAnonymous ? "border-purple-300 bg-purple-50/50" : "border-slate-200",
           )}>
             <div className="flex items-center justify-between">
@@ -523,11 +713,11 @@ export default function CreatePostPage() {
             </div>
             {isAnonymous && (
               <p className="text-xs text-purple-800 bg-purple-100/70 p-2.5 rounded-card border border-purple-200">
-                <strong>Identity Protected:</strong> In feeds and searches, this post will appear as <em>"Anonymous Student • {currentUser?.collegeName || 'Verified College'}"</em>. Your name and profile link will not be visible to anyone.
+                <strong>Identity Protected:</strong> In feeds and searches, this post will appear as <em>"Anonymous Student • {currentUser?.collegeName || 'Verified College'}"</em>. Your name, username, and user ID will not be visible to anyone.
               </p>
             )}
           </Card>
-        )}
+        ) : null}
 
         {/* Statutory Compliance Notice */}
         <p className="text-[11px] text-slate-500 text-center sm:text-left leading-relaxed">

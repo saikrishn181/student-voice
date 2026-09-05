@@ -62,6 +62,7 @@ export function FollowerSuggestions({ layout = "vertical" }: { layout?: "vertica
   const postCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const p of posts) {
+      if (p.isAnonymous) continue
       counts[p.authorId] = (counts[p.authorId] ?? 0) + 1
     }
     return counts

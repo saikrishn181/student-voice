@@ -139,6 +139,35 @@ export default function PostDetailPage({
 
   if (!post) return null
 
+  const follows = usePostStore.getState().follows
+  const isFollower = follows.some(
+    (f) => f.followerId === currentUser?.id && f.followingId === post.authorId,
+  )
+  const canViewPost =
+    !post.isFollowersOnly ||
+    post.authorId === currentUser?.id ||
+    currentUser?.isAdmin ||
+    isFollower
+
+  if (!canViewPost) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <EmptyState
+          icon={SearchX}
+          title="Followers Only Post"
+          description="This post is private and can only be viewed by accepted followers of the author."
+          action={
+            <Link href="/feed">
+              <Button variant="outline">
+                <ArrowLeft size={16} aria-hidden /> {s["postDetail.notFound.backToFeed"]}
+              </Button>
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <Link

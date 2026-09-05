@@ -102,6 +102,8 @@ interface PostState {
     poll?: Post["poll"]
     contentWarning?: string | null
     isAnonymous?: boolean
+    isFollowersOnly?: boolean
+    friendsAlso?: boolean
   }) => Promise<Post>
   updatePost: (id: string, input: {
     text: string
@@ -213,8 +215,23 @@ export const usePostStore = create<PostState>()((set, get) => ({
       blockedUserIds = new Set((myBlocks ?? []).map((r) => (r as BlockRow).blocked_id))
     }
 
+    const followsSet = new Set(
+      (followRows ?? []).map(
+        (r: { follower_id: string; following_id: string }) => `${r.follower_id}:${r.following_id}`,
+      ),
+    )
+    const isAdmin = useAuthStore.getState().currentUser?.isAdmin
+
     const posts = ((postRows ?? []) as PostRow[])
       .filter((row) => !blockedUserIds.has(row.author_id))
+      .filter((row) => {
+        if (row.is_followers_only) {
+          if (!currentUserId) return false
+          if (row.author_id === currentUserId || isAdmin) return true
+          return followsSet.has(`${currentUserId}:${row.author_id}`)
+        }
+        return true
+      })
       .map((row) => {
         const post = rowToPost(row)
         post.supportedByCurrentUser = supportedIds.has(post.id)
@@ -281,8 +298,20 @@ export const usePostStore = create<PostState>()((set, get) => ({
 
     const existingIds = new Set(get().posts.map((p) => p.id))
     const blockedIds = new Set(get().blockedUserIds)
+    const follows = get().follows
+    const isAdmin = useAuthStore.getState().currentUser?.isAdmin
     const newPosts = ((postRows ?? []) as PostRow[])
       .filter((row) => !existingIds.has(row.id) && !blockedIds.has(row.author_id))
+      .filter((row) => {
+        if (row.is_followers_only) {
+          if (!currentUserId) return false
+          if (row.author_id === currentUserId || isAdmin) return true
+          return follows.some(
+            (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+          )
+        }
+        return true
+      })
       .map((row) => rowToPost(row))
 
     // Prefetch authors of the newly loaded posts as well.
@@ -354,32 +383,56 @@ export const usePostStore = create<PostState>()((set, get) => ({
     }
 
     // 2. Insert post
-    const { data, error } = await supabase
-      .from("posts")
-      .insert({
-        author_id: input.authorId,
-        text: input.text,
-        media_url: input.mediaUrl ?? null,
-        media_type: input.mediaType ?? null,
-        media_aspect_ratio: input.mediaAspectRatio ?? null,
-        state: input.state,
-        category: categoryFromHashtags(input.hashtags),
-        hashtags: input.hashtags,
-        scheduled_for: input.scheduledFor ?? null,
-        event_at: input.eventAt ?? null,
-        event_location: input.eventLocation ?? null,
-        content_warning: input.contentWarning ?? null,
-        is_anonymous: Boolean(input.isAnonymous),
-        poll_json: input.poll
-          ? {
-              question: input.poll.question,
-              options: input.poll.options,
-              ends_at: input.poll.endsAt ?? null,
-            }
-          : null,
-      })
-      .select("*")
-      .single()
+    const isPrivate =
+      (useAuthStore.getState().currentUser?.id === input.authorId &&
+        Boolean(useAuthStore.getState().currentUser?.isPrivate)) ||
+      Boolean(useUserStore.getState().users[input.authorId]?.isPrivate)
+
+    const isFollowersOnly = Boolean(input.isFollowersOnly)
+    const isAnonymous = isPrivate
+      ? isFollowersOnly
+        ? false
+        : true
+      : Boolean(input.isAnonymous)
+    const friendsAlso = Boolean(input.friendsAlso)
+
+    const postPayload: Record<string, unknown> = {
+      author_id: input.authorId,
+      text: input.text,
+      media_url: input.mediaUrl ?? null,
+      media_type: input.mediaType ?? null,
+      media_aspect_ratio: input.mediaAspectRatio ?? null,
+      state: input.state,
+      category: categoryFromHashtags(input.hashtags),
+      hashtags: input.hashtags,
+      scheduled_for: input.scheduledFor ?? null,
+      event_at: input.eventAt ?? null,
+      event_location: input.eventLocation ?? null,
+      content_warning: input.contentWarning ?? null,
+      is_anonymous: isAnonymous,
+      is_followers_only: isFollowersOnly,
+      friends_also: friendsAlso,
+      poll_json: input.poll
+        ? {
+            question: input.poll.question,
+            options: input.poll.options,
+            ends_at: input.poll.endsAt ?? null,
+          }
+        : null,
+    }
+
+    let insertRes = await supabase.from("posts").insert(postPayload).select("*").single()
+    if (
+      insertRes.error &&
+      (insertRes.error.message.includes("is_followers_only") ||
+        insertRes.error.message.includes("friends_also"))
+    ) {
+      delete postPayload.is_followers_only
+      delete postPayload.friends_also
+      insertRes = await supabase.from("posts").insert(postPayload).select("*").single()
+    }
+
+    const { data, error } = insertRes
 
     if (error || !data) throw new Error(error?.message ?? "Could not publish post")
 

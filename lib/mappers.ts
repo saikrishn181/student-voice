@@ -24,6 +24,8 @@ export interface PostRow {
   poll_json: unknown | null
   content_warning: string | null
   is_anonymous?: boolean | null
+  is_followers_only?: boolean | null
+  friends_also?: boolean | null
   is_resolved?: boolean | null
   resolved_at?: string | null
   resolution_note?: string | null
@@ -67,6 +69,8 @@ export function rowToPost(row: PostRow): Post {
     savedByCurrentUser: false,
     contentWarning: row.content_warning ?? undefined,
     isAnonymous: Boolean(row.is_anonymous),
+    isFollowersOnly: Boolean(row.is_followers_only),
+    friendsAlso: Boolean(row.friends_also),
     isResolved: Boolean(row.is_resolved),
     resolvedAt: row.resolved_at ?? undefined,
     resolutionNote: row.resolution_note ?? undefined,

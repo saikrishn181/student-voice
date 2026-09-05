@@ -146,6 +146,10 @@ export interface Post {
   contentWarning?: string
   // Anonymous whistleblower mode: hides author name & profile from public view.
   isAnonymous?: boolean
+  // Private accounts: visible only to accepted followers.
+  isFollowersOnly?: boolean
+  // Anonymous posts: reveal author identity only to accepted followers/friends.
+  friendsAlso?: boolean
   // Issue resolution: marks problem as resolved with a celebration badge & note.
   isResolved?: boolean
   resolvedAt?: string

@@ -227,6 +227,9 @@ create table if not exists public.posts (
   event_location text,
   poll_json jsonb,
   content_warning text check (content_warning is null or content_warning in ('nsfw', 'spoiler', 'triggering', 'graphic')),
+  is_anonymous boolean not null default false,
+  is_followers_only boolean not null default false,
+  friends_also boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -236,17 +239,48 @@ create index if not exists posts_scheduled_for_idx on public.posts (scheduled_fo
 
 alter table public.posts enable row level security;
 
+drop policy if exists "Posts visible per privacy" on public.posts;
 drop policy if exists "Posts are public by everyone" on public.posts;
--- Posts are visible to everyone EXCEPT private accounts (whose posts only the
--- author, their followers, and admins can see).
-create policy "Posts visible per privacy"
+drop policy if exists "Posts visibility policy" on public.posts;
+-- Followers-only posts are visible only to accepted followers, the author, and admins.
+-- All other posts are visible to everyone (with anonymous masking applied for identity protection).
+create policy "Posts visibility policy"
   on public.posts for select
   using (
-    not exists (select 1 from public.profiles p where p.id = posts.author_id and p.is_private)
-    or posts.author_id = auth.uid()
-    or exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.following_id = posts.author_id)
-    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+    case
+      when is_followers_only = true then
+        author_id = auth.uid()
+        or exists (
+          select 1 from public.follows f
+          where f.follower_id = auth.uid() and f.following_id = posts.author_id
+        )
+        or exists (
+          select 1 from public.profiles p
+          where p.id = auth.uid() and p.is_admin
+        )
+      else
+        true
+    end
   );
+
+-- Ensure any post authored by a private account is automatically marked anonymous UNLESS chosen as followers_only
+create or replace function public.ensure_private_account_post_rules()
+returns trigger language plpgsql security definer as $$
+begin
+  if exists (select 1 from public.profiles where id = new.author_id and is_private = true) then
+    if new.is_followers_only is not true then
+      new.is_anonymous := true;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_ensure_private_account_post_anonymous on public.posts;
+drop trigger if exists trg_ensure_private_account_post_rules on public.posts;
+create trigger trg_ensure_private_account_post_rules
+  before insert or update on public.posts
+  for each row execute function public.ensure_private_account_post_rules();
 
 drop policy if exists "Users can create posts" on public.posts;
 create policy "Users can create posts"

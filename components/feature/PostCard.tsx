@@ -30,6 +30,8 @@ import {
   Heart,
   Sparkles,
   CheckCircle2,
+  Lock,
+  UserCheck,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -71,6 +73,27 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const pathname = usePathname()
   const currentUser = useAuthStore((s) => s.currentUser)
   const author = useUserById(post.authorId)
+  const follows = usePostStore((s) => s.follows)
+  const isOwnPost = currentUser?.id === post.authorId
+  const isFollower = follows.some(
+    (f) => f.followerId === currentUser?.id && f.followingId === post.authorId,
+  )
+  const isFriendViewing = isOwnPost || isFollower
+
+  // Anonymity logic:
+  // - If post is followers-only: author chose to share with accepted followers with their profile.
+  // - If post is anonymous:
+  //   - If post.friendsAlso is true AND viewer is follower or author: reveal identity to them!
+  //   - Otherwise: completely anonymous!
+  // - If author is private and post is NOT followers-only, default to anonymous.
+  const isAnonymous = Boolean(
+    (post.isAnonymous || (author?.isPrivate && !post.isFollowersOnly)) &&
+      !(post.friendsAlso && isFriendViewing),
+  )
+
+  const isSharedWithFriendsBadge = Boolean(
+    post.friendsAlso && isFriendViewing && (post.isAnonymous || author?.isPrivate),
+  )
   const deletePost = usePostStore((s) => s.deletePost)
   const blockUser = usePostStore((s) => s.blockUser)
   const reportPost = usePostStore((s) => s.reportPost)
@@ -173,22 +196,22 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     }
   }
 
-  const isOwnPost = currentUser?.id === post.authorId
   const isAdmin = Boolean(currentUser?.isAdmin)
   const isBlocked = Boolean(author?.id && blockedUserIds.includes(author.id))
   const hasWarning = Boolean(post.contentWarning)
   const concealed = hasWarning && !warningRevealed
   const isVerifiedOrg =
     author?.accountType === "organization" && author.verificationStatus === "verified"
-  const follows = usePostStore((s) => s.follows)
   // Messaging a PRIVATE account is only allowed once they accept your follow
   // request. Public accounts (and admins) can always be messaged.
+  // Anonymous/private posts cannot be messaged directly to protect author privacy.
   const canMessage =
-    !author ||
-    isOwnPost ||
-    currentUser?.isAdmin ||
-    !author.isPrivate ||
-    follows.some((f) => f.followerId === currentUser?.id && f.followingId === author.id)
+    !isAnonymous &&
+    (!author ||
+      isOwnPost ||
+      currentUser?.isAdmin ||
+      !author.isPrivate ||
+      isFollower)
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -422,7 +445,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          {post.isAnonymous ? (
+          {isAnonymous ? (
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold shadow-xs select-none border border-purple-200">
               A
             </div>
@@ -433,8 +456,8 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              {post.isAnonymous ? (
-                <span className="truncate text-sm font-semibold text-purple-950 flex items-center gap-1">
+              {isAnonymous ? (
+                <span className="truncate text-sm font-semibold text-purple-950 flex items-center gap-1 select-none">
                   <span>Anonymous Student</span>
                   {isOwnPost ? (
                     <span className="text-[11px] font-medium text-purple-600">(You)</span>
@@ -448,18 +471,28 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                   {author?.name ?? s["post.unknownName"]}
                 </Link>
               )}
-              {!post.isAnonymous && isVerifiedOrg ? <VerifiedBadge /> : null}
-              {!post.isAnonymous && author?.collegeVerified ? <CollegeBadge /> : null}
+              {!isAnonymous && isVerifiedOrg ? <VerifiedBadge /> : null}
+              {!isAnonymous && author?.collegeVerified ? <CollegeBadge /> : null}
+              {post.isFollowersOnly ? (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                  <Lock size={10} /> Followers only
+                </span>
+              ) : null}
+              {isSharedWithFriendsBadge ? (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 border border-purple-200">
+                  <UserCheck size={10} /> Visible to friends
+                </span>
+              ) : null}
             </div>
             <div className="mt-0.5 text-body-sm text-slate-500">
-              {post.isAnonymous
+              {isAnonymous
                 ? `${author?.collegeName || "Verified College"} · ${timeAgo(post.createdAt)}`
                 : `${author?.accountType === "organization" ? s["post.authorType.org"] : s["post.authorType.student"]} · ${timeAgo(post.createdAt)}`}
             </div>
           </div>
         </div>
 
-        {showFollow && !isOwnPost && !post.isAnonymous && author ? (
+        {showFollow && !isOwnPost && !isAnonymous && author ? (
           <FollowButton
             followerId={currentUser?.id ?? ""}
             followingId={author.id}
@@ -619,17 +652,19 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                         <Flag size={16} className="text-amber-500" />
                         {s["post.report"]}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuOpen(false)
-                          setBlockOpen(true)
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-                      >
-                        <ShieldOff size={16} />
-                        {s["post.block"]}
-                      </button>
+                      {!isAnonymous ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false)
+                            setBlockOpen(true)
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <ShieldOff size={16} />
+                          {s["post.block"]}
+                        </button>
+                      ) : null}
                     </>
                   )}
                 </div>

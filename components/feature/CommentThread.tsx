@@ -73,6 +73,7 @@ function CommentItem({ comment }: { comment: Comment }) {
 
   const isVerifiedOrg = author?.accountType === "organization" && author?.verificationStatus === "verified"
   const isOfficial = comment.isOfficialResponse || isVerifiedOrg
+  const isAnonymousComment = Boolean(author?.isPrivate)
 
   return (
     <div
@@ -87,9 +88,22 @@ function CommentItem({ comment }: { comment: Comment }) {
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
+          {isAnonymousComment ? (
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold shadow-xs select-none border border-purple-200">
+              A
+            </div>
+          ) : (
+            <Avatar name={author?.name ?? s["post.unknownName"]} src={author?.avatarUrl} size="sm" />
+          )}
           <span className="text-sm font-semibold text-slate-800">
-            {author?.name ?? s["post.unknownName"]}
+            {isAnonymousComment ? (
+              <span className="text-purple-950 select-none">
+                Anonymous Student
+                {currentUser?.id === comment.authorId ? " (You)" : ""}
+              </span>
+            ) : (
+              author?.name ?? s["post.unknownName"]
+            )}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
