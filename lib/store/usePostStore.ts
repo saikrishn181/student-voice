@@ -236,12 +236,24 @@ export const usePostStore = create<PostState>()((set, get) => ({
         const post = rowToPost(row)
         post.supportedByCurrentUser = supportedIds.has(post.id)
         post.savedByCurrentUser = savedIds.has(post.id)
+        if (post.isAnonymous) {
+          const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+          const isFriend = Boolean(
+            post.friendsAlso &&
+              currentUserId &&
+              followsSet.has(`${currentUserId}:${row.author_id}`),
+          )
+          if (!isSelf && !isAdmin && !isFriend) {
+            post.authorId = "anonymous"
+          }
+        }
         return post
       })
 
-    // Prefetch every author up front so name/avatar fields never flash
+    // Prefetch every public author up front so name/avatar fields never flash
     // "Unknown" while useUserById lazily loads a single profile.
-    prefetchAuthors(posts.map((p) => p.authorId))
+    // Anonymous authors are strictly excluded so private identities are never exposed in cache.
+    prefetchAuthors(posts.filter((p) => p.authorId !== "anonymous").map((p) => p.authorId))
     if (commentRows?.length) {
       prefetchAuthors(
         (commentRows as Parameters<typeof rowToComment>[0][]).map((r) => r.author_id),
@@ -312,10 +324,28 @@ export const usePostStore = create<PostState>()((set, get) => ({
         }
         return true
       })
-      .map((row) => rowToPost(row))
+      .map((row) => {
+        const post = rowToPost(row)
+        if (post.isAnonymous) {
+          const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+          const isFriend = Boolean(
+            post.friendsAlso &&
+              currentUserId &&
+              follows.some(
+                (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+              ),
+          )
+          if (!isSelf && !isAdmin && !isFriend) {
+            post.authorId = "anonymous"
+          }
+        }
+        return post
+      })
 
-    // Prefetch authors of the newly loaded posts as well.
-    if (newPosts.length > 0) prefetchAuthors(newPosts.map((p) => p.authorId))
+    // Prefetch authors of the newly loaded posts (excluding anonymous authors).
+    if (newPosts.length > 0) {
+      prefetchAuthors(newPosts.filter((p) => p.authorId !== "anonymous").map((p) => p.authorId))
+    }
 
     // Mark supportedByCurrentUser for the newly loaded posts.
     if (currentUserId && newPosts.length > 0) {
@@ -915,7 +945,35 @@ export const usePostStore = create<PostState>()((set, get) => ({
           // Scheduled posts only appear in feeds once their time arrives.
           if (existing || blocked) return
           if (row.scheduled_for && new Date(row.scheduled_for).getTime() > Date.now()) return
+
+          const currentUserId = useAuthStore.getState().currentUser?.id
+          const isAdmin = Boolean(useAuthStore.getState().currentUser?.isAdmin)
+          const follows = get().follows
+
+          // Followers-only guard: do not show to non-followers
+          if (row.is_followers_only) {
+            if (!currentUserId) return
+            const isFollower = follows.some(
+              (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+            )
+            if (row.author_id !== currentUserId && !isAdmin && !isFollower) return
+          }
+
           const post = rowToPost(row)
+          if (post.isAnonymous) {
+            const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+            const isFriend = Boolean(
+              post.friendsAlso &&
+                currentUserId &&
+                follows.some(
+                  (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+                ),
+            )
+            if (!isSelf && !isAdmin && !isFriend) {
+              post.authorId = "anonymous"
+            }
+          }
+
           // supportedByCurrentUser: fresh posts can't have my support yet.
           post.supportedByCurrentUser = false
           set((s) => ({
@@ -923,7 +981,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
             ),
           }))
-          prefetchAuthors([row.author_id])
+          if (post.authorId !== "anonymous") {
+            prefetchAuthors([post.authorId])
+          }
         },
       )
       // Counts (supports/comments) on an existing post -> patch in place.
@@ -1027,7 +1087,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
 function prefetchAuthors(ids: string[]) {
   const currentUserId = useAuthStore.getState().currentUser?.id
   const missing = Array.from(new Set(ids)).filter(
-    (id) => id !== currentUserId && !useUserStore.getState().users[id],
+    (id) => id && id !== "anonymous" && id !== currentUserId && !useUserStore.getState().users[id],
   )
   if (missing.length === 0) return
   missing.forEach((id) => {

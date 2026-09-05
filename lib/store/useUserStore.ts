@@ -36,6 +36,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   },
 
   loadById: async (id) => {
+    if (!id || id === "anonymous") return null
     const cached = get().users[id]
     if (cached) return cached
     const supabase = createSupabaseBrowserClient()
@@ -51,7 +52,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   },
 
   loadMany: async (ids) => {
-    const missing = [...new Set(ids)].filter((id) => !get().users[id])
+    const missing = [...new Set(ids)].filter((id) => id && id !== "anonymous" && !get().users[id])
     if (missing.length === 0) return
     const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase

@@ -174,6 +174,23 @@ export default function EditPostPage({
     )
   }
 
+  if (loaded && post && (!currentUser || (post.authorId !== currentUser.id && !currentUser.isAdmin))) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4">
+        <EmptyState
+          icon={Send}
+          title="Unauthorized"
+          description="You can only edit posts that you authored."
+          action={
+            <Button onClick={() => router.push("/feed")}>
+              {s["postDetail.notFound.backToFeed"]}
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4">
       <div>

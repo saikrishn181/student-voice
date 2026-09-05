@@ -20,11 +20,18 @@ import s from "@/lib/strings"
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function getSafeRedirect(next: string | null): string {
-  if (!next) return LOGGED_IN_HOME
-  if (next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
-    return next
+  if (!next || typeof next !== "string") return LOGGED_IN_HOME
+  if (
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.includes("\\") ||
+    next.includes("://") ||
+    next.startsWith("/javascript:") ||
+    /[\x00-\x1F\x7F]/.test(next)
+  ) {
+    return LOGGED_IN_HOME
   }
-  return LOGGED_IN_HOME
+  return next
 }
 
 function LoginForm() {

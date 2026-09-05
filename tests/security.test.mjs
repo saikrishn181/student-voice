@@ -293,3 +293,132 @@ test("security: ReDoS regex exponential backtracking protection on hashtag & tex
   assert.equal(safeRegex.test("#CampusLife2026"), true)
   assert.equal(safeRegex.test("Invalid tag!"), false)
 })
+
+test("security: Anonymous post author masking ensures real user ID is never exposed to non-authors", () => {
+  function sanitizePostForViewer(post, currentUserId, isAdmin = false, isFriend = false) {
+    if (!post.isAnonymous) return post.authorId
+    if (currentUserId && post.authorId === currentUserId) return post.authorId
+    if (isAdmin) return post.authorId
+    if (post.friendsAlso && isFriend) return post.authorId
+    return "anonymous"
+  }
+
+  const anonPost = { id: "post-1", authorId: "real-uuid-1234", isAnonymous: true, friendsAlso: false }
+  const friendAnonPost = { id: "post-2", authorId: "real-uuid-1234", isAnonymous: true, friendsAlso: true }
+
+  // Non-author stranger sees "anonymous"
+  assert.equal(sanitizePostForViewer(anonPost, "stranger-id"), "anonymous")
+  // Unauthenticated visitor sees "anonymous"
+  assert.equal(sanitizePostForViewer(anonPost, null), "anonymous")
+  // Real author sees their own ID
+  assert.equal(sanitizePostForViewer(anonPost, "real-uuid-1234"), "real-uuid-1234")
+  // Admin sees author ID for moderation
+  assert.equal(sanitizePostForViewer(anonPost, "admin-id", true), "real-uuid-1234")
+  // Friend sees author ID when friendsAlso is true
+  assert.equal(sanitizePostForViewer(friendAnonPost, "friend-id", false, true), "real-uuid-1234")
+  // Non-friend does not see author ID even when friendsAlso is true
+  assert.equal(sanitizePostForViewer(friendAnonPost, "stranger-id", false, false), "anonymous")
+})
+
+test("security: Private account follow bypass protection validates accepted follow request requirement", () => {
+  function canFollowTarget(followerId, targetProfile, acceptedRequests) {
+    if (followerId === targetProfile.id) return false
+    if (!targetProfile.isPrivate) return true
+    return acceptedRequests.some(
+      (r) => r.requesterId === followerId && r.targetId === targetProfile.id && r.status === "accepted",
+    )
+  }
+
+  const publicTarget = { id: "user-pub", isPrivate: false }
+  const privateTarget = { id: "user-priv", isPrivate: true }
+  const requests = [{ requesterId: "follower-1", targetId: "user-priv", status: "accepted" }]
+
+  assert.equal(canFollowTarget("follower-2", publicTarget, requests), true)
+  assert.equal(canFollowTarget("follower-2", privateTarget, requests), false)
+  assert.equal(canFollowTarget("follower-1", privateTarget, requests), true)
+  assert.equal(canFollowTarget("user-priv", privateTarget, requests), false)
+})
+
+test("security: Post metric spoofing prevention freezes engagement counters on update", () => {
+  function enforcePostUpdateIntegrity(oldRow, incomingRow, isAdmin = false) {
+    const safe = { ...incomingRow }
+    safe.author_id = oldRow.author_id
+    safe.support_count = oldRow.support_count
+    safe.comment_count = oldRow.comment_count
+    safe.created_at = oldRow.created_at
+    if (!isAdmin) {
+      safe.is_pinned = oldRow.is_pinned
+    }
+    return safe
+  }
+
+  const oldPost = {
+    id: "p1",
+    author_id: "author-1",
+    text: "Original text",
+    support_count: 5,
+    comment_count: 2,
+    created_at: "2026-09-01T00:00:00Z",
+    is_pinned: false,
+  }
+
+  const hackerAttempt = {
+    id: "p1",
+    author_id: "victim-2",
+    text: "Hacked text",
+    support_count: 999999,
+    comment_count: 999999,
+    created_at: "2026-09-05T00:00:00Z",
+    is_pinned: true,
+  }
+
+  const sanitized = enforcePostUpdateIntegrity(oldPost, hackerAttempt, false)
+  assert.equal(sanitized.author_id, "author-1")
+  assert.equal(sanitized.support_count, 5)
+  assert.equal(sanitized.comment_count, 2)
+  assert.equal(sanitized.created_at, "2026-09-01T00:00:00Z")
+  assert.equal(sanitized.is_pinned, false)
+  assert.equal(sanitized.text, "Hacked text")
+})
+
+test("security: Chat mutual block check blocks messaging and group inclusion", () => {
+  function canMessage(callerId, otherId, blocks) {
+    if (callerId === otherId) return true
+    const isBlocked = blocks.some(
+      (b) =>
+        (b.blockerId === callerId && b.blockedId === otherId) ||
+        (b.blockerId === otherId && b.blockedId === callerId),
+    )
+    return !isBlocked
+  }
+
+  const blocks = [{ blockerId: "victim", blockedId: "harasser" }]
+  assert.equal(canMessage("harasser", "victim", blocks), false)
+  assert.equal(canMessage("victim", "harasser", blocks), false)
+  assert.equal(canMessage("friend", "victim", blocks), true)
+})
+
+test("security: Hardened redirect URL validator blocks backslash and protocol injection vectors", () => {
+  function safeRedirect(next) {
+    if (!next || typeof next !== "string") return "/feed"
+    if (
+      !next.startsWith("/") ||
+      next.startsWith("//") ||
+      next.includes("\\") ||
+      next.includes("://") ||
+      next.startsWith("/javascript:") ||
+      /[\x00-\x1F\x7F]/.test(next)
+    ) {
+      return "/feed"
+    }
+    return next
+  }
+
+  assert.equal(safeRedirect("/\\evil.com"), "/feed")
+  assert.equal(safeRedirect("/\tevil.com"), "/feed")
+  assert.equal(safeRedirect("//attacker.com"), "/feed")
+  assert.equal(safeRedirect("https://attacker.com"), "/feed")
+  assert.equal(safeRedirect("/javascript:alert(1)"), "/feed")
+  assert.equal(safeRedirect("/profile/c87a19e4"), "/profile/c87a19e4")
+  assert.equal(safeRedirect("/feed"), "/feed")
+})

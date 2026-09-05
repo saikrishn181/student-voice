@@ -54,6 +54,11 @@ export default function AdminVerificationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!currentUser || !currentUser.isAdmin) {
+      setLoading(false)
+      return
+    }
+
     const supabase = createSupabaseBrowserClient()
     
     async function loadData() {
@@ -191,7 +196,7 @@ export default function AdminVerificationsPage() {
     setReports((prev) => prev.filter((r) => r.id !== reportId))
   }
 
-  if (currentUser && !currentUser.isAdmin) {
+  if (!currentUser || !currentUser.isAdmin) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
         <EmptyState
