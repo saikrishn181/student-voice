@@ -4,22 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-const PROVIDERS = {
-  opencode: {
-    name: "OpenCode Zen",
-    defaultBaseUrl: "https://opencode.ai/zen/v1",
-    defaultModel: "nemotron-3.5-lightning-free",
-    envKey: "OPENCODE_API_KEY",
-    authField: "opencode"
-  },
-  astra: {
-    name: "ExperientialLabs Astra",
-    defaultBaseUrl: "https://api.experientiallabs.ai/v1",
-    defaultModel: "gpt-6-astra",
-    envKey: "ASTRA_API_KEY",
-    authField: "astra"
-  }
-};
+const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "openrouter/free";
 
 function readAuthFile() {
   try {
@@ -31,106 +17,64 @@ function readAuthFile() {
   return {};
 }
 
-function getApiKey(providerKey) {
-  const conf = PROVIDERS[providerKey];
-  if (!conf) return "";
-
-  if (process.env[conf.envKey] && process.env[conf.envKey].trim().length > 0) {
-    return process.env[conf.envKey].trim();
+function getApiKey() {
+  if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim().length > 0) {
+    return process.env.OPENROUTER_API_KEY.trim();
   }
-
   const auth = readAuthFile();
-  if (providerKey === "astra") {
-    return (auth?.astra?.key || auth?.experientiallabs?.key || "").trim();
-  }
-  return (auth?.[conf.authField]?.key || "").trim();
+  return (auth?.openrouter?.key || "").trim();
 }
 
-function getBaseUrl(providerKey) {
-  const conf = PROVIDERS[providerKey];
-  if (!conf) return "";
-  if (providerKey === "astra") {
-    return (process.env.ASTRA_BASE_URL || conf.defaultBaseUrl).replace(/\/+$/, "");
-  }
-  return (process.env.OPENCODE_BASE_URL || conf.defaultBaseUrl).replace(/\/+$/, "");
+function getBaseUrl() {
+  return (process.env.OPENROUTER_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
 }
 
-async function listOpencodeModels(apiKey) {
-  const endpoint = `${getBaseUrl("opencode")}/models`;
+async function listModels(apiKey) {
+  const endpoint = `${getBaseUrl()}/models`;
   const res = await fetch(endpoint, {
     headers: { "Authorization": `Bearer ${apiKey}` }
   });
   if (!res.ok) {
     const err = await res.text();
-    console.error(`Failed to fetch OpenCode models (${res.status}): ${err}`);
+    console.error(`Failed to fetch OpenRouter models (${res.status}): ${err}`);
     return;
   }
   const data = await res.json();
-  const models = (data.data || []).map((m) => m.id);
-  const freeModels = models.filter((id) => id.includes("free"));
-  const paidModels = models.filter((id) => !id.includes("free"));
+  const allModels = data.data || [];
+  const freeModels = allModels.filter((m) => m.id.endsWith(":free") || (m.pricing && m.pricing.prompt === "0" && m.pricing.completion === "0"));
+  const popularPaid = allModels.filter((m) => !m.id.endsWith(":free") && (
+    m.id.includes("claude-3.7") ||
+    m.id.includes("claude-3.5-sonnet") ||
+    m.id.includes("gpt-4o") ||
+    m.id.includes("deepseek-r1") ||
+    m.id.includes("deepseek-chat") ||
+    m.id.includes("qwen-2.5-coder")
+  ));
 
-  console.log("=== OpenCode Zen Models ===");
-  console.log("\nFree Models (No billing setup needed):");
+  console.log("=== OpenRouter Models ===");
+  console.log("\nFree Models (Active with no credits required):");
+  console.log("  - openrouter/free (Automatic smart routing to available free models)");
   for (const m of freeModels) {
-    console.log(`  - ${m}`);
+    console.log(`  - ${m.id}`);
   }
-  console.log("\nCredit Models (Requires workspace billing):");
-  for (const m of paidModels.slice(0, 15)) {
-    console.log(`  - ${m}`);
+
+  console.log("\nPopular Premium Models (Requires account credits):");
+  for (const m of popularPaid.slice(0, 15)) {
+    console.log(`  - ${m.id}`);
   }
-  if (paidModels.length > 15) {
-    console.log(`  ... and ${paidModels.length - 15} more credit models`);
-  }
+  console.log(`\nTotal OpenRouter models catalog: ${allModels.length}`);
 }
 
-async function listAstraModels(apiKey) {
-  const endpoint = `${getBaseUrl("astra")}/models`;
-  const res = await fetch(endpoint, {
-    headers: { "Authorization": `Bearer ${apiKey}` }
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error(`Failed to fetch Astra models (${res.status}): ${err}`);
-    return;
-  }
-  const data = await res.json();
-  const models = (data.data || []).map((m) => m.id);
-  const claudeModels = models.filter((m) => m.startsWith("claude"));
-  const codeModels = models.filter((m) => m.includes("code") || m.includes("codestral"));
-  const deepseekModels = models.filter((m) => m.startsWith("deepseek"));
-  const gptModels = models.filter((m) => m.startsWith("gpt") || m.startsWith("o1") || m.startsWith("o3") || m.startsWith("o4"));
-
-  console.log("=== ExperientialLabs Astra Models ===");
-  console.log("\nClaude Models:");
-  for (const m of claudeModels.slice(0, 10)) {
-    console.log(`  - ${m}`);
-  }
-  console.log("\nDedicated Code Models:");
-  for (const m of codeModels.slice(0, 10)) {
-    console.log(`  - ${m}`);
-  }
-  console.log("\nDeepSeek Models:");
-  for (const m of deepseekModels.slice(0, 10)) {
-    console.log(`  - ${m}`);
-  }
-  console.log("\nGPT Models:");
-  for (const m of gptModels.slice(0, 10)) {
-    console.log(`  - ${m}`);
-  }
-  console.log(`\nTotal Astra models available: ${models.length}`);
-}
-
-async function generateCode({ provider, model, prompt, temperature, maxTokens }) {
-  const apiKey = getApiKey(provider);
+async function generateCode({ model, prompt, temperature, maxTokens }) {
+  const apiKey = getApiKey();
   if (!apiKey) {
-    console.error(`Error: No API key found for ${PROVIDERS[provider].name}.`);
-    console.error(`Please set ${PROVIDERS[provider].envKey} or update ~/.local/share/opencode/auth.json.`);
+    console.error("Error: No OpenRouter API key found.");
+    console.error("Please set OPENROUTER_API_KEY environment variable or configure ~/.local/share/opencode/auth.json.");
     process.exit(1);
   }
 
-  const endpoint = `${getBaseUrl(provider)}/chat/completions`;
-  process.stderr.write(`Connecting to ${PROVIDERS[provider].name} (${model})...\n\n`);
+  const endpoint = `${getBaseUrl()}/chat/completions`;
+  process.stderr.write(`Connecting to OpenRouter (${model})...\n\n`);
 
   const reqBody = {
     model,
@@ -148,11 +92,8 @@ async function generateCode({ provider, model, prompt, temperature, maxTokens })
   };
 
   if (typeof temperature === "number") {
-    if (!(provider === "astra" && model.includes("claude-sonnet-4.6") && temperature !== 1.0)) {
-      reqBody.temperature = temperature;
-    }
+    reqBody.temperature = temperature;
   }
-
   if (maxTokens) {
     reqBody.max_tokens = maxTokens;
   }
@@ -161,20 +102,29 @@ async function generateCode({ provider, model, prompt, temperature, maxTokens })
   let attempts = 0;
   while (attempts < 3) {
     attempts++;
-    res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(reqBody)
-    });
-
-    if (res.status === 503 && attempts < 3) {
-      await new Promise((r) => setTimeout(r, 1500));
-      continue;
+    try {
+      res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://github.com/saikrishn181/student-voice",
+          "X-Title": "Student Voice"
+        },
+        body: JSON.stringify(reqBody)
+      });
+      if ((res.status === 503 || res.status === 429) && attempts < 3) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      break;
+    } catch (err) {
+      if (attempts < 3) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      throw err;
     }
-    break;
   }
 
   if (!res.ok) {
@@ -186,12 +136,11 @@ async function generateCode({ provider, model, prompt, temperature, maxTokens })
     } catch {}
 
     console.error(`Error (${res.status}): ${msg}`);
-    if (provider === "opencode" && (msg.includes("CreditsError") || msg.includes("payment method"))) {
-      console.error("\nTip: This OpenCode model requires credits. Free models available include:");
-      console.error("  - nemotron-3.5-lightning-free");
-      console.error("  - nemotron-3-ultra-free");
-      console.error("  - deepseek-v4-flash-free");
-      console.error("  - mimo-v2.5-free");
+    if (msg.includes("credit") || msg.includes("payment") || res.status === 402) {
+      console.error("\nTip: This model requires credits. You can use free models instead:");
+      console.error("  - openrouter/free");
+      console.error("  - nvidia/nemotron-3.5-lightning:free");
+      console.error("  - z-ai/glm-5.2:free");
     }
     process.exit(1);
   }
@@ -228,17 +177,17 @@ async function generateCode({ provider, model, prompt, temperature, maxTokens })
 }
 
 function printHelp() {
-  console.log("Unified AI Code Generator (OpenCode Zen + ExperientialLabs Astra)");
+  console.log("OpenRouter AI Code Generator");
   console.log("\nUsage:");
   console.log("  node scripts/ai.mjs \"<prompt>\"");
-  console.log("  node scripts/ai.mjs --provider astra --model claude-sonnet-4.6 \"<prompt>\"");
-  console.log("  node scripts/ai.mjs --provider opencode --model nemotron-3.5-lightning-free \"<prompt>\"");
+  console.log("  node scripts/ai.mjs --model openrouter/free \"<prompt>\"");
+  console.log("  node scripts/ai.mjs --model nvidia/nemotron-3.5-lightning:free \"<prompt>\"");
+  console.log("  node scripts/ai.mjs --model anthropic/claude-3.5-sonnet \"<prompt>\"");
   console.log("  node scripts/ai.mjs --models");
-  console.log("  node scripts/ai.mjs --provider astra --models");
   console.log("\nNPM Shortcuts:");
-  console.log("  npm run astra -- \"<prompt>\"");
-  console.log("  npm run opencode -- \"<prompt>\"");
-  console.log("  npm run ai -- --models");
+  console.log("  npm run ai -- \"<prompt>\"");
+  console.log("  npm run openrouter -- \"<prompt>\"");
+  console.log("  npm run openrouter -- --models");
 }
 
 async function main() {
@@ -249,46 +198,27 @@ async function main() {
     process.exit(0);
   }
 
-  let provider = "astra";
-  const invokedAs = path.basename(process.argv[1]);
-  if (invokedAs === "opencode.mjs" || process.env.AI_DEFAULT_PROVIDER === "opencode") {
-    provider = "opencode";
-  }
-
-  const providerIdx = args.indexOf("--provider");
-  if (providerIdx !== -1 && args[providerIdx + 1]) {
-    const p = args[providerIdx + 1].toLowerCase();
-    if (p === "opencode" || p === "zen") {
-      provider = "opencode";
-    } else if (p === "astra" || p === "experientiallabs") {
-      provider = "astra";
-    }
-    args.splice(providerIdx, 2);
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.error("Error: No OpenRouter API key configured in auth.json or OPENROUTER_API_KEY.");
+    process.exit(1);
   }
 
   if (args.includes("--models") || args.includes("-l")) {
-    const hasExplicitProvider = process.argv.includes("--provider");
-    if (hasExplicitProvider && provider === "opencode") {
-      const k = getApiKey("opencode");
-      if (k) await listOpencodeModels(k);
-    } else if (hasExplicitProvider && provider === "astra") {
-      const k = getApiKey("astra");
-      if (k) await listAstraModels(k);
-    } else {
-      const ok = getApiKey("opencode");
-      if (ok) await listOpencodeModels(ok);
-      console.log("\n----------------------------------------\n");
-      const ak = getApiKey("astra");
-      if (ak) await listAstraModels(ak);
-    }
+    await listModels(apiKey);
     return;
   }
 
-  let model = PROVIDERS[provider].defaultModel;
+  let model = DEFAULT_MODEL;
   const modelIdx = args.indexOf("--model");
   if (modelIdx !== -1 && args[modelIdx + 1]) {
     model = args[modelIdx + 1];
     args.splice(modelIdx, 2);
+  }
+
+  const providerIdx = args.indexOf("--provider");
+  if (providerIdx !== -1) {
+    args.splice(providerIdx, 2);
   }
 
   let temperature;
@@ -308,11 +238,11 @@ async function main() {
   const prompt = args.join(" ").trim();
   if (!prompt) {
     console.error("Error: Please provide a prompt.");
-    console.error("Example: npm run astra -- \"Write a quicksort in TypeScript\"");
+    console.error("Example: npm run openrouter -- \"Write a quicksort in TypeScript\"");
     process.exit(1);
   }
 
-  await generateCode({ provider, model, prompt, temperature, maxTokens });
+  await generateCode({ model, prompt, temperature, maxTokens });
 }
 
 main().catch((err) => {

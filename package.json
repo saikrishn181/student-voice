@@ -9,8 +9,7 @@
     "lint": "next lint",
     "test": "node --test \"tests/*.test.mjs\"",
     "posts": "node scripts/view-posts.mjs",
-    "opencode": "node scripts/ai.mjs --provider opencode",
-    "astra": "node scripts/ai.mjs --provider astra",
+    "openrouter": "node scripts/ai.mjs",
     "ai": "node scripts/ai.mjs"
   },
   "dependencies": {
