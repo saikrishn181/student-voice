@@ -47,13 +47,13 @@ export function SupportButton({ postId }: { postId: string }) {
       aria-pressed={supported}
       aria-label={supported ? s["support.button.remove"] : s["support.button.support"]}
       className={cn(
-        "gap-1.5 px-3",
-        supported ? "bg-accent-50 text-accent-700" : "text-slate-500",
+        "gap-1.5 px-3 min-h-[44px] touch-target active:scale-95 transition-transform",
+        supported ? "bg-accent-50 text-accent-700" : "text-slate-500 hover:text-slate-800",
         bump && "animate-heart-pop",
       )}
     >
       <Heart size={18} fill={supported ? "currentColor" : "none"} aria-hidden />
-      {compactNumber(post.supportCount)}
+      <span>{compactNumber(post.supportCount)}</span>
     </Button>
   )
 }

@@ -133,10 +133,10 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       } catch {}
     }
 
-    // Show heart pop animation
+    // Show heart pop animation (calibrated to 500ms snappy CSS duration)
     if (heartTimeoutRef.current) clearTimeout(heartTimeoutRef.current)
     setHeartPop(true)
-    heartTimeoutRef.current = setTimeout(() => setHeartPop(false), 850)
+    heartTimeoutRef.current = setTimeout(() => setHeartPop(false), 520)
 
     if (!currentUser) {
       showToast(s["validation.loginRequired"], "error")
@@ -359,47 +359,68 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   }
 
   const meta = (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {post.isPinned ? (
-        <span className="inline-flex items-center gap-1 rounded-pill border border-accent-200 bg-accent-50 px-2.5 py-0.5 text-xs font-semibold text-accent-700">
-          <Pin size={11} aria-hidden /> {s["post.pinnedBadge"]}
-        </span>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      {/* Priority Status & Alerts chunk */}
+      {(post.isPinned || isEvent || hasWarning) ? (
+        <div className="inline-flex items-center gap-1.5">
+          {post.isPinned ? (
+            <span className="inline-flex items-center gap-1 rounded-pill border border-accent-200 bg-accent-50 px-2.5 py-0.5 text-xs font-semibold text-accent-700">
+              <Pin size={11} aria-hidden /> {s["post.pinnedBadge"]}
+            </span>
+          ) : null}
+          {isEvent ? (
+            <span className="inline-flex items-center gap-1 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+              <CalendarClock size={11} aria-hidden /> {s["post.eventBadge"]}
+            </span>
+          ) : null}
+          {hasWarning ? (
+            <span className="inline-flex items-center gap-1 rounded-pill border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+              <TriangleAlert size={11} aria-hidden /> {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
+            </span>
+          ) : null}
+        </div>
       ) : null}
-      {isEvent ? (
-        <span className="inline-flex items-center gap-1 rounded-pill border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-          <CalendarClock size={11} aria-hidden /> {s["post.eventBadge"]}
-        </span>
-      ) : null}
-      {hasWarning ? (
-        <span className="inline-flex items-center gap-1 rounded-pill border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-          <TriangleAlert size={11} aria-hidden /> {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
-        </span>
-      ) : null}
+
+      {/* Region & Context chunk */}
       <RegionTag state={post.state} />
-      {post.hashtags.length > 0 &&
-        post.hashtags.map((tag) => (
-          <Link
-            key={tag}
-            href={`/tag/${encodeURIComponent(tag)}`}
-            className="rounded-pill border border-primary-100 bg-primary-50/70 px-2.5 py-0.5 text-xs font-semibold text-primary-700 transition-colors hover:border-primary-300 hover:bg-primary-100"
-          >
-            #{tag}
-          </Link>
-        ))}
+
+      {/* Topic tags chunk */}
+      {post.hashtags.length > 0 ? (
+        <div className="inline-flex flex-wrap items-center gap-1.5">
+          {post.hashtags.map((tag) => (
+            <Link
+              key={tag}
+              href={`/tag/${encodeURIComponent(tag)}`}
+              className="rounded-pill border border-primary-100 bg-primary-50/70 px-2.5 py-0.5 text-xs font-semibold text-primary-700 transition-colors hover:border-primary-300 hover:bg-primary-100"
+            >
+              #{tag}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Collective Solidarity Indicator for high-traction posts */}
+      {post.supportCount >= 10 ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-accent-100 bg-accent-50/80 px-2 py-0.5 text-[11px] font-semibold text-accent-800">
+          <Users size={11} className="text-accent-600" aria-hidden />
+          <span>{post.supportCount}+ Standing Together</span>
+        </span>
+      ) : null}
+
       <span className="text-body-sm text-slate-400">·</span>
-      <span className="text-body-sm text-slate-400" title={new Date(post.createdAt).toLocaleString()}>
+      <span className="text-body-sm text-slate-500" title={new Date(post.createdAt).toLocaleString()}>
         {timeAgo(post.createdAt)}
       </span>
       {post.editedAt ? (
         <>
           <span className="text-body-sm text-slate-400">·</span>
-          <span className="text-body-sm text-slate-400">{s["post.edited"]}</span>
+          <span className="text-body-sm text-slate-500">{s["post.edited"]}</span>
         </>
       ) : null}
       {post.viewCount > 0 ? (
         <>
           <span className="text-body-sm text-slate-400">·</span>
-          <span className="inline-flex items-center gap-1 text-body-sm text-slate-400">
+          <span className="inline-flex items-center gap-1 text-body-sm text-slate-500">
             <Eye size={13} aria-hidden /> {post.viewCount}
           </span>
         </>

@@ -53,17 +53,17 @@ export function BannedUserScreen({ user }: BannedUserScreenProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <h1 className="text-h2 font-bold text-white">Account Suspended</h1>
+            <h1 className="text-h2 font-bold text-white">Account Under Safety Review</h1>
             <p className="text-body-sm text-slate-300">
-              Your account has been restricted due to repeated NSFW and community guideline violations.
+              Your posting access is temporarily paused to maintain a respectful, safe campus environment for all students.
             </p>
           </div>
 
           {/* Strikes visualization */}
           <div className="flex w-full flex-col gap-2.5 rounded-card border border-slate-800 bg-slate-950/80 p-4">
             <div className="flex items-center justify-between text-xs font-semibold">
-              <span className="text-slate-400">Violation Strikes</span>
-              <span className="text-red-400 font-bold">{strikes} / 10 Strikes</span>
+              <span className="text-slate-400">Community Safety Status</span>
+              <span className="text-red-400 font-bold">{strikes} / 10 Notice Points</span>
             </div>
             {/* Strike indicator bars */}
             <div className="grid grid-cols-10 gap-1">
@@ -82,22 +82,21 @@ export function BannedUserScreen({ user }: BannedUserScreenProps) {
           <div className="flex w-full flex-col gap-3 rounded-card border border-red-500/20 bg-red-950/20 p-4 text-left text-xs">
             <div className="flex items-center gap-2 font-semibold text-red-400">
               <AlertTriangle size={15} />
-              <span>{isPermanent ? "Permanent Account Ban" : `Temporary Ban (${remainingDays} days remaining)`}</span>
+              <span>{isPermanent ? "Account Suspended" : `Temporary Restriction (${remainingDays} days remaining)`}</span>
             </div>
             <p className="text-slate-300">
               {user.banReason ??
-                "This account reached 10 strikes for posting NSFW, abusive, or inappropriate content."}
+                "This account received community reports regarding safety and guideline compliance."}
             </p>
             {!isPermanent && formattedUntil ? (
               <p className="text-slate-400">
-                Suspension lifts on: <strong className="text-white">{formattedUntil}</strong>
+                Access automatically restores on: <strong className="text-white">{formattedUntil}</strong>
               </p>
             ) : null}
           </div>
 
           <div className="text-body-sm text-slate-400">
-            Krantind is dedicated to maintaining a safe, productive space for students across India. Banned accounts
-            cannot post, comment, message, or participate in campus discussions.
+            Krantind believes in restorative community moderation. If you believe this notice was issued in error or want to appeal with our student safety board, you can submit an instant review below.
           </div>
 
           {/* Actions */}

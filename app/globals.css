@@ -9,12 +9,12 @@
   }
 
   body {
-    /* Warm paper background with a faint warm glow at the top — like a
-       notebook page under a study lamp, not flat AI-grey. */
-    background-color: #faf7f2;
+    /* Warm paper background with a subtle, non-distracting ambient warmth —
+       like an editorial student publication, low optical fatigue. */
+    background-color: #fbf9f6;
     background-image:
-      radial-gradient(900px 480px at 85% -5%, rgba(237, 95, 42, 0.06), transparent 65%),
-      radial-gradient(700px 420px at -10% 0%, rgba(31, 78, 120, 0.05), transparent 60%);
+      radial-gradient(800px 380px at 80% -5%, rgba(237, 95, 42, 0.04), transparent 60%),
+      radial-gradient(600px 320px at -10% 0%, rgba(31, 78, 120, 0.035), transparent 55%);
     color: #24201b;
   }
 
@@ -91,7 +91,16 @@
 }
 
 .animate-double-tap-heart {
-  animation: double-tap-heart 800ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: double-tap-heart 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Enforce Fitts's Law 44px minimum touch targets on mobile devices */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Slow pulse for breaking campus issue banners */

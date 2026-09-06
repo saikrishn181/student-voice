@@ -46,9 +46,10 @@ const config: Config = {
           900: "#7d2816",
         },
         // Paper — warm background (cream) and warm ink for text
-        paper: "#FAF7F2",
+        paper: "#FBF9F6",
         "paper-deep": "#F2ECE1",
         ink: "#24201B",
+        "ink-muted": "#4A4239",
         // Success / info / neutral used by toasts & badges
         success: "#16a34a",
         info: "#2563eb",
