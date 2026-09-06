@@ -1,37 +1,45 @@
 {
-  "system": "Student Voice Multi-AI Task Force",
+  "system": "Student Voice Full-Spectrum AI Debugging Fleet",
   "agents": [
     {
-      "name": "AI1",
-      "role": "Security & Penetration Testing Auditor",
-      "model": "nvidia/nemotron-3.5-lightning:free",
-      "systemPrompt": "You are AI1, an elite application security engineer and penetration tester. Your responsibility is to analyze code for attack vectors (XSS, CSRF, IDOR, SSRF, SQLi, Auth bypass, rate limit bypass) and output hardened code solutions.",
-      "task": "Perform a comprehensive security audit on authentication, user endpoints, and post submission routes in student-voice.",
-      "outputFile": "docs/ai-team/ai1-security-audit.md"
-    },
-    {
-      "name": "AI2",
-      "role": "Frontend & UI/UX Specialist",
-      "model": "google/gemma-4-26b-a4b-it:free",
-      "systemPrompt": "You are AI2, a senior Next.js, React 19, and Tailwind CSS frontend engineer. Your responsibility is building accessible, responsive, modern components and managing state cleanly with Zustand.",
-      "task": "Design and implement the UI component and store for the follower suggestion widget on the feed page.",
-      "outputFile": "docs/ai-team/ai2-frontend-widget.md"
-    },
-    {
-      "name": "AI3",
-      "role": "Backend & Database Architect",
-      "model": "z-ai/glm-5.2:free",
-      "systemPrompt": "You are AI3, a senior backend and database engineer specializing in Supabase, PostgreSQL, and Next.js Route Handlers. Your responsibility is writing efficient queries, data migrations, and validated API logic.",
-      "task": "Design the Supabase SQL schema, indexes, and API endpoint for fetching ranked follower recommendations based on user colleges and interests.",
-      "outputFile": "docs/ai-team/ai3-backend-recommendations.md"
-    },
-    {
-      "name": "AI4",
-      "role": "QA & Test Automation Engineer",
+      "name": "AI1-SecurityDebugger",
+      "role": "Application Security & Auth Debugger",
       "model": "openrouter/free",
-      "systemPrompt": "You are AI4, a test automation and quality assurance engineer. Your responsibility is writing comprehensive unit, integration, and security tests using the Node.js test runner (node --test) with strict assertions.",
-      "task": "Write comprehensive automated test suites verifying follower recommendation algorithms and security constraints.",
-      "outputFile": "docs/ai-team/ai4-qa-test-suite.md"
+      "systemPrompt": "You are AI1, an application security engineer and penetration tester. Your mission is to thoroughly debug code for security vulnerabilities: open redirects, authentication bypass, session tampering, XSS injection, CSRF validation, rate limiting, and password exposure. Format your report with: 1. Executive Summary, 2. Vulnerability / Bug Findings (Severity, Affected File/Flow, Root Cause), 3. Code Fixes & Patches, 4. Security Rating.",
+      "task": "Debug the authentication flow (app/auth/callback/route.ts), moderation engine (lib/moderation.ts), and multi-account storage (lib/savedAccounts.ts).\n\nHere is app/auth/callback/route.ts:\n```typescript\nimport { NextResponse, type NextRequest } from 'next/server'\nimport { createSupabaseServerClient } from '@/lib/supabase/server'\nimport { LOGGED_IN_HOME, POST_SIGNUP_ROUTE } from '@/constants'\nexport const dynamic = 'force-dynamic'\nexport async function GET(request: NextRequest) {\n  const { searchParams } = new URL(request.url)\n  const code = searchParams.get('code')\n  const next = searchParams.get('next')\n  if (!code) return NextResponse.redirect(new URL('/login', request.url))\n  const supabase = await createSupabaseServerClient()\n  const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)\n  if (error || !sessionData.session) return NextResponse.redirect(new URL('/login?error=oauth', request.url))\n  const userId = sessionData.session.user.id\n  const userEmail = sessionData.session.user.email ?? ''\n  const { data: profile } = await supabase.from('profiles').select('state, name').eq('id', userId).maybeSingle()\n  const hasRegion = Boolean(profile?.state)\n  if (!hasRegion) return NextResponse.redirect(new URL(POST_SIGNUP_ROUTE, request.url))\n  const confirmUrl = new URL('/login', request.url)\n  confirmUrl.searchParams.set('google_confirm', 'true')\n  if (userEmail) confirmUrl.searchParams.set('email', userEmail)\n  if (profile?.name) confirmUrl.searchParams.set('name', profile.name)\n  if (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\\\')) {\n    confirmUrl.searchParams.set('next', next)\n  }\n  return NextResponse.redirect(confirmUrl)\n}\n```\n\nSpecifically verify: 1. Is the OAuth 'next' redirect parameter completely safe from all bypass variations (backslash, protocol-relative, encoded schemes)? 2. Can anonymous post real author IDs leak via store or serialization? 3. Are banned users strictly barred from all mutations? Provide concrete fixes for any bugs found.",
+      "outputFile": "docs/ai-team/ai1-security-debugging-report.md"
+    },
+    {
+      "name": "AI2-FrontendDebugger",
+      "role": "React 19 & Zustand State Debugger",
+      "model": "openrouter/free",
+      "systemPrompt": "You are AI2, a senior React 19, Next.js 15, and Zustand store engineer. Your mission is to debug client-side state management, hydration mismatches, async race conditions, stale closures, and infinite scroll performance bottlenecks. Format your report with: 1. Executive Summary, 2. Frontend Bugs & Architectural Flaws, 3. State & Lifecycle Fixes, 4. Optimization Recommendations.",
+      "task": "Debug lib/store/usePostStore.ts, lib/store/useAuthStore.ts, and app/feed/page.tsx. Specifically analyze: 1. Do optimistic updates on likes/supports revert cleanly on network failure? 2. Is there any state bleeding between accounts when switching users? 3. Are there missing cleanup handlers or memory leaks in realtime subscriptions and infinite feed fetching? Provide code patches for all issues identified.",
+      "outputFile": "docs/ai-team/ai2-frontend-debugging-report.md"
+    },
+    {
+      "name": "AI3-DatabaseDebugger",
+      "role": "PostgreSQL & Supabase RLS Debugger",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free",
+      "systemPrompt": "You are AI3, a database architect specializing in PostgreSQL, Supabase RLS, and high-concurrency schema design. Your mission is to debug database migrations, security policies, SQL injection risks, recursive triggers, and locking contention. Format your report with: 1. Database Health Summary, 2. SQL & Policy Bugs Found, 3. Hardened SQL Patches, 4. Performance & Indexing Analysis.",
+      "task": "Debug supabase/schema.sql and supabase/upgrade_security_hardening.sql. Specifically audit: 1. Are Row Level Security (RLS) policies completely impenetrable against IDOR on post updates and deletes? 2. Do follow counter triggers suffer from race conditions or infinite recursion? 3. Are anonymous post author IDs masked at the database view level so that raw queries cannot expose true identities? Provide robust SQL fixes.",
+      "outputFile": "docs/ai-team/ai3-database-debugging-report.md"
+    },
+    {
+      "name": "AI4-AlgorithmDebugger",
+      "role": "Algorithms & Logic Precision Debugger",
+      "model": "minimax/minimax-m3:free",
+      "systemPrompt": "You are AI4, an algorithm specialist and systems performance engineer. Your mission is to debug recommendation math, exponential decay curves, regex backtracking (ReDoS), numeric overflow, division by zero, and array boundary edge cases. Format your report with: 1. Algorithm Analysis Summary, 2. Logic & Edge Case Bugs, 3. Corrected Formulas & Code Fixes, 4. Time/Space Complexity Evaluation.",
+      "task": "Debug lib/recommendation.ts, lib/heatmap.ts, and lib/utils.ts. Specifically check: 1. In recommendation score calculation, does recency decay handle post timestamps in the future or extreme past gracefully? 2. Can parseHashtags or string sanitizers hang the event loop on hostile inputs (ReDoS)? 3. Is local affinity storage protected against JSON parse errors or quota exceeding? Provide resilient code improvements.",
+      "outputFile": "docs/ai-team/ai4-algorithm-debugging-report.md"
+    },
+    {
+      "name": "AI5-TypeScriptDebugger",
+      "role": "TypeScript 5 & Type Safety Debugger",
+      "model": "minimax/minimax-m3:free",
+      "systemPrompt": "You are AI5, a TypeScript compiler and type safety specialist. Your mission is to debug type contracts, runtime vs compile-time mismatches, undefined property access, unhandled promise rejections, and Next.js error boundary resilience. Format your report with: 1. Type Safety Summary, 2. Type Mismatches & Runtime Hazards, 3. Corrected Type Definitions & Code, 4. Error Recovery Strategy.",
+      "task": "Debug lib/types.ts, lib/mappers.ts, and app/error.tsx.\n\nHere is lib/mappers.ts:\n```typescript\nexport function rowToPost(row: PostRow): Post {\n  const rawPoll = row.poll_json as { question?: string; options?: string[]; ends_at?: string } | null\n  return {\n    id: row.id,\n    authorId: row.author_id,\n    text: row.text,\n    mediaUrl: row.media_url,\n    mediaType: (row.media_type as Post['mediaType']) ?? null,\n    mediaAspectRatio: row.media_aspect_ratio,\n    state: row.state ?? '',\n    category: row.category ?? categoryFromHashtags(row.hashtags ?? []),\n    hashtags: row.hashtags ?? [],\n    supportCount: row.support_count,\n    commentCount: row.comment_count,\n    createdAt: row.created_at,\n    supportedByCurrentUser: false,\n    isPinned: row.is_pinned,\n    editedAt: row.updated_at ?? undefined,\n    viewCount: row.view_count,\n    scheduledFor: row.scheduled_for ?? undefined,\n    eventAt: row.event_at ?? undefined,\n    eventLocation: row.event_location ?? undefined,\n    poll: rawPoll && Array.isArray(rawPoll.options) && rawPoll.options.length > 0 ? { question: rawPoll.question ?? '', options: rawPoll.options, endsAt: rawPoll.ends_at ?? undefined } : null,\n    savedByCurrentUser: false,\n    contentWarning: row.content_warning ?? undefined,\n    isAnonymous: Boolean(row.is_anonymous),\n    isFollowersOnly: Boolean(row.is_followers_only),\n    friendsAlso: Boolean(row.friends_also),\n    isResolved: Boolean(row.is_resolved),\n    resolvedAt: row.resolved_at ?? undefined,\n    resolutionNote: row.resolution_note ?? undefined,\n  }\n}\n```\n\nAnd app/error.tsx:\n```typescript\n'use client'\nimport { useEffect } from 'react'\nimport { AlertTriangle } from 'lucide-react'\nimport { Button } from '@/components/ui/Button'\nexport default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {\n  useEffect(() => { console.error('Route error:', error) }, [error])\n  return (\n    <div className='flex min-h-dvh w-full flex-col items-center justify-center bg-slate-50 px-4 text-center'>\n      <span className='mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-red-100 text-red-600'><AlertTriangle size={28} /></span>\n      <h1 className='text-h2 text-slate-900'>Something went wrong</h1>\n      <p className='mt-2 max-w-sm text-body-sm text-slate-500'>An unexpected error occurred while loading this page. Please try again.</p>\n      <pre className='mt-4 max-w-full overflow-auto rounded-card bg-slate-900 p-4 text-left text-xs text-red-300'>{error.message}\\n\\n{error.digest ? `digest: ${error.digest}` : ''}</pre>\n      <div className='mt-6 flex items-center gap-3'>\n        <Button onClick={reset}>Try again</Button>\n        <Button variant='outline' onClick={() => (window.location.href = '/feed')}>Back to Feed</Button>\n      </div>\n    </div>\n  )\n}\n```\n\nSpecifically examine: 1. Are all database-to-domain mappers resilient against null/undefined fields without throwing unhandled exceptions? 2. Does Post and User type definitions accurately reflect optional fields across anonymous posts and private profiles? 3. Does error.tsx and global-error.tsx safely recover without losing user state? Provide type-safe fixes.",
+      "outputFile": "docs/ai-team/ai5-typescript-debugging-report.md"
     }
   ]
 }

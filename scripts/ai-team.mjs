@@ -41,7 +41,8 @@ async function callModel(apiKey, model, systemPrompt, userPrompt) {
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
           ],
-          temperature: 0.2
+          temperature: 0.2,
+          stream: true
         })
       });
 
@@ -60,9 +61,37 @@ async function callModel(apiKey, model, systemPrompt, userPrompt) {
         return { error: `HTTP ${res.status}: ${msg}` };
       }
 
-      const json = await res.json();
-      const content = json.choices?.[0]?.message?.content || "";
-      return { content: content.trim() };
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(":")) continue;
+          if (trimmed === "data: [DONE]") continue;
+          if (trimmed.startsWith("data: ")) {
+            try {
+              const parsed = JSON.parse(trimmed.slice(6));
+              const delta = parsed.choices?.[0]?.delta;
+              const text = delta?.content || "";
+              if (text) {
+                fullContent += text;
+              }
+            } catch {}
+          }
+        }
+      }
+
+      return { content: fullContent.trim() };
     } catch (err) {
       if (attempts < 3) {
         await new Promise((r) => setTimeout(r, 2000));
@@ -194,6 +223,12 @@ async function main() {
     }
     console.log("\n=== Output ===\n");
     console.log(res.content);
+    if (target.outputFile) {
+      const outPath = path.resolve(process.cwd(), target.outputFile);
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, res.content + "\n");
+      console.log(`\nOutput written to ${target.outputFile}`);
+    }
     return;
   }
 
