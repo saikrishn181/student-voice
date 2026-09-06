@@ -15,7 +15,7 @@ const PROVIDERS = {
   astra: {
     name: "ExperientialLabs Astra",
     defaultBaseUrl: "https://api.experientiallabs.ai/v1",
-    defaultModel: "claude-sonnet-4.6",
+    defaultModel: "gpt-6-astra",
     envKey: "ASTRA_API_KEY",
     authField: "astra"
   }

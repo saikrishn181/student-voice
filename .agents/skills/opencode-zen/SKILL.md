@@ -10,7 +10,7 @@ This skill allows Antigravity and the user to leverage OpenCode Zen and Experien
 ## 1. ExperientialLabs Astra Provider
 - Endpoint: `https://api.experientiallabs.ai/v1`
 - Credentials: Stored in `~/.local/share/opencode/auth.json` (astra key) or `ASTRA_API_KEY`
-- Default Model: `claude-sonnet-4.6`
+- Default Model: `gpt-6-astra`
 - Supported Models:
   - Claude: `claude-sonnet-4.6`, `claude-sonnet-4`, `claude-3-haiku`, `claude-opus-4.6`
   - Dedicated Code: `codestral-2508`, `qwen3-coder-flash`, `gpt-5.2-codex`, `kat-coder-pro-v2.5`

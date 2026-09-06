@@ -4,7 +4,7 @@
 All substantive code generation, architectural implementations, and refactoring in this repository should leverage the user's configured API models:
 
 1. **ExperientialLabs Astra** (Default engine):
-   - CLI execution: `node scripts/ai.mjs --provider astra --model claude-sonnet-4.6 "<prompt>"`
+   - CLI execution: `node scripts/ai.mjs --provider astra --model gpt-6-astra "<prompt>"`
    - Fast code completions: `node scripts/ai.mjs --provider astra --model codestral-2508 "<prompt>"`
    - Reasoning: `node scripts/ai.mjs --provider astra --model deepseek-v4-pro "<prompt>"`
 
