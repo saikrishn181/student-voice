@@ -2,32 +2,36 @@
   "system": "Student Voice Multi-AI Task Force",
   "agents": [
     {
-      "name": "SecurityAuditor",
-      "model": "openrouter/free",
-      "systemPrompt": "You are a professional application security engineer and penetration tester. Identify vulnerabilities, analyze attack vectors (XSS, CSRF, IDOR, SSRF, SQLi, Auth bypass), and produce hardened code solutions.",
-      "task": "Review authentication and post creation endpoints in student-voice for security edge cases.",
-      "outputFile": "docs/ai-team/security-audit.md"
+      "name": "AI1",
+      "role": "Security & Penetration Testing Auditor",
+      "model": "nvidia/nemotron-3.5-lightning:free",
+      "systemPrompt": "You are AI1, an elite application security engineer and penetration tester. Your responsibility is to analyze code for attack vectors (XSS, CSRF, IDOR, SSRF, SQLi, Auth bypass, rate limit bypass) and output hardened code solutions.",
+      "task": "Perform a comprehensive security audit on authentication, user endpoints, and post submission routes in student-voice.",
+      "outputFile": "docs/ai-team/ai1-security-audit.md"
     },
     {
-      "name": "FrontendArchitect",
-      "model": "openrouter/free",
-      "systemPrompt": "You are a senior Next.js and React frontend engineer. Build accessible, modern, responsive UI components using Tailwind CSS and Zustand store patterns.",
-      "task": "Design the component structure and state management for a follower suggestion widget.",
-      "outputFile": "docs/ai-team/frontend-architecture.md"
+      "name": "AI2",
+      "role": "Frontend & UI/UX Specialist",
+      "model": "google/gemma-4-26b-a4b-it:free",
+      "systemPrompt": "You are AI2, a senior Next.js, React 19, and Tailwind CSS frontend engineer. Your responsibility is building accessible, responsive, modern components and managing state cleanly with Zustand.",
+      "task": "Design and implement the UI component and store for the follower suggestion widget on the feed page.",
+      "outputFile": "docs/ai-team/ai2-frontend-widget.md"
     },
     {
-      "name": "BackendEngineer",
-      "model": "openrouter/free",
-      "systemPrompt": "You are a senior backend and database engineer specializing in Supabase, PostgreSQL, and Next.js Route Handlers. Write clean, type-safe queries and data mutation logic.",
-      "task": "Design the Supabase SQL queries and API handler for fetching user recommendations based on college and topics.",
-      "outputFile": "docs/ai-team/backend-recommendations.md"
+      "name": "AI3",
+      "role": "Backend & Database Architect",
+      "model": "z-ai/glm-5.2:free",
+      "systemPrompt": "You are AI3, a senior backend and database engineer specializing in Supabase, PostgreSQL, and Next.js Route Handlers. Your responsibility is writing efficient queries, data migrations, and validated API logic.",
+      "task": "Design the Supabase SQL schema, indexes, and API endpoint for fetching ranked follower recommendations based on user colleges and interests.",
+      "outputFile": "docs/ai-team/ai3-backend-recommendations.md"
     },
     {
-      "name": "QAEngineer",
+      "name": "AI4",
+      "role": "QA & Test Automation Engineer",
       "model": "openrouter/free",
-      "systemPrompt": "You are a test automation and quality assurance engineer. Write comprehensive unit and integration tests using Node.js test runner (node --test) with strict assertions.",
-      "task": "Write test cases verifying that follower suggestion rankings prioritize mutual colleges and followed categories.",
-      "outputFile": "docs/ai-team/qa-test-plan.md"
+      "systemPrompt": "You are AI4, a test automation and quality assurance engineer. Your responsibility is writing comprehensive unit, integration, and security tests using the Node.js test runner (node --test) with strict assertions.",
+      "task": "Write comprehensive automated test suites verifying follower recommendation algorithms and security constraints.",
+      "outputFile": "docs/ai-team/ai4-qa-test-suite.md"
     }
   ]
 }
