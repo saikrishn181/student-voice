@@ -74,3 +74,50 @@ export function categoryFromHashtags(tags: string[]): Category {
   if (/(exam|stud|academic|study|class|syllabus|marks)/.test(joined)) return "Exams"
   return "Academic"
 }
+
+/**
+ * Strict open-redirect guard. Ensures redirect URLs are strictly internal relative paths.
+ * Blocks protocol-relative (//evil.com), backslash tricks (/\\evil.com), control characters,
+ * and dangerous protocols (javascript:, data:, vbscript:).
+ */
+export function getSafeRedirect(next: string | null | undefined, fallback = "/feed"): string {
+  if (!next || typeof next !== "string") return fallback
+  const trimmed = next.trim()
+  if (
+    !trimmed.startsWith("/") ||
+    trimmed.startsWith("//") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("://") ||
+    trimmed.toLowerCase().startsWith("/javascript:") ||
+    trimmed.toLowerCase().startsWith("/data:") ||
+    trimmed.toLowerCase().startsWith("/vbscript:") ||
+    /[\x00-\x1F\x7F]/.test(trimmed)
+  ) {
+    return fallback
+  }
+  return trimmed
+}
+
+/**
+ * Validates media URLs to block malicious schemes (javascript:, vbscript:, data:text/html, etc.).
+ */
+export function isSafeMediaUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false
+  const trimmed = url.trim().toLowerCase()
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("vbscript:") ||
+    trimmed.startsWith("data:text/html") ||
+    trimmed.startsWith("data:application/")
+  ) {
+    return false
+  }
+  return (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:image/") ||
+    trimmed.startsWith("data:video/") ||
+    (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.includes("\\"))
+  )
+}

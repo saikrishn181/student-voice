@@ -14,7 +14,7 @@ import { useCallback, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Skeleton } from "@/components/ui/Skeleton"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
+import { cn, isSafeMediaUrl } from "@/lib/utils"
 import type { MediaType } from "@/lib/types"
 
 interface MediaDisplayProps {
@@ -31,7 +31,7 @@ function splitMediaUrls(mediaUrl: string): string[] {
   return mediaUrl
     .split(" ")
     .map((u) => u.trim())
-    .filter(Boolean)
+    .filter((u) => u.length > 0 && isSafeMediaUrl(u))
 }
 
 export function MediaDisplay({

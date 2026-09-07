@@ -9,6 +9,8 @@ import {
   compactNumber,
   parseHashtags,
   categoryFromHashtags,
+  getSafeRedirect,
+  isSafeMediaUrl,
 } from "./utils-runner.mjs"
 
 test("cn merges tailwind classes without conflicts", () => {
@@ -79,3 +81,30 @@ test("categoryFromHashtags maps keywords to categories", () => {
   assert.equal(categoryFromHashtags(["exams", "marks"]), "Exams")
   assert.equal(categoryFromHashtags(["hostel"]), "Academic")
 })
+
+test("getSafeRedirect prevents open redirects, backslashes, and dangerous schemes", () => {
+  assert.equal(getSafeRedirect(null), "/feed")
+  assert.equal(getSafeRedirect(""), "/feed")
+  assert.equal(getSafeRedirect("https://attacker.com"), "/feed")
+  assert.equal(getSafeRedirect("//attacker.com"), "/feed")
+  assert.equal(getSafeRedirect("/\\attacker.com"), "/feed")
+  assert.equal(getSafeRedirect("javascript:alert(1)"), "/feed")
+  assert.equal(getSafeRedirect("/javascript:alert(1)"), "/feed")
+  assert.equal(getSafeRedirect("/data:text/html,hack"), "/feed")
+  assert.equal(getSafeRedirect("/feed\r\nevil.com"), "/feed")
+  assert.equal(getSafeRedirect("/feed\tevil.com"), "/feed")
+  assert.equal(getSafeRedirect("/profile/c87a19e4"), "/profile/c87a19e4")
+  assert.equal(getSafeRedirect("/feed?tag=fees"), "/feed?tag=fees")
+})
+
+test("isSafeMediaUrl validates safe image and video sources", () => {
+  assert.equal(isSafeMediaUrl(null), false)
+  assert.equal(isSafeMediaUrl(""), false)
+  assert.equal(isSafeMediaUrl("javascript:alert(1)"), false)
+  assert.equal(isSafeMediaUrl("data:text/html;base64,PHNjcmlwdD4="), false)
+  assert.equal(isSafeMediaUrl("https://example.supabase.co/storage/v1/object/public/post-media/1.jpg"), true)
+  assert.equal(isSafeMediaUrl("blob:http://localhost:3000/1234"), true)
+  assert.equal(isSafeMediaUrl("/logo.png"), true)
+  assert.equal(isSafeMediaUrl("//attacker.com/evil.jpg"), false)
+})
+

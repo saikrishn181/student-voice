@@ -4,6 +4,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { LOGGED_IN_HOME, POST_SIGNUP_ROUTE } from "@/constants"
+import { getSafeRedirect } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -45,8 +46,11 @@ export async function GET(request: NextRequest) {
   confirmUrl.searchParams.set("google_confirm", "true")
   if (userEmail) confirmUrl.searchParams.set("email", userEmail)
   if (profile?.name) confirmUrl.searchParams.set("name", profile.name)
-  if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) {
-    confirmUrl.searchParams.set("next", next)
+  if (next) {
+    const safeNext = getSafeRedirect(next, "")
+    if (safeNext) {
+      confirmUrl.searchParams.set("next", safeNext)
+    }
   }
 
   return NextResponse.redirect(confirmUrl)

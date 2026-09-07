@@ -32,13 +32,37 @@ export interface PostRow {
   created_at: string
 }
 
-export function rowToPost(row: PostRow): Post {
+export interface ViewerContext {
+  currentUserId?: string | null
+  isAdmin?: boolean
+  isFriend?: boolean
+}
+
+export function sanitizePostForViewer(
+  post: Post,
+  currentUserId?: string | null,
+  isAdmin = false,
+  isFriend = false,
+): Post {
+  if (!post.isAnonymous) return post
+  const isSelf = Boolean(currentUserId && post.authorId === currentUserId)
+  if (isSelf || isAdmin || (post.friendsAlso && isFriend)) {
+    return post
+  }
+  return {
+    ...post,
+    authorId: "anonymous",
+  }
+}
+
+export function rowToPost(row: PostRow, viewerContext?: ViewerContext | number): Post {
+  const context = typeof viewerContext === "object" && viewerContext !== null ? viewerContext : undefined
   const rawPoll = row.poll_json as {
     question?: string
     options?: string[]
     ends_at?: string
   } | null
-  return {
+  const post: Post = {
     id: row.id,
     authorId: row.author_id,
     text: row.text,
@@ -75,6 +99,13 @@ export function rowToPost(row: PostRow): Post {
     resolvedAt: row.resolved_at ?? undefined,
     resolutionNote: row.resolution_note ?? undefined,
   }
+
+  return sanitizePostForViewer(
+    post,
+    context?.currentUserId,
+    context?.isAdmin,
+    context?.isFriend,
+  )
 }
 
 export function rowToUser(row: Profile): User {

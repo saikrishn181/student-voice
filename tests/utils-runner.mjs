@@ -73,3 +73,43 @@ export function categoryFromHashtags(tags) {
   if (/(exam|stud|academic|study|class|syllabus|marks)/.test(joined)) return "Exams"
   return "Academic"
 }
+
+export function getSafeRedirect(next, fallback = "/feed") {
+  if (!next || typeof next !== "string") return fallback
+  const trimmed = next.trim()
+  if (
+    !trimmed.startsWith("/") ||
+    trimmed.startsWith("//") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("://") ||
+    trimmed.toLowerCase().startsWith("/javascript:") ||
+    trimmed.toLowerCase().startsWith("/data:") ||
+    trimmed.toLowerCase().startsWith("/vbscript:") ||
+    /[\x00-\x1F\x7F]/.test(trimmed)
+  ) {
+    return fallback
+  }
+  return trimmed
+}
+
+export function isSafeMediaUrl(url) {
+  if (!url || typeof url !== "string") return false
+  const trimmed = url.trim().toLowerCase()
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("vbscript:") ||
+    trimmed.startsWith("data:text/html") ||
+    trimmed.startsWith("data:application/")
+  ) {
+    return false
+  }
+  return (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:image/") ||
+    trimmed.startsWith("data:video/") ||
+    (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.includes("\\"))
+  )
+}
+

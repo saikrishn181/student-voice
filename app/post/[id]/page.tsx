@@ -63,7 +63,10 @@ export default function PostDetailPage({
         .select("*")
         .eq("post_id", params.id)
         .order("created_at", { ascending: true })
-      const mappedPost = rowToPost(row as unknown as PostRow)
+      const mappedPost = rowToPost(row as unknown as PostRow, {
+        currentUserId: currentUser?.id,
+        isAdmin: currentUser?.isAdmin,
+      })
       const mappedComments = (commentRows ?? []).map((r) => rowToComment(r as unknown as CommentRow))
       usePostStore.setState((s) => ({
         posts: s.posts.some((p) => p.id === row.id) ? s.posts : [mappedPost, ...s.posts],

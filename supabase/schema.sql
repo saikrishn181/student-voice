@@ -306,6 +306,42 @@ create policy "Posts visibility policy"
     end
   );
 
+-- Secure view for posts that guarantees column-level author masking for anonymous posts
+create or replace view public.posts_secure_view as
+select
+  p.id,
+  case
+    when p.is_anonymous is true
+      and p.author_id <> auth.uid()
+      and not exists (select 1 from public.profiles pr where pr.id = auth.uid() and pr.is_admin = true)
+      and not (p.friends_also and exists (select 1 from public.follows f where f.follower_id = auth.uid() and f.following_id = p.author_id))
+    then '00000000-0000-0000-0000-000000000000'::uuid
+    else p.author_id
+  end as author_id,
+  p.text,
+  p.media_url,
+  p.media_type,
+  p.media_aspect_ratio,
+  p.state,
+  p.district,
+  p.category,
+  p.hashtags,
+  p.support_count,
+  p.comment_count,
+  p.is_pinned,
+  p.updated_at,
+  p.view_count,
+  p.scheduled_for,
+  p.event_at,
+  p.event_location,
+  p.poll_json,
+  p.content_warning,
+  p.is_anonymous,
+  p.is_followers_only,
+  p.friends_also,
+  p.created_at
+from public.posts p;
+
 -- Ensure any post authored by a private account is automatically marked anonymous UNLESS chosen as followers_only
 create or replace function public.ensure_private_account_post_rules()
 returns trigger language plpgsql security definer as $$
