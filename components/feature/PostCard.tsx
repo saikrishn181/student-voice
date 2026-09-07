@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   Lock,
   UserCheck,
+  Users,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"

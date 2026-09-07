@@ -20,5 +20,5 @@ Thumbs.db
 .env.production
 .env.development
 
-# Local AI-assisted dev tooling (not part of the app)
+# Local dev tooling
 .opencode/

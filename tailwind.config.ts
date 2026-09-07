@@ -3,10 +3,10 @@ import type { Config } from "tailwindcss"
 // Design tokens for Krantind.
 // Primary = deep blue (#1F4E78) for trust/authority.
 // Accent = warm orange/red for the Support button and urgent elements.
-// Paper = warm off-white background (cream) — warmer than AI-grey slate,
+// Paper = warm off-white background (cream) — warmer than sterile slate,
 // reads like a student notebook page.
 // Display = Fraunces (warm editorial serif) for headlines; Sans = Manrope
-// (rounded, friendly) for body. Slight imperfections = human-made feel.
+// (rounded, friendly) for body. Natural warmth = handcrafted editorial feel.
 
 const config: Config = {
   content: [
