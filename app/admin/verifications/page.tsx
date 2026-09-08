@@ -7,7 +7,7 @@
 //   update public.profiles set is_admin = true where email = 'you@example.com';
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ShieldCheck, ShieldX, Lock, Inbox, ExternalLink } from "lucide-react"
+import { ShieldCheck, ShieldX, Lock, Inbox, ExternalLink, EyeOff, ShieldAlert, Trash2 } from "lucide-react"
 import { Button, Card, EmptyState, Badge, Avatar } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
@@ -44,12 +44,26 @@ interface ReportItem {
   postAuthorAvatar?: string
 }
 
+interface AnonymousPostItem {
+  id: string
+  authorId: string
+  text: string
+  category: string
+  createdAt: string
+  authorName: string
+  authorUsername?: string
+  authorEmail?: string
+  authorCollege?: string
+  authorAvatar?: string
+}
+
 export default function AdminVerificationsPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const showToast = useToastStore((s) => s.show)
 
   const [orgs, setOrgs] = useState<OrgRow[]>([])
   const [reports, setReports] = useState<ReportItem[]>([])
+  const [anonPosts, setAnonPosts] = useState<AnonymousPostItem[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -83,70 +97,112 @@ export default function AdminVerificationsPage() {
 
         if (reportsRes.error) {
           showToast(reportsRes.error.message, "error")
-          setLoading(false)
-          return
         }
 
         const rawReports = reportsRes.data ?? []
-        if (rawReports.length === 0) {
+        if (rawReports.length > 0) {
+          // Collect IDs for bulk lookup
+          const reporterIds = Array.from(new Set(rawReports.map((r) => r.reporter_id).filter(Boolean)))
+          const postIds = Array.from(new Set(rawReports.map((r) => r.post_id).filter(Boolean)))
+
+          // Fetch reporters
+          const { data: reportersData } = reporterIds.length > 0
+            ? await supabase.from("profiles").select("id, name, username, avatar_url").in("id", reporterIds)
+            : { data: [] }
+          const reportersMap = new Map((reportersData ?? []).map((u) => [u.id, u]))
+
+          // Fetch posts
+          const { data: postsData } = postIds.length > 0
+            ? await supabase.from("posts").select("id, text, author_id").in("id", postIds)
+            : { data: [] }
+          const postsMap = new Map((postsData ?? []).map((p) => [p.id, p]))
+
+          // Fetch post authors
+          const postAuthorIds = Array.from(new Set((postsData ?? []).map((p) => p.author_id).filter(Boolean)))
+          const { data: authorsData } = postAuthorIds.length > 0
+            ? await supabase.from("profiles").select("id, name, username, avatar_url").in("id", postAuthorIds)
+            : { data: [] }
+          const authorsMap = new Map((authorsData ?? []).map((u) => [u.id, u]))
+
+          // Hydrate rich ReportItem records
+          const hydratedReports: ReportItem[] = rawReports.map((r) => {
+            const reporter = reportersMap.get(r.reporter_id)
+            const post = postsMap.get(r.post_id)
+            const author = post ? authorsMap.get(post.author_id) : null
+
+            const reporterName = reporter?.name?.trim() || reporter?.username?.trim() || "Student Reporter"
+            const reporterUsername = reporter?.username ? `@${reporter.username}` : "student"
+            const postAuthorName = author?.name?.trim() || author?.username?.trim() || "Student Author"
+            const postAuthorUsername = author?.username ? `@${author.username}` : "author"
+
+            return {
+              id: r.id,
+              reporter_id: r.reporter_id,
+              post_id: r.post_id,
+              reason: r.reason,
+              details: r.details,
+              status: r.status,
+              created_at: r.created_at,
+              reporterName,
+              reporterUsername,
+              reporterAvatar: reporter?.avatar_url,
+              postContent: post?.text || "Post unavailable or removed",
+              postAuthorName,
+              postAuthorUsername,
+              postAuthorAvatar: author?.avatar_url,
+            }
+          })
+          setReports(hydratedReports)
+        } else {
           setReports([])
-          setLoading(false)
-          return
         }
 
-        // Collect IDs for bulk lookup
-        const reporterIds = Array.from(new Set(rawReports.map((r) => r.reporter_id).filter(Boolean)))
-        const postIds = Array.from(new Set(rawReports.map((r) => r.post_id).filter(Boolean)))
+        // 3. Fetch anonymous posts for Admin Intelligence Audit
+        const anonRes = await supabase
+          .from("posts")
+          .select("id, author_id, text, category, created_at, is_anonymous")
+          .eq("is_anonymous", true)
+          .order("created_at", { ascending: false })
+          .limit(50)
 
-        // Fetch reporters
-        const { data: reportersData } = reporterIds.length > 0
-          ? await supabase.from("profiles").select("id, name, username, avatar_url").in("id", reporterIds)
-          : { data: [] }
-        const reportersMap = new Map((reportersData ?? []).map((u) => [u.id, u]))
+        const rawAnon = (anonRes.data ?? []) as {
+          id: string
+          author_id: string
+          text: string
+          category?: string
+          created_at: string
+          is_anonymous: boolean
+        }[]
 
-        // Fetch posts
-        const { data: postsData } = postIds.length > 0
-          ? await supabase.from("posts").select("id, content, author_id").in("id", postIds)
-          : { data: [] }
-        const postsMap = new Map((postsData ?? []).map((p) => [p.id, p]))
+        if (rawAnon.length > 0) {
+          const anonAuthorIds = Array.from(new Set(rawAnon.map((p) => p.author_id).filter(Boolean)))
+          const { data: anonAuthorsData } = anonAuthorIds.length > 0
+            ? await supabase
+                .from("profiles")
+                .select("id, name, username, email, avatar_url, college_name")
+                .in("id", anonAuthorIds)
+            : { data: [] }
+          const anonAuthorsMap = new Map((anonAuthorsData ?? []).map((u) => [u.id, u]))
 
-        // Fetch post authors
-        const postAuthorIds = Array.from(new Set((postsData ?? []).map((p) => p.author_id).filter(Boolean)))
-        const { data: authorsData } = postAuthorIds.length > 0
-          ? await supabase.from("profiles").select("id, name, username, avatar_url").in("id", postAuthorIds)
-          : { data: [] }
-        const authorsMap = new Map((authorsData ?? []).map((u) => [u.id, u]))
-
-        // Hydrate rich ReportItem records
-        const hydratedReports: ReportItem[] = rawReports.map((r) => {
-          const reporter = reportersMap.get(r.reporter_id)
-          const post = postsMap.get(r.post_id)
-          const author = post ? authorsMap.get(post.author_id) : null
-
-          const reporterName = reporter?.name?.trim() || reporter?.username?.trim() || "Student Reporter"
-          const reporterUsername = reporter?.username ? `@${reporter.username}` : "student"
-          const postAuthorName = author?.name?.trim() || author?.username?.trim() || "Student Author"
-          const postAuthorUsername = author?.username ? `@${author.username}` : "author"
-
-          return {
-            id: r.id,
-            reporter_id: r.reporter_id,
-            post_id: r.post_id,
-            reason: r.reason,
-            details: r.details,
-            status: r.status,
-            created_at: r.created_at,
-            reporterName,
-            reporterUsername,
-            reporterAvatar: reporter?.avatar_url,
-            postContent: post?.content || "Post unavailable or removed",
-            postAuthorName,
-            postAuthorUsername,
-            postAuthorAvatar: author?.avatar_url,
-          }
-        })
-
-        setReports(hydratedReports)
+          const hydratedAnonPosts: AnonymousPostItem[] = rawAnon.map((p) => {
+            const author = anonAuthorsMap.get(p.author_id)
+            return {
+              id: p.id,
+              authorId: p.author_id,
+              text: p.text,
+              category: p.category ?? "General",
+              createdAt: p.created_at,
+              authorName: author?.name?.trim() || "Student Author",
+              authorUsername: author?.username ? `@${author.username}` : undefined,
+              authorEmail: author?.email,
+              authorCollege: author?.college_name,
+              authorAvatar: author?.avatar_url,
+            }
+          })
+          setAnonPosts(hydratedAnonPosts)
+        } else {
+          setAnonPosts([])
+        }
       } catch (err) {
         console.error("Admin data load error:", err)
       } finally {
@@ -156,6 +212,19 @@ export default function AdminVerificationsPage() {
 
     loadData()
   }, [showToast])
+
+  const deleteAnonPost = async (postId: string) => {
+    setBusyId(postId)
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.from("posts").delete().eq("id", postId)
+    setBusyId(null)
+    if (error) {
+      showToast(error.message || "Could not delete post", "error")
+      return
+    }
+    showToast("Anonymous post removed by admin", "success")
+    setAnonPosts((prev) => prev.filter((p) => p.id !== postId))
+  }
 
   const setVerification = async (orgId: string, status: "verified" | "rejected") => {
     setBusyId(orgId)
@@ -293,6 +362,102 @@ export default function AdminVerificationsPage() {
           <div className="flex flex-col gap-3">
             {reports.map((report) => (
               <ReportCard key={report.id} report={report} onResolve={setReportStatus} busy={busyId === report.id} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Anonymous Posts Intelligence Audit Section */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-h4 flex items-center gap-2">
+              <EyeOff size={18} className="text-purple-600" />
+              {s["admin.anonHeading"]}
+            </h2>
+            <p className="text-xs text-slate-500">{s["admin.anonSubtitle"]}</p>
+          </div>
+          <span className="rounded-pill bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-800 border border-purple-200">
+            {anonPosts.length} {anonPosts.length === 1 ? "post" : "posts"}
+          </span>
+        </div>
+
+        {anonPosts.length === 0 ? (
+          <Card className="p-4">
+            <p className="flex items-center gap-2 text-body-sm text-slate-500">
+              <Inbox size={16} aria-hidden /> {s["admin.emptyAnon"]}
+            </p>
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {anonPosts.map((post) => (
+              <Card key={post.id} className="flex flex-col gap-3 p-4 border-purple-200/80 bg-white">
+                {/* Top row: Real Author Identity */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Avatar name={post.authorName} src={post.authorAvatar} size="sm" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/profile/${post.authorId}`}
+                          className="text-sm font-bold text-slate-900 hover:underline truncate"
+                        >
+                          {post.authorName}
+                        </Link>
+                        {post.authorUsername ? (
+                          <span className="text-xs text-slate-400">{post.authorUsername}</span>
+                        ) : null}
+                        <span className="rounded-pill bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 border border-purple-200">
+                          Anonymous to Public
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {post.authorEmail ? `${post.authorEmail} · ` : ""}
+                        {post.authorCollege || "College not set"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-400 shrink-0">{timeAgo(post.createdAt)}</span>
+                </div>
+
+                {/* Post Text Preview */}
+                <div className="rounded-card bg-purple-50/40 border border-purple-100 p-3 text-xs">
+                  <span className="mb-1 inline-block text-[10px] font-bold text-purple-700 uppercase tracking-wider">
+                    Category: {post.category}
+                  </span>
+                  <p className="text-slate-800 line-clamp-3 leading-relaxed">
+                    &ldquo;{post.text}&rdquo;
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/post/${post.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700 hover:underline"
+                    >
+                      {s["admin.viewPost"]} <ExternalLink size={12} aria-hidden />
+                    </Link>
+                    <Link
+                      href={`/profile/${post.authorId}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-900 hover:underline"
+                    >
+                      View Student Profile <ExternalLink size={12} aria-hidden />
+                    </Link>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={busyId === post.id}
+                    onClick={() => deleteAnonPost(post.id)}
+                  >
+                    <Trash2 size={13} aria-hidden /> Delete Post
+                  </Button>
+                </div>
+              </Card>
             ))}
           </div>
         )}

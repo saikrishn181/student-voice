@@ -440,6 +440,9 @@ const s = {
   "admin.orgUpdated": "Verification status updated",
   "admin.notAdmin.title": "Admins only",
   "admin.notAdmin.description": "You don't have permission to view this page.",
+  "admin.anonHeading": "Anonymous Posts Intelligence",
+  "admin.anonSubtitle": "Real student identities behind anonymous posts (moderator & admin visibility).",
+  "admin.emptyAnon": "No anonymous posts recorded. All clear.",
   "nav.admin": "Moderation",
   "tag.back": "Back to feed",
   "tag.subtitle": (count: number) =>

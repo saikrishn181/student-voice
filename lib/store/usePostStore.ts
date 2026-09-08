@@ -220,7 +220,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
         (r: { follower_id: string; following_id: string }) => `${r.follower_id}:${r.following_id}`,
       ),
     )
-    const isAdmin = useAuthStore.getState().currentUser?.isAdmin
+    const isAdmin = Boolean(useAuthStore.getState().currentUser?.isAdmin)
 
     const posts = ((postRows ?? []) as PostRow[])
       .filter((row) => !blockedUserIds.has(row.author_id))
@@ -233,26 +233,21 @@ export const usePostStore = create<PostState>()((set, get) => ({
         return true
       })
       .map((row) => {
-        const post = rowToPost(row)
+        const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+        const isFriend = Boolean(
+          row.friends_also &&
+            currentUserId &&
+            followsSet.has(`${currentUserId}:${row.author_id}`),
+        )
+        const post = rowToPost(row, { currentUserId, isAdmin, isFriend })
         post.supportedByCurrentUser = supportedIds.has(post.id)
         post.savedByCurrentUser = savedIds.has(post.id)
-        if (post.isAnonymous) {
-          const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
-          const isFriend = Boolean(
-            post.friendsAlso &&
-              currentUserId &&
-              followsSet.has(`${currentUserId}:${row.author_id}`),
-          )
-          if (!isSelf && !isAdmin && !isFriend) {
-            post.authorId = "anonymous"
-          }
-        }
         return post
       })
 
     // Prefetch every public author up front so name/avatar fields never flash
     // "Unknown" while useUserById lazily loads a single profile.
-    // Anonymous authors are strictly excluded so private identities are never exposed in cache.
+    // Anonymous authors are included when de-anonymized for admins.
     prefetchAuthors(posts.filter((p) => p.authorId !== "anonymous").map((p) => p.authorId))
     if (commentRows?.length) {
       prefetchAuthors(
@@ -311,7 +306,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
     const existingIds = new Set(get().posts.map((p) => p.id))
     const blockedIds = new Set(get().blockedUserIds)
     const follows = get().follows
-    const isAdmin = useAuthStore.getState().currentUser?.isAdmin
+    const isAdmin = Boolean(useAuthStore.getState().currentUser?.isAdmin)
     const newPosts = ((postRows ?? []) as PostRow[])
       .filter((row) => !existingIds.has(row.id) && !blockedIds.has(row.author_id))
       .filter((row) => {
@@ -325,24 +320,19 @@ export const usePostStore = create<PostState>()((set, get) => ({
         return true
       })
       .map((row) => {
-        const post = rowToPost(row)
-        if (post.isAnonymous) {
-          const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
-          const isFriend = Boolean(
-            post.friendsAlso &&
-              currentUserId &&
-              follows.some(
-                (f) => f.followerId === currentUserId && f.followingId === row.author_id,
-              ),
-          )
-          if (!isSelf && !isAdmin && !isFriend) {
-            post.authorId = "anonymous"
-          }
-        }
+        const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+        const isFriend = Boolean(
+          row.friends_also &&
+            currentUserId &&
+            follows.some(
+              (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+            ),
+        )
+        const post = rowToPost(row, { currentUserId, isAdmin, isFriend })
         return post
       })
 
-    // Prefetch authors of the newly loaded posts (excluding anonymous authors).
+    // Prefetch authors of the newly loaded posts (excluding masked anonymous authors).
     if (newPosts.length > 0) {
       prefetchAuthors(newPosts.filter((p) => p.authorId !== "anonymous").map((p) => p.authorId))
     }
@@ -494,7 +484,11 @@ export const usePostStore = create<PostState>()((set, get) => ({
           category: scan.category ?? "nsfw",
         })
         // Return the post with contentWarning applied
-        const post = rowToPost(data as PostRow)
+        const post = rowToPost(data as PostRow, {
+          currentUserId: input.authorId,
+          isAdmin: Boolean(useAuthStore.getState().currentUser?.isAdmin),
+          isFriend: true,
+        })
         const blurredPost = { ...post, contentWarning: "nsfw" }
         set((s) => ({ posts: [blurredPost, ...s.posts] }))
         return blurredPost
@@ -506,7 +500,11 @@ export const usePostStore = create<PostState>()((set, get) => ({
     }
 
     recordPostTimestamp(input.authorId)
-    const post = rowToPost(data as PostRow)
+    const post = rowToPost(data as PostRow, {
+      currentUserId: input.authorId,
+      isAdmin: Boolean(useAuthStore.getState().currentUser?.isAdmin),
+      isFriend: true,
+    })
     set((s) => ({ posts: [post, ...s.posts] }))
     return post
   },
@@ -546,7 +544,13 @@ export const usePostStore = create<PostState>()((set, get) => ({
     if (previous?.mediaUrl && previous.mediaUrl !== input.mediaUrl) {
       void deletePostMedia(previous.mediaUrl)
     }
-    const post = rowToPost(data as PostRow)
+    const currentViewerId = useAuthStore.getState().currentUser?.id
+    const isAdminViewer = Boolean(useAuthStore.getState().currentUser?.isAdmin)
+    const post = rowToPost(data as PostRow, {
+      currentUserId: currentViewerId,
+      isAdmin: isAdminViewer,
+      isFriend: true,
+    })
     set((s) => ({
       posts: s.posts.map((p) => (p.id === id ? post : p)),
       comments: s.comments, // unchanged
@@ -959,20 +963,15 @@ export const usePostStore = create<PostState>()((set, get) => ({
             if (row.author_id !== currentUserId && !isAdmin && !isFollower) return
           }
 
-          const post = rowToPost(row)
-          if (post.isAnonymous) {
-            const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
-            const isFriend = Boolean(
-              post.friendsAlso &&
-                currentUserId &&
-                follows.some(
-                  (f) => f.followerId === currentUserId && f.followingId === row.author_id,
-                ),
-            )
-            if (!isSelf && !isAdmin && !isFriend) {
-              post.authorId = "anonymous"
-            }
-          }
+          const isSelf = Boolean(currentUserId && row.author_id === currentUserId)
+          const isFriend = Boolean(
+            row.friends_also &&
+              currentUserId &&
+              follows.some(
+                (f) => f.followerId === currentUserId && f.followingId === row.author_id,
+              ),
+          )
+          const post = rowToPost(row, { currentUserId, isAdmin, isFriend })
 
           // supportedByCurrentUser: fresh posts can't have my support yet.
           post.supportedByCurrentUser = false

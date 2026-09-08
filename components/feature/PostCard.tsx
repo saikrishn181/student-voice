@@ -33,6 +33,8 @@ import {
   Lock,
   UserCheck,
   Users,
+  ShieldAlert,
+  EyeOff,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -73,6 +75,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const router = useRouter()
   const pathname = usePathname()
   const currentUser = useAuthStore((s) => s.currentUser)
+  const isAdmin = Boolean(currentUser?.isAdmin)
   const author = useUserById(post.authorId)
   const follows = usePostStore((s) => s.follows)
   const isOwnPost = currentUser?.id === post.authorId
@@ -85,9 +88,10 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   // - If post is followers-only: author chose to share with accepted followers with their profile.
   // - If post is anonymous:
   //   - If post.friendsAlso is true AND viewer is follower or author: reveal identity to them!
-  //   - Otherwise: completely anonymous!
+  //   - Otherwise: completely anonymous to regular students!
   // - If author is private and post is NOT followers-only, default to anonymous.
-  const isAnonymous = Boolean(
+  // - For administrators ("us"): reveal the student author's information so we know who is posting!
+  const isPostAnonymous = Boolean(
     (post.isAnonymous || (author?.isPrivate && !post.isFollowersOnly)) &&
       !(post.friendsAlso && isFriendViewing),
   )
@@ -95,6 +99,9 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const isSharedWithFriendsBadge = Boolean(
     post.friendsAlso && isFriendViewing && (post.isAnonymous || author?.isPrivate),
   )
+
+  // Standard student rendering: anonymous unless revealed to friends or viewed by admin
+  const isAnonymous = isPostAnonymous && !isAdmin
   const deletePost = usePostStore((s) => s.deletePost)
   const blockUser = usePostStore((s) => s.blockUser)
   const reportPost = usePostStore((s) => s.reportPost)
@@ -197,7 +204,6 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     }
   }
 
-  const isAdmin = Boolean(currentUser?.isAdmin)
   const isBlocked = Boolean(author?.id && blockedUserIds.includes(author.id))
   const hasWarning = Boolean(post.contentWarning)
   const concealed = hasWarning && !warningRevealed
@@ -493,6 +499,11 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
                   {author?.name ?? s["post.unknownName"]}
                 </Link>
               )}
+              {isAdmin && isPostAnonymous ? (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-800 border border-purple-200">
+                  <EyeOff size={10} /> Anonymous to Students
+                </span>
+              ) : null}
               {!isAnonymous && isVerifiedOrg ? <VerifiedBadge /> : null}
               {!isAnonymous && author?.collegeVerified ? <CollegeBadge /> : null}
               {post.isFollowersOnly ? (
@@ -514,7 +525,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           </div>
         </div>
 
-        {showFollow && !isOwnPost && !isAnonymous && author ? (
+        {showFollow && !isOwnPost && !isPostAnonymous && author ? (
           <FollowButton
             followerId={currentUser?.id ?? ""}
             followingId={author.id}
@@ -695,6 +706,33 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           </div>
         )}
       </div>
+
+      {/* Admin Intelligence Banner for Anonymous Posts */}
+      {isAdmin && isPostAnonymous ? (
+        <div className="flex items-center justify-between gap-2 rounded-card bg-purple-50/90 border border-purple-200 px-3 py-2 text-xs text-purple-900 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldAlert size={15} className="text-purple-700 shrink-0" />
+            <span className="truncate">
+              <span className="font-bold">Admin Intel:</span> Anonymous post created by{" "}
+              <Link
+                href={`/profile/${post.authorId}`}
+                className="font-bold underline hover:text-purple-950 text-purple-900"
+              >
+                {author?.name ?? "Student"}
+              </Link>
+              {author?.username ? ` (@${author.username})` : ""}
+              {author?.email ? ` · ${author.email}` : ""}
+              {author?.collegeName ? ` · ${author.collegeName}` : ""}
+            </span>
+          </div>
+          <Link
+            href={`/profile/${post.authorId}`}
+            className="shrink-0 font-semibold text-[11px] text-purple-800 hover:text-purple-950 underline"
+          >
+            View Profile
+          </Link>
+        </div>
+      ) : null}
 
       {/* Resolved Issue Victory Banner */}
       {post.isResolved ? (

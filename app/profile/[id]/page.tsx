@@ -117,13 +117,13 @@ export default function PublicProfilePage({
       posts
         .filter((p) => {
           if (p.authorId !== params.id) return false
-          // If viewing someone else's profile, hide anonymous posts so identity is not revealed
-          if (p.isAnonymous && currentUser?.id !== params.id) return false
+          // If viewing someone else's profile, hide anonymous posts from non-admins
+          if (p.isAnonymous && currentUser?.id !== params.id && !currentUser?.isAdmin) return false
           return true
         })
         // Pinned posts first, then newest.
         .sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || b.createdAt.localeCompare(a.createdAt)),
-    [posts, params.id, currentUser?.id],
+    [posts, params.id, currentUser?.id, currentUser?.isAdmin],
   )
 
   // Upcoming events from this org (only org profiles).

@@ -352,9 +352,10 @@ export default function FeedPage() {
                 (p.isAnonymous || (author?.isPrivate && !p.isFollowersOnly)) &&
                   !(p.friendsAlso && isFriendViewing),
               )
+              const isAnonForViewer = isAnon && !currentUser?.isAdmin
               return (
                 <div key={p.id} className="flex items-center gap-3 py-3">
-                  {isAnon ? (
+                  {isAnonForViewer ? (
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-xs font-bold shadow-xs select-none border border-purple-200">
                       A
                     </div>
@@ -364,7 +365,13 @@ export default function FeedPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-800">{p.text}</p>
                     <p className="text-xs text-slate-400">
-                      {isAnon ? "Anonymous Student · " : author?.name ? `${author.name} · ` : ""}
+                      {isAnon
+                        ? currentUser?.isAdmin && author?.name
+                          ? `Anonymous (by ${author.name}) · `
+                          : "Anonymous Student · "
+                        : author?.name
+                        ? `${author.name} · `
+                        : ""}
                       {s["feed.supports"](p.supportCount)}
                     </p>
                   </div>

@@ -314,6 +314,7 @@ test("security: Anonymous post author masking ensures real user ID is never expo
   assert.equal(sanitizePostForViewer(anonPost, "real-uuid-1234"), "real-uuid-1234")
   // Admin sees author ID for moderation
   assert.equal(sanitizePostForViewer(anonPost, "admin-id", true), "real-uuid-1234")
+  assert.equal(sanitizePostForViewer(anonPost, "admin-id-2", true, false), "real-uuid-1234")
   // Friend sees author ID when friendsAlso is true
   assert.equal(sanitizePostForViewer(friendAnonPost, "friend-id", false, true), "real-uuid-1234")
   // Non-friend does not see author ID even when friendsAlso is true

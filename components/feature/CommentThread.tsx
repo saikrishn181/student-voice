@@ -4,7 +4,8 @@
 // highlighted background + a small "Offering Help" Badge. The author of a
 // comment can edit or delete it (RLS also enforces ownership server-side).
 import { useMemo, useState } from "react"
-import { Check, MoreHorizontal, Pencil, Trash2, X } from "lucide-react"
+import Link from "next/link"
+import { Check, MoreHorizontal, Pencil, Trash2, X, ShieldAlert } from "lucide-react"
 import { Badge, Avatar, Modal, Button, Textarea } from "@/components/ui"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -97,10 +98,24 @@ function CommentItem({ comment }: { comment: Comment }) {
           )}
           <span className="text-sm font-semibold text-slate-800">
             {isAnonymousComment ? (
-              <span className="text-purple-950 select-none">
-                Anonymous Student
-                {currentUser?.id === comment.authorId ? " (You)" : ""}
-              </span>
+              isAdmin && author ? (
+                <span className="text-purple-950 flex items-center gap-1.5 flex-wrap">
+                  <span>Anonymous Student</span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-normal text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded border border-purple-200">
+                    <ShieldAlert size={10} className="text-purple-700 shrink-0" />
+                    <span className="font-semibold">Admin Intel:</span>{" "}
+                    <Link href={`/profile/${author.id}`} className="font-semibold underline hover:text-purple-950">
+                      {author.name}
+                    </Link>
+                    {author.email ? ` (${author.email})` : ""}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-purple-950 select-none">
+                  Anonymous Student
+                  {currentUser?.id === comment.authorId ? " (You)" : ""}
+                </span>
+              )
             ) : (
               author?.name ?? s["post.unknownName"]
             )}
