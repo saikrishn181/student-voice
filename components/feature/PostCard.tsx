@@ -175,6 +175,9 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       target.closest("a") ||
       target.closest("input") ||
       target.closest("textarea") ||
+      target.closest("video") ||
+      target.closest("audio") ||
+      target.closest("[data-media-control]") ||
       target.closest("[role='menu']")
     ) {
       return
@@ -813,10 +816,16 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       {/* Media */}
       {post.mediaUrl && post.mediaType ? (
         <div
+          data-media-control
           className={cn(
-            "block select-none relative rounded-card",
+            "block relative rounded-card",
             concealed && "pointer-events-none select-none blur-md"
           )}
+          onClick={(e) => {
+            if (post.mediaType === "video") {
+              e.stopPropagation()
+            }
+          }}
         >
           <MediaDisplay
             mediaUrl={post.mediaUrl}

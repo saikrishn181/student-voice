@@ -220,7 +220,6 @@ export default function CreatePostPage() {
         uploads.push(upload.url ?? "")
         mediaType = picked.type
         if (!mediaAspectRatio && upload.aspectRatio) mediaAspectRatio = upload.aspectRatio
-        if (picked.url.startsWith("blob:")) URL.revokeObjectURL(picked.url)
       }
       if (uploads.length > 0) {
         mediaUrl = uploads.filter(Boolean).join(" ")
@@ -271,6 +270,9 @@ export default function CreatePostPage() {
         isAnonymous: postIsAnonymous,
         isFollowersOnly: postIsFollowersOnly,
         friendsAlso: postFriendsAlso,
+      })
+      media.forEach((m) => {
+        if (m.url.startsWith("blob:")) URL.revokeObjectURL(m.url)
       })
       showToast(s["toast.postPublished"], "success")
       router.push(`/post/${post.id}`)

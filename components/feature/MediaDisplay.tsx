@@ -63,13 +63,21 @@ export function MediaDisplay({
   const handleVideoMetadata = useCallback(
     (ev: React.SyntheticEvent<HTMLVideoElement>) => {
       const { videoWidth, videoHeight } = ev.currentTarget
-      if (videoWidth > 0 && videoHeight > 0 && !measuredRef.current) {
+      if (videoWidth > 0 && videoHeight > 0) {
         measuredRef.current = true
         setAspect(videoWidth / videoHeight)
+      } else if (!measuredRef.current) {
+        measuredRef.current = true
+        setAspect(FALLBACK_RATIO)
       }
     },
     [],
   )
+
+  const handleVideoError = useCallback(() => {
+    measuredRef.current = true
+    setAspect(FALLBACK_RATIO)
+  }, [])
 
   const go = (dir: 1 | -1) => {
     setIndex((i) => (i + dir + urls.length) % urls.length)
@@ -86,7 +94,7 @@ export function MediaDisplay({
     >
       {/* Desktop raises the cap via a container-level media query overlay */}
       <div className="absolute inset-0 max-h-[500px] lg:max-h-[600px]">
-        {!revealed ? (
+        {!revealed && mediaType === "photo" ? (
           <div className="absolute inset-0">
             <Skeleton className="h-full w-full rounded-none" />
           </div>
@@ -105,14 +113,17 @@ export function MediaDisplay({
           />
         ) : (
           <video
+            key={current}
             src={current}
             controls
             preload="metadata"
-            muted
             playsInline
             aria-label={s["media.alt"]}
-            className={cn("h-full w-full object-contain", !revealed && "opacity-0")}
+            className="h-full w-full object-contain"
             onLoadedMetadata={handleVideoMetadata}
+            onLoadedData={handleVideoMetadata}
+            onCanPlay={handleVideoMetadata}
+            onError={handleVideoError}
           />
         )}
 

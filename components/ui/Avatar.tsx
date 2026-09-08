@@ -1,7 +1,7 @@
 "use client"
 
-// Circular avatar with initials fallback. Uses next/image for the image.
-import Image from "next/image"
+// Circular avatar with initials fallback. Uses native img with error fallback for reliable cross-device display.
+import { useState, useEffect } from "react"
 import { cn, initialsOf } from "@/lib/utils"
 
 type Size = "sm" | "md" | "lg"
@@ -21,20 +21,35 @@ interface AvatarProps {
 
 export function Avatar({ name, src, size = "md", className }: AvatarProps) {
   const px = sizeMap[size]
+  const [imgError, setImgError] = useState(false)
 
-  if (src) {
+  // Reset error state whenever the source URL changes
+  useEffect(() => {
+    setImgError(false)
+  }, [src])
+
+  const validSrc =
+    src &&
+    typeof src === "string" &&
+    src.trim() !== "" &&
+    src.trim() !== "null" &&
+    src.trim() !== "undefined"
+      ? src.trim()
+      : null
+
+  if (validSrc && !imgError) {
     return (
       <span
-        className={cn("relative inline-flex shrink-0 overflow-hidden rounded-full", className)}
+        className={cn("relative inline-flex shrink-0 overflow-hidden rounded-full bg-slate-100", className)}
         style={{ width: px, height: px }}
       >
-        <Image
-          src={src}
+        <img
+          src={validSrc}
           alt={name}
-          fill
-          sizes={`${px}px`}
-          className="object-cover"
-          unoptimized
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          onError={() => setImgError(true)}
         />
       </span>
     )

@@ -70,7 +70,7 @@ interface AuthState {
 export interface ProfilePatch {
   name?: string
   username?: string
-  avatarUrl?: string
+  avatarUrl?: string | null
   state?: string
   bio?: string
   isPrivate?: boolean
@@ -294,12 +294,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // Username is case-insensitively unique in the DB; normalize before write
     // so an error from Postgres maps cleanly to a friendly message.
     const row: Partial<Profile> = {
-      name: patch.name,
-      username: patch.username?.trim() || null,
-      avatar_url: patch.avatarUrl ?? null,
-      state: patch.state,
-      bio: patch.bio ?? null,
-      is_private: patch.isPrivate,
+      name: patch.name ?? currentUser.name,
+      username: patch.username !== undefined ? (patch.username?.trim() || null) : (currentUser.username ?? null),
+      avatar_url: patch.avatarUrl !== undefined ? patch.avatarUrl : (currentUser.avatarUrl ?? null),
+      state: patch.state !== undefined ? patch.state : (currentUser.state ?? null),
+      bio: patch.bio !== undefined ? (patch.bio?.trim() || null) : (currentUser.bio ?? null),
+      is_private: patch.isPrivate !== undefined ? patch.isPrivate : currentUser.isPrivate,
     }
 
     const { data, error } = await supabase

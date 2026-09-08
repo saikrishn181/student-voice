@@ -108,6 +108,13 @@ export function rowToPost(row: PostRow, viewerContext?: ViewerContext | number):
   )
 }
 
+function cleanAvatarUrl(url: string | null | undefined): string | undefined {
+  if (!url || typeof url !== "string") return undefined
+  const trimmed = url.trim()
+  if (trimmed === "" || trimmed === "null" || trimmed === "undefined") return undefined
+  return trimmed
+}
+
 export function rowToUser(row: Profile): User {
   return {
     id: row.id,
@@ -117,7 +124,7 @@ export function rowToUser(row: Profile): User {
     accountType: row.account_type,
     organizationType: row.organization_type ?? undefined,
     verificationStatus: row.verification_status ?? undefined,
-    avatarUrl: row.avatar_url ?? undefined,
+    avatarUrl: cleanAvatarUrl(row.avatar_url),
     state: row.state ?? undefined,
     bio: row.bio ?? undefined,
     followerCount: row.follower_count,

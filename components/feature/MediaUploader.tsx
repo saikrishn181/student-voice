@@ -69,10 +69,13 @@ export function MediaUploader({ value, onChange }: MediaUploaderProps) {
 
     const hasVideo = value.some((m) => m.type === "video") || picked.some((m) => m.type === "video")
     if (hasVideo) {
-      // Video is always single. Replacing it clears the rest.
-      picked.forEach((m) => URL.revokeObjectURL(m.url))
-      onChange(picked.slice(0, 1))
-      picked.slice(0, 1).forEach((m) => rememberBlob(m.url))
+      // Video is always single. Clear any previously selected media.
+      value.forEach((m) => URL.revokeObjectURL(m.url))
+      const videoItem = picked.find((m) => m.type === "video") || picked[0]
+      // Revoke any other picked files if user selected multiple files together with video
+      picked.filter((m) => m !== videoItem).forEach((m) => URL.revokeObjectURL(m.url))
+      rememberBlob(videoItem.url)
+      onChange([videoItem])
       return
     }
     const combined = [...value, ...picked].slice(0, MAX_PHOTOS)

@@ -28,22 +28,69 @@ async function imageAspectRatio(file: File): Promise<number | null> {
   }
 }
 
+async function mediaAspectRatio(file: File): Promise<number | null> {
+  if (file.type.startsWith("image/")) {
+    return imageAspectRatio(file)
+  }
+  if (file.type.startsWith("video/")) {
+    try {
+      if (typeof window === "undefined") return 16 / 9
+      return await new Promise<number | null>((resolve) => {
+        const video = document.createElement("video")
+        video.preload = "metadata"
+        const blobUrl = URL.createObjectURL(file)
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(blobUrl)
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            resolve(video.videoWidth / video.videoHeight)
+          } else {
+            resolve(16 / 9)
+          }
+        }
+        video.onerror = () => {
+          URL.revokeObjectURL(blobUrl)
+          resolve(16 / 9)
+        }
+        video.src = blobUrl
+      })
+    } catch {
+      return 16 / 9
+    }
+  }
+  return null
+}
+
 export async function uploadPostMedia(file: File): Promise<UploadResult> {
   const supabase = createSupabaseBrowserClient()
 
-  const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${file.name.split(".").pop()}`
+  const rawExt = file.name.split(".").pop() || ""
+  const safeExt =
+    rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() ||
+    (file.type.startsWith("video/") ? "mp4" : "jpg")
+
+  const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`
+
+  let contentType = file.type
+  if (!contentType) {
+    if (safeExt === "mp4") contentType = "video/mp4"
+    else if (safeExt === "webm") contentType = "video/webm"
+    else if (safeExt === "mov") contentType = "video/quicktime"
+    else if (safeExt === "jpg" || safeExt === "jpeg") contentType = "image/jpeg"
+    else if (safeExt === "png") contentType = "image/png"
+    else contentType = "application/octet-stream"
+  }
 
   const { error } = await supabase.storage.from("post-media").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
-    contentType: file.type,
+    contentType,
   })
   if (error) {
     return { ok: false, error: friendlyUploadError(error.message) }
   }
 
   const { data } = supabase.storage.from("post-media").getPublicUrl(path)
-  const aspectRatio = await imageAspectRatio(file)
+  const aspectRatio = await mediaAspectRatio(file)
 
   return { ok: true, url: data.publicUrl, aspectRatio: aspectRatio ?? undefined }
 }
@@ -52,12 +99,22 @@ export async function uploadPostMedia(file: File): Promise<UploadResult> {
 export async function uploadAvatar(file: File): Promise<UploadResult> {
   const supabase = createSupabaseBrowserClient()
 
-  const path = `avatars/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${file.name.split(".").pop()}`
+  const rawExt = file.name.split(".").pop() || ""
+  const safeExt = rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg"
+  const path = `avatars/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`
+
+  let contentType = file.type
+  if (!contentType || !contentType.startsWith("image/")) {
+    if (safeExt === "png") contentType = "image/png"
+    else if (safeExt === "webp") contentType = "image/webp"
+    else if (safeExt === "gif") contentType = "image/gif"
+    else contentType = "image/jpeg"
+  }
 
   const { error } = await supabase.storage.from("post-media").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
-    contentType: file.type,
+    contentType,
   })
   if (error) {
     return { ok: false, error: friendlyUploadError(error.message) }
@@ -87,7 +144,11 @@ export async function deletePostMedia(url?: string | null): Promise<void> {
 }
 
 function friendlyUploadError(message: string): string {
-  if (message.includes("bucket")) return "Media bucket not found. Run supabase/schema.sql first."
-  if (message.toLowerCase().includes("permission")) return "Upload failed — you need to be signed in."
+  const lower = message.toLowerCase()
+  if (lower.includes("bucket")) return "Media bucket not found. Please ensure storage bucket is initialized."
+  if (lower.includes("permission") || lower.includes("row-level security"))
+    return "Upload failed — storage permissions error. Ensure bucket policies are enabled."
+  if (lower.includes("payload too large") || lower.includes("entity too large") || lower.includes("size"))
+    return "Video or media file exceeds maximum allowed size (50MB). Please select a smaller file."
   return message || "Upload failed. Please try again."
 }

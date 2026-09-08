@@ -123,7 +123,6 @@ export default function EditPostPage({
       finalUrls.push(upload.url ?? "")
       mediaType = picked.type
       if (!mediaAspectRatio && upload.aspectRatio) mediaAspectRatio = upload.aspectRatio
-      if (picked.url.startsWith("blob:")) URL.revokeObjectURL(picked.url)
     }
 
     // Pre-upload image computer vision scan
@@ -148,6 +147,9 @@ export default function EditPostPage({
         mediaUrl: finalUrls.length > 0 ? finalUrls.join(" ") : null,
         mediaType: finalUrls.length > 0 ? mediaType : null,
         mediaAspectRatio: finalUrls.length > 0 ? mediaAspectRatio : null,
+      })
+      media.forEach((m) => {
+        if (m.url.startsWith("blob:")) URL.revokeObjectURL(m.url)
       })
       showToast(s["toast.postUpdated"], "success")
       router.push(`/post/${postId}`)

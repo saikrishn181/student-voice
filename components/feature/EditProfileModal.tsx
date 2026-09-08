@@ -20,7 +20,62 @@ interface EditProfileModalProps {
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/
-const MAX_AVATAR_MB = 5
+const MAX_AVATAR_MB = 15
+
+async function optimizeAvatarFile(file: File): Promise<File> {
+  if (typeof window === "undefined") return file
+  return new Promise<File>((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = document.createElement("img")
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        const maxDim = 800
+        let width = img.width
+        let height = img.height
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          resolve(file)
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file)
+              return
+            }
+            const safeName = file.name.replace(/\.[^.]+$/, "") + ".jpg"
+            const resizedFile = new File([blob], safeName, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            })
+            resolve(resizedFile)
+          },
+          "image/jpeg",
+          0.88,
+        )
+      }
+      img.onerror = () => resolve(file)
+      img.src = String(e.target?.result)
+    }
+    reader.onerror = () => resolve(file)
+    reader.readAsDataURL(file)
+  })
+}
 
 export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -55,7 +110,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     setUsernameError(undefined)
   }, [open, currentUser])
 
-  const handleAvatarFile = (file: File | undefined | null) => {
+  const handleAvatarFile = async (file: File | undefined | null) => {
     if (!file) return
     if (!file.type.startsWith("image/")) {
       showToast(s["validation.fileType"], "error")
@@ -65,8 +120,9 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       showToast(s["settings.avatar.tooLarge"](MAX_AVATAR_MB), "error")
       return
     }
-    setAvatarFile(file)
-    setAvatarUrl(URL.createObjectURL(file))
+    const optimized = await optimizeAvatarFile(file)
+    setAvatarFile(optimized)
+    setAvatarUrl(URL.createObjectURL(optimized))
     setRemoveAvatar(false)
   }
 
@@ -94,7 +150,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     const previousBlobUrl = avatarUrl?.startsWith("blob:") ? avatarUrl : null
 
     // Upload a new avatar first if one was selected.
-    let nextAvatarUrl = avatarUrl
+    let nextAvatarUrl: string | null | undefined = undefined
     if (avatarFile) {
       const result = await uploadAvatar(avatarFile)
       if (!result.ok || !result.url) {
@@ -112,7 +168,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       username: trimmedUsername,
       bio,
       state: state || undefined,
-      avatarUrl: nextAvatarUrl ?? undefined,
+      avatarUrl: nextAvatarUrl,
       isPrivate,
     })
 
@@ -148,19 +204,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       >
         {/* Avatar picker */}
         <div className="flex items-center gap-4">
-          {avatarUrl ? (
-            <span className="relative inline-flex h-20 w-20 shrink-0 overflow-hidden rounded-full">
-              <Image
-                src={avatarUrl}
-                alt={s["settings.avatar.label"]}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            </span>
-          ) : (
-            <Avatar name={currentUser?.name ?? ""} size="lg" />
-          )}
+          <Avatar name={currentUser?.name ?? ""} src={avatarUrl} size="lg" />
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
