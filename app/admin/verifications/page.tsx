@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Clock,
+  Sparkles,
 } from "lucide-react"
 import { Button, Card, EmptyState, Badge, Avatar, Modal, Input } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -372,11 +373,18 @@ export default function AdminVerificationsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-h2 text-slate-900">
-          <ShieldCheck className="text-primary-600" aria-hidden /> {s["admin.title"]}
-        </h1>
-        <p className="text-body-sm text-slate-500">{s["admin.subtitle"]}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="flex items-center gap-2 text-h2 text-slate-900">
+            <ShieldCheck className="text-primary-600" aria-hidden /> {s["admin.title"]}
+          </h1>
+          <p className="text-body-sm text-slate-500">{s["admin.subtitle"]}</p>
+        </div>
+        <Link href="/admin/social">
+          <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm">
+            <Sparkles size={15} className="text-primary-600" /> AI Social Studio
+          </Button>
+        </Link>
       </div>
 
       <section>
