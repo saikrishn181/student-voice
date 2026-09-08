@@ -34,7 +34,7 @@ export function PageShell({ children }: PageShellProps) {
 
       {/* Mobile Top Header with Plus (Post) on Top Left, krantind in Middle, and Impact on Top Right (< 1024px) */}
       {!isDedicatedSubPage ? (
-        <header className="sticky top-0 z-20 flex w-full items-center justify-between bg-paper pt-4 pb-2 px-4 sm:px-6 lg:hidden">
+        <header className="sticky top-0 z-20 flex w-full items-center justify-between bg-paper pt-5 pb-2.5 px-4 sm:px-6 lg:hidden">
           <Link
             href="/post/create"
             aria-label="Create Post"
@@ -45,8 +45,11 @@ export function PageShell({ children }: PageShellProps) {
           </Link>
 
           {/* Platform Name in Middle */}
-          <Link href="/feed" className="flex items-center justify-center transition-opacity hover:opacity-90">
-            <span className="font-serif text-2xl font-bold tracking-tight text-slate-900 lowercase">
+          <Link
+            href="/feed"
+            className="flex items-center justify-center transition-opacity hover:opacity-90 translate-y-1.5 sm:translate-y-2"
+          >
+            <span className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 lowercase">
               krantind
             </span>
           </Link>
@@ -63,16 +66,29 @@ export function PageShell({ children }: PageShellProps) {
 
       {/* Content: leaves room for the fixed sidebar on desktop and the bottom bar on mobile */}
       <main id="main-content" className="lg:pl-64">
-        {/* Desktop Top Bar with Top-Right Impact Link (>= 1024px) */}
+        {/* Desktop Top Bar with Platform Name in Middle and Impact Link on Right (>= 1024px) */}
         {!isDedicatedSubPage ? (
-          <div className="hidden lg:flex w-full items-center justify-end px-8 pt-5">
-            <Link
-              href="/impact"
-              className="flex items-center gap-2 rounded-pill border border-amber-300 bg-amber-50/90 px-4 py-2 text-sm font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
-            >
-              <Trophy size={17} className="text-amber-600" />
-              <span>Campus Impact & Leaderboard</span>
-            </Link>
+          <div className="hidden lg:grid grid-cols-3 w-full items-center px-8 pt-6 pb-2">
+            <div />
+            <div className="flex justify-center translate-y-1.5">
+              <Link
+                href="/feed"
+                className="flex items-center justify-center transition-opacity hover:opacity-90"
+              >
+                <span className="font-serif text-3xl xl:text-4xl font-bold tracking-tight text-slate-900 lowercase">
+                  krantind
+                </span>
+              </Link>
+            </div>
+            <div className="flex justify-end">
+              <Link
+                href="/impact"
+                className="flex items-center gap-2 rounded-pill border border-amber-300 bg-amber-50/90 px-4 py-2 text-sm font-bold text-amber-800 shadow-xs hover:bg-amber-100 transition-colors"
+              >
+                <Trophy size={17} className="text-amber-600" />
+                <span>Campus Impact & Leaderboard</span>
+              </Link>
+            </div>
           </div>
         ) : null}
 

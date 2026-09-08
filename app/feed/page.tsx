@@ -148,12 +148,10 @@ export default function FeedPage() {
       {/* Main feed column */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-h2 text-slate-900">{s["feed.title"]}</h1>
-            <p className="text-body-sm text-slate-500">
-              {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
-            </p>
-          </div>
+          <h1 className="sr-only">{s["feed.title"]}</h1>
+          <p className="text-body-sm text-slate-500">
+            {localState ? s["feed.subtitle.near"](localState) : s["feed.subtitle.default"]}
+          </p>
           <button
             type="button"
             onClick={() => void handleManualRefresh()}

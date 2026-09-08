@@ -36,12 +36,10 @@ export default function NotificationsPage() {
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-h2 text-slate-900">{s["notifications.title"]}</h1>
-            <p className="text-body-sm text-slate-500">
-              {unreadCount > 0 ? s["notifications.unread"](unreadCount) : s["notifications.caughtUp"]}
-            </p>
-          </div>
+          <h1 className="sr-only">{s["notifications.title"]}</h1>
+          <p className="text-body-sm text-slate-500">
+            {unreadCount > 0 ? s["notifications.unread"](unreadCount) : s["notifications.caughtUp"]}
+          </p>
           {unreadCount > 0 ? (
             <Button
               variant="outline"

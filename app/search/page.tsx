@@ -239,9 +239,7 @@ function SearchPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-h2 text-slate-900">{s["search.title"]}</h1>
-        </div>
+        <h1 className="sr-only">{s["search.title"]}</h1>
 
         {/* Search input */}
         <div className="relative">
