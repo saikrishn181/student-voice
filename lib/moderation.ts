@@ -740,6 +740,111 @@ export function checkUserBanStatus(user: User | null | undefined): {
 }
 
 /**
+ * Administrative action: manually issue strikes, apply temporary suspensions,
+ * permanently ban, or pardon a user.
+ */
+export async function adminManageStudentStrikes(
+  targetUserId: string,
+  options: {
+    action: "strike" | "suspend_24h" | "suspend_7d" | "ban" | "pardon"
+    reason?: string
+  },
+): Promise<{ ok: boolean; message: string; strikes: number; isBanned: boolean }> {
+  const supabase = createSupabaseBrowserClient()
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, name, email, strike_count, is_banned, banned_until, ban_reason")
+    .eq("id", targetUserId)
+    .single()
+
+  if (error || !profile) {
+    throw new Error(error?.message || "User profile not found")
+  }
+
+  let strikeCount = Number(profile.strike_count) || 0
+  let isBanned = Boolean(profile.is_banned)
+  let bannedUntil: string | null = profile.banned_until ?? null
+  let banReason = profile.ban_reason ?? ""
+  let outcomeMessage = ""
+
+  if (options.action === "strike") {
+    strikeCount += 1
+    if (strikeCount >= 10) {
+      isBanned = true
+      bannedUntil = null
+      banReason = options.reason || "Permanent ban applied: Reached 10 strikes."
+      outcomeMessage = "Strike issued (Total: 10/10). User is now permanently banned."
+    } else if (strikeCount >= 6) {
+      isBanned = true
+      bannedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      banReason = options.reason || `Account temporarily suspended for 7 days (Strike ${strikeCount}/10).`
+      outcomeMessage = `Strike issued (Total: ${strikeCount}/10). User is suspended for 7 days.`
+    } else if (strikeCount >= 3) {
+      isBanned = true
+      bannedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      banReason = options.reason || `Account temporarily restricted for 24 hours (Strike ${strikeCount}/10).`
+      outcomeMessage = `Strike issued (Total: ${strikeCount}/10). User is restricted for 24 hours.`
+    } else {
+      outcomeMessage = `Strike issued (Total: ${strikeCount}/10). User received an official warning.`
+    }
+  } else if (options.action === "suspend_24h") {
+    strikeCount = Math.max(strikeCount, 3)
+    isBanned = true
+    bannedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    banReason = options.reason || "24-hour administrative restriction."
+    outcomeMessage = "24-hour administrative restriction applied."
+  } else if (options.action === "suspend_7d") {
+    strikeCount = Math.max(strikeCount, 6)
+    isBanned = true
+    bannedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    banReason = options.reason || "7-day administrative suspension."
+    outcomeMessage = "7-day administrative suspension applied."
+  } else if (options.action === "ban") {
+    strikeCount = 10
+    isBanned = true
+    bannedUntil = null
+    banReason = options.reason || "Permanent administrative ban applied by moderator."
+    outcomeMessage = "Student account has been permanently banned."
+  } else if (options.action === "pardon") {
+    strikeCount = 0
+    isBanned = false
+    bannedUntil = null
+    banReason = ""
+    outcomeMessage = "Strikes cleared and user access fully restored."
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      strike_count: strikeCount,
+      is_banned: isBanned,
+      banned_until: bannedUntil,
+      ban_reason: banReason || null,
+    })
+    .eq("id", targetUserId)
+
+  if (updateError) {
+    throw new Error(updateError.message || "Failed to update profile moderation status")
+  }
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem(`krantind_strikes_${targetUserId}`, String(strikeCount))
+    localStorage.setItem(
+      `krantind_banned_${targetUserId}`,
+      JSON.stringify({ isBanned, bannedUntil, banReason }),
+    )
+  }
+
+  return {
+    ok: true,
+    message: outcomeMessage,
+    strikes: strikeCount,
+    isBanned,
+  }
+}
+
+/**
  * Fast client-side Computer Vision pixel analysis for uploaded images.
  * Evaluates skin tone exposure ratio, chrominance clustering, and explicit visual features
  * using an offscreen HTML5 canvas. Runs in <5ms for $0 cost.

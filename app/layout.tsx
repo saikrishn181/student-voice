@@ -53,12 +53,21 @@ export const metadata: Metadata = {
     description:
       "Students and student organizations post campus problems and get real support from people in their state.",
     locale: "en_IN",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Krantind — Student Voice Platform",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Krantind – Post the problem, get real support",
     description:
       "Students and student organizations post campus problems and get real support from people in their state.",
+    images: ["/logo.png"],
   },
   robots: {
     index: true,

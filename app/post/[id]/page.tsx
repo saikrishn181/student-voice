@@ -110,6 +110,59 @@ export default function PostDetailPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id])
 
+  // Real-time synchronization: subscribe to live comment updates on this post
+  useEffect(() => {
+    if (!params.id) return
+    const supabase = createSupabaseBrowserClient()
+    const channel = supabase
+      .channel(`realtime-comments-${params.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "comments",
+          filter: `post_id=eq.${params.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as unknown as CommentRow
+          const mapped = rowToComment(newRow)
+          usePostStore.setState((s) => {
+            if (s.comments.some((c) => c.id === mapped.id)) return s
+            return {
+              comments: [...s.comments, mapped],
+              posts: s.posts.map((p) =>
+                p.id === params.id ? { ...p, commentCount: p.commentCount + 1 } : p,
+              ),
+            }
+          })
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "comments",
+          filter: `post_id=eq.${params.id}`,
+        },
+        (payload) => {
+          const oldRow = payload.old as { id: string }
+          usePostStore.setState((s) => ({
+            comments: s.comments.filter((c) => c.id !== oldRow.id),
+            posts: s.posts.map((p) =>
+              p.id === params.id ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p,
+            ),
+          }))
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [params.id])
+
   if (lookingUp) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
