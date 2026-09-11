@@ -105,10 +105,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
     const user = await fetchProfile(data.session.user.id)
     if (user) {
-      saveAccount(user, {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      })
+      saveAccount(user)
     }
     set({ isLoggedIn: true, currentUser: user ?? null })
     return { ok: true }
@@ -139,10 +136,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (data.session) {
       const user = await fetchProfile(data.session.user.id)
       if (user) {
-        saveAccount(user, {
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        })
+        saveAccount(user)
       }
       set({ isLoggedIn: true, currentUser: user ?? null })
       return { ok: true, requiresOtp: false }
@@ -173,20 +167,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
       const user = await fetchProfile(fallback.data.session.user.id)
       if (user) {
-        saveAccount(user, {
-          access_token: fallback.data.session.access_token,
-          refresh_token: fallback.data.session.refresh_token,
-        })
+        saveAccount(user)
       }
       set({ isLoggedIn: true, currentUser: user ?? null })
       return { ok: true }
     }
     const user = await fetchProfile(data.session.user.id)
     if (user) {
-      saveAccount(user, {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      })
+      saveAccount(user)
     }
     set({ isLoggedIn: true, currentUser: user ?? null })
     return { ok: true }
@@ -367,46 +355,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return { ok: false, error: "Account not found on this device." }
     }
     const supabase = createSupabaseBrowserClient()
-    if (target.session?.access_token && target.session?.refresh_token) {
-      try {
-        const { data, error } = await supabase.auth.setSession({
-          access_token: target.session.access_token,
-          refresh_token: target.session.refresh_token,
-        })
-        if (!error && data.session) {
-          const user = await fetchProfile(data.session.user.id)
-          if (user) {
-            set({ isLoggedIn: true, currentUser: user })
-            try {
-              useNotificationStore.getState().stopRealtime()
-              useNotificationStore.setState({ notifications: [], status: "idle", preferences: null })
-              useNotificationStore.getState().load(user.id)
-            } catch {}
-            try {
-              useChatStore.getState().stopRealtime()
-              useChatStore.setState({
-                conversations: [],
-                messagesByConversation: {},
-                conversationsLoaded: false,
-                unreadByConversation: {},
-                activeConversationId: null,
-                typingByConversation: {},
-                otherLastReadByConversation: {},
-                memberCountByConversation: {},
-              })
-              useChatStore.getState().loadConversations()
-            } catch {}
-            saveAccount(user, {
-              access_token: data.session.access_token,
-              refresh_token: data.session.refresh_token,
-            })
-            return { ok: true }
-          }
-        }
-      } catch {}
-    }
-    // If no active session or session expired, log out and return SESSION_EXPIRED
-    await supabase.auth.signOut()
+    await supabase.auth.signOut().catch(() => {})
     set({ isLoggedIn: false, currentUser: null })
     return { ok: false, error: "SESSION_EXPIRED", email: target.email }
   },
@@ -502,11 +451,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         supabase.auth.getUser().then(({ data }) => {
           if (!data.user) return
           fetchProfile(data.user.id).then((user) => {
-            if (user && session) {
-              saveAccount(user, {
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-              })
+            if (user) {
+              saveAccount(user)
             }
             set({ isLoggedIn: true, currentUser: user, bootstrapping: false })
           })
@@ -528,7 +474,7 @@ function normalizeErrorMessage(message?: string): string {
     return "An account with this email already exists."
   }
   if (message.includes("Password should be")) {
-    return "Password should be at least 6 characters."
+    return "Password should be at least 8 characters."
   }
   return message
 }

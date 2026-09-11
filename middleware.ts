@@ -36,7 +36,6 @@ export async function middleware(request: NextRequest) {
     path === "/sw.js" ||
     path.startsWith("/screenshots/") ||
     path.startsWith("/_next/") ||
-    path.startsWith("/api/") ||
     /\.(?:json|js|png|ico|svg|jpg|jpeg|webp|txt|xml|html)$/i.test(path)
   ) {
     return response

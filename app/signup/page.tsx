@@ -101,8 +101,8 @@ export default function SignupPage() {
     if (!password) {
       setPasswordError("Password is required")
       hasError = true
-    } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters")
+    } else if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters")
       hasError = true
     }
     if (!confirmPassword) {

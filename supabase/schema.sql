@@ -273,12 +273,35 @@ create table if not exists public.posts (
   is_anonymous boolean not null default false,
   is_followers_only boolean not null default false,
   friends_also boolean not null default false,
+  is_resolved boolean not null default false,
+  resolved_at timestamptz,
+  resolution_note text check (char_length(resolution_note) <= 1000),
   created_at timestamptz not null default now()
 );
 
 create index if not exists posts_author_id_idx on public.posts (author_id);
 create index if not exists posts_created_at_idx on public.posts (created_at desc);
 create index if not exists posts_scheduled_for_idx on public.posts (scheduled_for);
+create index if not exists posts_is_resolved_idx on public.posts (is_resolved, resolved_at desc);
+
+-- Ensures resolved_at is timestamped automatically when is_resolved becomes true
+create or replace function public.trg_fn_posts_resolution_timestamp()
+returns trigger as $$
+begin
+  if new.is_resolved = true and (old.is_resolved is null or old.is_resolved = false) then
+    if new.resolved_at is null then
+      new.resolved_at := now();
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_posts_resolution_timestamp on public.posts;
+create trigger trg_posts_resolution_timestamp
+  before update on public.posts
+  for each row
+  execute function public.trg_fn_posts_resolution_timestamp();
 
 alter table public.posts enable row level security;
 
@@ -617,8 +640,11 @@ create table if not exists public.comments (
   author_id uuid not null references public.profiles(id) on delete cascade,
   content text not null check (char_length(trim(content)) > 0 and char_length(content) <= 500),
   is_org_help boolean not null default false,
+  is_official_response boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+create index if not exists comments_is_official_idx on public.comments (post_id, is_official_response);
 
 alter table public.comments enable row level security;
 
@@ -992,10 +1018,11 @@ create policy "Admins update reports"
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
-  type text not null check (type in ('support', 'comment', 'follow', 'offer_help', 'verification_approved', 'follow_request')),
+  type text not null check (type in ('support', 'comment', 'follow', 'offer_help', 'verification_approved', 'follow_request', 'content_warning', 'post_removed')),
   actor_id uuid not null references public.profiles(id) on delete cascade,
   post_id uuid references public.posts(id) on delete cascade,
   read boolean not null default false,
+  metadata text,
   created_at timestamptz not null default now()
 );
 

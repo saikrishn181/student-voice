@@ -585,7 +585,7 @@ const s = {
   "about.contactText":
     "Questions, feedback or problems? Write to us from inside the app, or start a conversation on any post.",
   "about.backHome": "Back to Krantind",
-  "chat.encrypted": "End-to-end encrypted",
+  "chat.encrypted": "Private & secure",
 
   // ─── Chat V2: groups, attachments, typing, receipts ─────────────────────────
   "chat.newGroup": "New group",

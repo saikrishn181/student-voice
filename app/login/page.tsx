@@ -63,18 +63,6 @@ function LoginForm() {
       return
     }
 
-    if (account.session?.access_token) {
-      setSwitchingId(account.id)
-      const res = await switchAccount(account.id)
-      setSwitchingId(null)
-      if (res.ok) {
-        showToast(`Welcome back, ${account.name}!`, "success")
-        const next = searchParams.get("next")
-        router.push(getSafeRedirect(next))
-        return
-      }
-    }
-
     // Prefill email and focus password
     setEmail(account.email || "")
     setEmailError("")

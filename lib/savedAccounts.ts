@@ -10,10 +10,6 @@ export interface SavedAccount {
   organizationType?: OrganizationType
   state?: string
   lastActiveAt: number
-  session?: {
-    access_token: string
-    refresh_token: string
-  }
 }
 
 const STORAGE_KEY = "krantind_saved_accounts"
@@ -30,10 +26,7 @@ export function getSavedAccounts(): SavedAccount[] {
   }
 }
 
-export function saveAccount(
-  user: User,
-  session?: { access_token: string; refresh_token: string },
-): SavedAccount[] {
+export function saveAccount(user: User): SavedAccount[] {
   if (typeof window === "undefined" || !user?.id) return []
   try {
     const existing = getSavedAccounts()
@@ -48,7 +41,6 @@ export function saveAccount(
       organizationType: user.organizationType,
       state: user.state,
       lastActiveAt: Date.now(),
-      session: session || (index >= 0 ? existing[index].session : undefined),
     }
 
     let newList: SavedAccount[]

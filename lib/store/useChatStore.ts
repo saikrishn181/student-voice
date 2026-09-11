@@ -490,11 +490,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       },
     }))
 
-    let query = supabase.from("messages").delete().eq("id", messageId)
-    if (!currentUser?.isAdmin) {
-      query = query.eq("sender_id", currentUserId)
-    }
-    const { error } = await query
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId)
+      .eq("sender_id", currentUserId)
+
     if (error) {
       await get().loadMessages(conversationId)
       return false

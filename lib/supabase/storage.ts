@@ -60,6 +60,13 @@ async function mediaAspectRatio(file: File): Promise<number | null> {
   return null
 }
 
+function generateSecureFileName(folder: string, ext: string): string {
+  const id = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+  return `${folder}/${id}.${ext}`
+}
+
 export async function uploadPostMedia(file: File): Promise<UploadResult> {
   const supabase = createSupabaseBrowserClient()
 
@@ -68,7 +75,7 @@ export async function uploadPostMedia(file: File): Promise<UploadResult> {
     rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() ||
     (file.type.startsWith("video/") ? "mp4" : "jpg")
 
-  const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`
+  const path = generateSecureFileName("posts", safeExt)
 
   let contentType = file.type
   if (!contentType) {
@@ -101,7 +108,7 @@ export async function uploadAvatar(file: File): Promise<UploadResult> {
 
   const rawExt = file.name.split(".").pop() || ""
   const safeExt = rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg"
-  const path = `avatars/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`
+  const path = generateSecureFileName("avatars", safeExt)
 
   let contentType = file.type
   if (!contentType || !contentType.startsWith("image/")) {
@@ -139,6 +146,8 @@ export async function deletePostMedia(url?: string | null): Promise<void> {
   if (slash === -1) return
   const bucket = full.slice(0, slash)
   const path = full.slice(slash + 1)
+  // Security guard: only delete from the post-media bucket, and prevent path traversal
+  if (bucket !== "post-media" || path.includes("..") || path.startsWith("/")) return
   const supabase = createSupabaseBrowserClient()
   await supabase.storage.from(bucket).remove([path])
 }
