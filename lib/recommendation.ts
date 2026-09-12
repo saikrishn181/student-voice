@@ -26,7 +26,13 @@ export function getUserAffinities(userId?: string): UserAffinities {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${userId}`)
     if (!raw) return empty
-    return JSON.parse(raw) as UserAffinities
+    const parsed = JSON.parse(raw) as Partial<UserAffinities> | null
+    return {
+      topics: parsed?.topics && typeof parsed.topics === "object" ? parsed.topics : {},
+      colleges: parsed?.colleges && typeof parsed.colleges === "object" ? parsed.colleges : {},
+      categories: parsed?.categories && typeof parsed.categories === "object" ? parsed.categories : {},
+      states: parsed?.states && typeof parsed.states === "object" ? parsed.states : {},
+    }
   } catch {
     return empty
   }

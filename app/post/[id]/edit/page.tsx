@@ -46,53 +46,36 @@ export default function EditPostPage({
   // Keep hashtag preview live as the user types.
   const previewTags = parseHashtags(hashtagInput)
 
-  // Hydrate the form once the post is available.
+  // Hydrate the form once the post is available with authoritative viewer context.
   useEffect(() => {
     if (!postId) return
-    usePostStore.getState().loadAll(currentUser?.id).finally(async () => {
-      const fresh = usePostStore.getState().posts.find((p) => p.id === postId)
-      if (fresh) {
-        setText(fresh.text)
-        setHashtagInput(fresh.hashtags.join(" "))
-        setContentWarning(fresh.contentWarning ?? "")
-        setExistingMediaUrls((fresh.mediaUrl ?? "").split(" ").filter(Boolean))
-        setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
+    let cancelled = false
+    const supabase = createSupabaseBrowserClient()
+    supabase
+      .from("posts")
+      .select("*")
+      .eq("id", postId)
+      .maybeSingle()
+      .then(({ data: row }) => {
+        if (cancelled) return
+        if (row) {
+          const mapped = rowToPost(row as unknown as PostRow, {
+            currentUserId: currentUser?.id,
+            isAdmin: currentUser?.isAdmin,
+          })
+          usePostStore.getState().upsertPosts([mapped])
+          setText(mapped.text)
+          setHashtagInput(mapped.hashtags.join(" "))
+          setContentWarning(mapped.contentWarning ?? "")
+          setExistingMediaUrls((mapped.mediaUrl ?? "").split(" ").filter(Boolean))
+          setExistingMediaType(mapped.mediaType as "photo" | "video" | null)
+        }
         setLoaded(true)
-        return
-      }
-
-      // If not in first batch of posts, fetch directly by ID
-      const supabase = createSupabaseBrowserClient()
-      const { data: row } = await supabase.from("posts").select("*").eq("id", postId).maybeSingle()
-      if (row) {
-        const mapped = rowToPost(row as unknown as PostRow, {
-          currentUserId: currentUser?.id,
-          isAdmin: currentUser?.isAdmin,
-        })
-        usePostStore.setState((s) => ({
-          posts: s.posts.some((p) => p.id === mapped.id) ? s.posts : [mapped, ...s.posts],
-        }))
-        setText(mapped.text)
-        setHashtagInput(mapped.hashtags.join(" "))
-        setContentWarning(mapped.contentWarning ?? "")
-        setExistingMediaUrls((mapped.mediaUrl ?? "").split(" ").filter(Boolean))
-        setExistingMediaType(mapped.mediaType as "photo" | "video" | null)
-      }
-      setLoaded(true)
-    })
-  }, [postId, currentUser?.id])
-
-  // Never hydrate from the responsive lookup; but if we already have it, use it.
-  useEffect(() => {
-    if (post && !loaded) {
-      setText(post.text)
-      setHashtagInput(post.hashtags.join(" "))
-      setContentWarning(post.contentWarning ?? "")
-      setExistingMediaUrls((post.mediaUrl ?? "").split(" ").filter(Boolean))
-      setExistingMediaType(post.mediaType as "photo" | "video" | null)
-      setLoaded(true)
+      })
+    return () => {
+      cancelled = true
     }
-  }, [post, loaded])
+  }, [postId, currentUser?.id, currentUser?.isAdmin])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
