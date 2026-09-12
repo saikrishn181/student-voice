@@ -87,12 +87,26 @@ export default function ProfilePage() {
       setSavedLoading(false)
       return
     }
-    const { data: rows } = await supabase
-      .from("posts")
-      .select("*")
-      .in("id", ids)
-      .or("scheduled_for.is.null,scheduled_for.lte.now")
-    setSavedPosts(((rows ?? []) as PostRow[]).map((r) => rowToPost(r, { currentUserId: currentUser.id, isAdmin: currentUser.isAdmin })))
+    const [{ data: rows }, { data: supports }] = await Promise.all([
+      supabase
+        .from("posts")
+        .select("*")
+        .in("id", ids)
+        .or("scheduled_for.is.null,scheduled_for.lte.now"),
+      supabase
+        .from("post_supports")
+        .select("post_id")
+        .eq("user_id", currentUser.id)
+        .in("post_id", ids),
+    ])
+    const supportedIds = new Set((supports ?? []).map((r) => r.post_id))
+    const mapped = ((rows ?? []) as PostRow[]).map((r) => {
+      const p = rowToPost(r, { currentUserId: currentUser.id, isAdmin: currentUser.isAdmin })
+      p.savedByCurrentUser = true
+      p.supportedByCurrentUser = supportedIds.has(p.id)
+      return p
+    })
+    setSavedPosts(mapped)
     setSavedLoading(false)
   }, [currentUser])
 

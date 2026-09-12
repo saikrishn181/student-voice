@@ -1005,6 +1005,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
                     isPinned: row.is_pinned,
                     editedAt: row.updated_at ?? undefined,
                     contentWarning: row.content_warning ?? undefined,
+                    isResolved: Boolean(row.is_resolved),
+                    resolvedAt: row.resolved_at ?? undefined,
+                    resolutionNote: row.resolution_note ?? undefined,
                   }
                 : p,
             ),

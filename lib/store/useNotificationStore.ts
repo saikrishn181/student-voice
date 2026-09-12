@@ -68,6 +68,10 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   pollTimer: null,
 
   load: async (userId) => {
+    if (!userId) {
+      set({ notifications: [], status: "ready" })
+      return
+    }
     const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from("notifications")
@@ -87,6 +91,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   },
 
   loadPreferences: async (userId) => {
+    if (!userId) return
     const supabase = createSupabaseBrowserClient()
     const { data, error } = await supabase
       .from("notification_preferences")
@@ -135,6 +140,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   },
 
   startRealtime: (userId) => {
+    if (!userId) return
     const { realtimeChannel, pollTimer } = get()
     if (realtimeChannel) return
     const supabase = createSupabaseBrowserClient()

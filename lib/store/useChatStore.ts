@@ -477,7 +477,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   deleteMessageForEveryone: async (conversationId, messageId) => {
     const supabase = createSupabaseBrowserClient()
     const currentUserId = useAuthStore.getState().currentUser?.id
-    const currentUser = useAuthStore.getState().currentUser
     if (!currentUserId) return false
 
     // Optimistic removal

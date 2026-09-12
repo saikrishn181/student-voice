@@ -25,21 +25,16 @@ export default function PostDetailPage({
   const params = use(paramsPromise)
   const post = usePostStore((s) => s.posts.find((p) => p.id === params.id))
   const posts = usePostStore((s) => s.posts)
-  const [lookingUp, setLookingUp] = useState(posts.length === 0)
-  const [notFound, setNotFound] = useState(posts.length > 0 && !post)
+  const [lookingUp, setLookingUp] = useState(!post)
+  const [notFound, setNotFound] = useState(false)
   const currentUser = useAuthStore((s) => s.currentUser)
 
-  // Store memory doesn't survive a refresh — if we have nothing cached, fetch
-  // the post + comments directly instead of flashing "not found".
+  // If the post is not in the cached feed store (e.g. older post, direct deep link,
+  // or after reload), fetch it directly from Supabase instead of showing "not found".
   useEffect(() => {
     if (post) {
       setLookingUp(false)
       setNotFound(false)
-      return
-    }
-    if (posts.length > 0) {
-      setNotFound(true)
-      setLookingUp(false)
       return
     }
     setLookingUp(true)

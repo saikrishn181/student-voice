@@ -95,7 +95,7 @@ function SearchPage() {
       } else {
         const blocked = new Set(blockedUserIds)
         const rows = (data as PostRow[]).filter((r) => !blocked.has(r.author_id))
-        setDefaultPosts(rows.map(rowToPost))
+        setDefaultPosts(rows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin })))
       }
       setLoadingDefault(false)
     }
@@ -218,7 +218,7 @@ function SearchPage() {
       }))
 
       setResults({
-        posts: postRows.map(rowToPost),
+        posts: postRows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin })),
         accounts: mappedAccounts,
       })
       setSearching(false)

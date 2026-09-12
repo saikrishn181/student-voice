@@ -249,7 +249,7 @@ export default function PublicProfilePage({
 
   const followerCount = stats?.follower_count ?? targetUser.followerCount
   const followingCount = stats?.following_count ?? targetUser.followingCount
-  const postsCount = stats?.posts_count ?? theirPosts.length
+  const postsCount = stats?.posts_count ?? userPosts.length
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">

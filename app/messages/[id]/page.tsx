@@ -139,6 +139,12 @@ export default function ConversationPage({
 
   const partner = conversation && !conversation.isGroup ? users[conversation.otherUserId] : undefined
 
+  useEffect(() => {
+    if (conversation && !conversation.isGroup && conversation.otherUserId && !partner) {
+      void useUserStore.getState().loadById(conversation.otherUserId)
+    }
+  }, [conversation, partner])
+
   // Throttled typing ping while the user types.
   const pingTyping = () => {
     const nowMs = Date.now()
@@ -317,7 +323,7 @@ export default function ConversationPage({
     )
   }
 
-  if (!conversation || (!conversation.isGroup && !partner)) {
+  if (!conversation) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
         <EmptyState
@@ -338,11 +344,11 @@ export default function ConversationPage({
 
   const headerName = conversation.isGroup
     ? conversation.title ?? s["chat.group"]
-    : partner!.name
+    : partner?.name ?? s["post.unknownName"]
   const headerSub = conversation.isGroup
     ? s["chat.groupMembers"](memberCount)
-    : partner!.username
-      ? `@${partner!.username}`
+    : partner?.username
+      ? `@${partner.username}`
       : null
 
   return (
@@ -362,7 +368,7 @@ export default function ConversationPage({
             <Users size={18} aria-hidden />
           </span>
         ) : (
-          <Avatar name={partner!.name} src={partner!.avatarUrl ?? null} size="md" />
+          <Avatar name={partner?.name ?? "Student"} src={partner?.avatarUrl ?? null} size="md" />
         )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-950">{headerName}</p>

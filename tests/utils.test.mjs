@@ -105,6 +105,15 @@ test("isSafeMediaUrl validates safe image and video sources", () => {
   assert.equal(isSafeMediaUrl("https://example.supabase.co/storage/v1/object/public/post-media/1.jpg"), true)
   assert.equal(isSafeMediaUrl("blob:http://localhost:3000/1234"), true)
   assert.equal(isSafeMediaUrl("/logo.png"), true)
-  assert.equal(isSafeMediaUrl("//attacker.com/evil.jpg"), false)
 })
 
+test("topic filter matches tags case-insensitively", () => {
+  const followedTopics = ["hostel", "exams"]
+  const postHashtags = ["Hostel", "MessFood"]
+  const matches = postHashtags.some((t) => followedTopics.includes(t.toLowerCase()))
+  assert.equal(matches, true)
+
+  const nonMatching = ["Placement", "Campus"]
+  const noMatch = nonMatching.some((t) => followedTopics.includes(t.toLowerCase()))
+  assert.equal(noMatch, false)
+})

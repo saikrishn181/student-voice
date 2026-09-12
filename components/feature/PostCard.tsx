@@ -388,7 +388,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
           ) : null}
           {hasWarning ? (
             <span className="inline-flex items-center gap-1 rounded-pill border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-              <TriangleAlert size={11} aria-hidden /> {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
+              <TriangleAlert size={11} aria-hidden /> {(s[`post.warning.${post.contentWarning}` as keyof typeof s] as string) || "Sensitive Content"}
             </span>
           ) : null}
         </div>
@@ -770,7 +770,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
         <div className="flex flex-col items-center gap-3 rounded-card border border-red-200 bg-red-50/60 p-4 text-center">
           <TriangleAlert size={20} className="text-red-600" aria-hidden />
           <p className="text-body-sm font-medium text-red-800">
-            {s[`post.warning.${post.contentWarning}` as keyof typeof s] as string}
+            {(s[`post.warning.${post.contentWarning}` as keyof typeof s] as string) || "Sensitive Content"}
           </p>
           <p className="max-w-sm text-body-sm text-red-700/80">{s["post.warningBlurHint"]}</p>
           <Button size="sm" onClick={() => setWarningRevealed(true)}>

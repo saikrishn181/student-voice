@@ -264,7 +264,7 @@ export default function FeedPage() {
                 filter === "trending"
                   ? [...posts].sort((a, b) => b.supportCount - a.supportCount)
                   : filter === "topics"
-                    ? posts.filter((p) => p.hashtags.some((t) => followedTopics.includes(t)))
+                    ? posts.filter((p) => p.hashtags.some((t) => followedTopics.includes(t.toLowerCase())))
                     : posts
               const localPosts = filter === "all" && localState
                 ? visible.filter((p) => p.state === localState)
