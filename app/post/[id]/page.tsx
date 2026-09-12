@@ -98,7 +98,7 @@ export default function PostDetailPage({
     return () => {
       cancelled = true
     }
-  }, [params.id, post, posts.length, currentUser?.id])
+  }, [params.id, post, currentUser?.id, currentUser?.isAdmin])
 
   // Count this visit: bump view_count once per mount (RLS requires a signed-in
   // user to update, so anonymous visits simply don't count).
