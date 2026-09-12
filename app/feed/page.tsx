@@ -8,7 +8,7 @@
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus } from "lucide-react"
+import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus, BookOpen, PartyPopper, Megaphone } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
@@ -20,7 +20,8 @@ import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useUserStore } from "@/lib/store/useUserStore"
 import { rankPostsForYou } from "@/lib/recommendation"
 import { detectHotIssues } from "@/lib/heatmap"
-import { cn } from "@/lib/utils"
+import { cn, getPostVibe } from "@/lib/utils"
+import type { PostVibe } from "@/lib/types"
 import s from "@/lib/strings"
 
 export default function FeedPage() {
@@ -37,6 +38,7 @@ export default function FeedPage() {
   const [pullDistance, setPullDistance] = useState(0)
   const touchStartRef = useRef(0)
   const [filter, setFilter] = useState<"forYou" | "all" | "local" | "trending" | "topics">("forYou")
+  const [vibeFilter, setVibeFilter] = useState<"all" | PostVibe>("all")
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // Load once on mount; keep ears open for live updates (default-on but
@@ -163,23 +165,48 @@ export default function FeedPage() {
           </button>
         </div>
 
-        {/* Create Post Prompt Card */}
+        {/* Create Post Prompt Card with Multi-Intent Campus Vibe Shortcuts */}
         {currentUser && !initialLoading ? (
-          <Card className="flex items-center gap-3 p-3.5 border-[#E8E1D6] bg-white shadow-xs hover:border-primary-300 transition-all">
-            <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="md" />
-            <Link
-              href="/post/create"
-              className="flex-1 rounded-pill border border-slate-200 bg-slate-50/80 px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            >
-              Share an issue or problem on campus...
-            </Link>
-            <Link
-              href="/post/create"
-              className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all shrink-0"
-            >
-              <Plus size={15} strokeWidth={2.5} />
-              <span>Post</span>
-            </Link>
+          <Card className="flex flex-col gap-2.5 p-3.5 border-[#E8E1D6] bg-white shadow-xs hover:border-primary-300 transition-all">
+            <div className="flex items-center gap-3">
+              <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="md" />
+              <Link
+                href="/post/create"
+                className="flex-1 rounded-pill border border-slate-200 bg-slate-50/80 px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors truncate"
+              >
+                What&apos;s happening on campus? Issues, fests, notes, memories...
+              </Link>
+              <Link
+                href="/post/create"
+                className="flex items-center gap-1.5 rounded-pill bg-primary-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-primary-700 active:scale-95 transition-all shrink-0"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                <span>Post</span>
+              </Link>
+            </div>
+
+            {/* Quick-vibe intent buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 text-xs">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">Quick Post:</span>
+              <Link
+                href="/post/create?vibe=issue"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-rose-200 bg-rose-50/70 px-2.5 py-1 font-semibold text-rose-700 hover:bg-rose-100 active:scale-95 transition-all"
+              >
+                <span>📢</span> Report Issue
+              </Link>
+              <Link
+                href="/post/create?vibe=life"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-purple-200 bg-purple-50/70 px-2.5 py-1 font-semibold text-purple-700 hover:bg-purple-100 active:scale-95 transition-all"
+              >
+                <span>🎉</span> Campus Life & Fest
+              </Link>
+              <Link
+                href="/post/create?vibe=study"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all"
+              >
+                <span>📚</span> Share Notes & Tips
+              </Link>
+            </div>
           </Card>
         ) : null}
 
@@ -210,6 +237,33 @@ export default function FeedPage() {
               )}
             >
               {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Campus Vibe Sub-filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 shrink-0 mr-1">
+            Campus Pulse:
+          </span>
+          {[
+            { id: "all", label: "⚡ All Campus", activeCls: "bg-slate-900 text-white border-slate-900 shadow-2xs" },
+            { id: "issue", label: "📢 Issues & Voice", activeCls: "bg-rose-700 text-white border-rose-700 shadow-2xs" },
+            { id: "life", label: "🎉 Campus Life & Fests", activeCls: "bg-purple-700 text-white border-purple-700 shadow-2xs" },
+            { id: "study", label: "📚 Study Hub & Notes", activeCls: "bg-emerald-700 text-white border-emerald-700 shadow-2xs" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setVibeFilter(item.id as "all" | PostVibe)}
+              className={cn(
+                "rounded-pill px-3 py-1 font-semibold transition-all shrink-0 border",
+                vibeFilter === item.id
+                  ? item.activeCls
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+              )}
+            >
+              {item.label}
             </button>
           ))}
         </div>
@@ -249,9 +303,38 @@ export default function FeedPage() {
           ? (() => {
               if (filter === "forYou") {
                 const ranked = rankPostsForYou(posts, users, currentUser, followedTopics)
+                const filteredRanked = vibeFilter === "all" ? ranked : ranked.filter((p) => getPostVibe(p) === vibeFilter)
+                if (filteredRanked.length === 0 && posts.length > 0) {
+                  return (
+                    <EmptyState
+                      icon={vibeFilter === "life" ? PartyPopper : vibeFilter === "study" ? BookOpen : Megaphone}
+                      title={
+                        vibeFilter === "life"
+                          ? "No Campus Life posts yet"
+                          : vibeFilter === "study"
+                            ? "No Study Hub notes yet"
+                            : "No Campus Issues right now"
+                      }
+                      description={
+                        vibeFilter === "life"
+                          ? "Be the first to share a college fest update, party memory, hostel banter, or campus moment!"
+                          : vibeFilter === "study"
+                            ? "Share handwritten lecture notes, previous year question papers, or exam strategy with batchmates."
+                            : "No active campus grievances in your feed right now."
+                      }
+                      action={
+                        <Link href={`/post/create?vibe=${vibeFilter}`}>
+                          <Button variant="outline" size="sm">
+                            {vibeFilter === "life" ? "Post Campus Life" : vibeFilter === "study" ? "Share Notes / Tips" : "Report Issue"}
+                          </Button>
+                        </Link>
+                      }
+                    />
+                  )
+                }
                 return (
                   <>
-                    {ranked.map((post) => (
+                    {filteredRanked.map((post) => (
                       <div key={post.id}>
                         <PostCard post={post} recommendationReason={post.recommendationReason} />
                       </div>
@@ -260,12 +343,46 @@ export default function FeedPage() {
                 )
               }
 
-              const visible =
+              let visible =
                 filter === "trending"
                   ? [...posts].sort((a, b) => b.supportCount - a.supportCount)
                   : filter === "topics"
                     ? posts.filter((p) => p.hashtags.some((t) => followedTopics.includes(t.toLowerCase())))
                     : posts
+
+              if (vibeFilter !== "all") {
+                visible = visible.filter((p) => getPostVibe(p) === vibeFilter)
+              }
+
+              if (visible.length === 0 && posts.length > 0) {
+                return (
+                  <EmptyState
+                    icon={vibeFilter === "life" ? PartyPopper : vibeFilter === "study" ? BookOpen : Megaphone}
+                    title={
+                      vibeFilter === "life"
+                        ? "No Campus Life posts yet"
+                        : vibeFilter === "study"
+                          ? "No Study Hub notes yet"
+                          : "No Campus Issues right now"
+                    }
+                    description={
+                      vibeFilter === "life"
+                        ? "Be the first to share a college fest update, party memory, hostel banter, or campus moment!"
+                        : vibeFilter === "study"
+                          ? "Share handwritten lecture notes, previous year question papers, or exam strategy with batchmates."
+                          : "No active campus grievances found for this selection."
+                    }
+                    action={
+                      <Link href={`/post/create?vibe=${vibeFilter}`}>
+                        <Button variant="outline" size="sm">
+                          {vibeFilter === "life" ? "Post Campus Life" : vibeFilter === "study" ? "Share Notes / Tips" : "Report Issue"}
+                        </Button>
+                      </Link>
+                    }
+                  />
+                )
+              }
+
               const localPosts = filter === "all" && localState
                 ? visible.filter((p) => p.state === localState)
                 : []

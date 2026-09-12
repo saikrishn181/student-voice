@@ -74,6 +74,71 @@ export function categoryFromHashtags(tags) {
   return "Academic"
 }
 
+export function getPostVibe(post) {
+  const tags = (post.hashtags || []).map((t) => t.toLowerCase())
+  const joinedTags = tags.join(" ")
+
+  // 1. Campus Life & Fun keywords
+  if (
+    /(fest|fests|party|parties|celebrat|freshers|farewell|hostellife|hosteldiar|canteen|foodie|crush|hangout|hangouts|meme|memes|cultural|sports|trip|vibe|vibes|collegeevent|music|dance|fun|reels|nightout|djnight)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "life"
+  }
+
+  // 2. Study Hub & Academics keywords
+  if (
+    /(notes|pyq|pyqs|studytip|studytips|studying|examhack|examhacks|syllabus|cheatsheet|material|materials|lecture|gate|cat|jee|placement|placements|intern|internship|resume|interview|coding|hackathon|project|resources|assignments|solutions)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "study"
+  }
+
+  // 3. Grievances / Whistleblower / Issues:
+  // If anonymous, resolved, or tagged with issues/complaints/ragging/fees/mess/admin
+  if (
+    post.isAnonymous ||
+    post.isResolved ||
+    post.category === "Harassment" ||
+    post.category === "Mental Health" ||
+    post.category === "Financial" ||
+    /(issue|complaint|grievance|problem|mess|food|hostel|water|wifi|admin|fee|fees|fine|fines|ragging|bully|harass|corrupt|hygiene|sanitation|electricity|protest|justice|scam|retaliation|threat|action)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "issue"
+  }
+
+  // Check text content if tags are sparse or empty
+  if (post.text) {
+    const text = post.text.toLowerCase()
+    if (
+      /(fest|annual fest|freshers party|farewell party|dj night|cultural night|hostel fun|canteen food|sports day|college trip|college vibe)/i.test(
+        text,
+      )
+    ) {
+      return "life"
+    }
+    if (
+      /(handwritten notes|pyq|previous year question|study material|lecture notes|exam tips|cheatsheet|placement drive|interview prep|resume review|coding challenge)/i.test(
+        text,
+      )
+    ) {
+      return "study"
+    }
+  }
+
+  // Fallbacks based on category column
+  if (post.category === "Placements" || post.category === "Exams") {
+    return "study"
+  }
+
+  // Krantind's foundational mission: Campus Voice & Issues
+  return "issue"
+}
+
 export function getSafeRedirect(next, fallback = "/feed") {
   if (!next || typeof next !== "string") return fallback
   const trimmed = next.trim()

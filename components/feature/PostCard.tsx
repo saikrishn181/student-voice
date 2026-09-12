@@ -44,7 +44,7 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { useUserById } from "@/hooks"
 import { trackInteraction } from "@/lib/recommendation"
 import s from "@/lib/strings"
-import { cn, timeAgo } from "@/lib/utils"
+import { cn, timeAgo, getPostVibe } from "@/lib/utils"
 import type { Post, ReportReason } from "@/lib/types"
 import { MediaDisplay } from "./MediaDisplay"
 import { VerifiedBadge, RegionTag, CollegeBadge } from "./Badges"
@@ -371,6 +371,8 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
     }
   }
 
+  const vibe = getPostVibe(post)
+
   const meta = (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
       {/* Priority Status & Alerts chunk */}
@@ -396,6 +398,21 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
 
       {/* Region & Context chunk */}
       <RegionTag state={post.state} />
+
+      {/* Campus Vibe pill */}
+      {vibe === "life" ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-purple-200 bg-purple-50/90 px-2.5 py-0.5 text-xs font-semibold text-purple-700 shadow-2xs">
+          <span>🎉</span> Campus Life
+        </span>
+      ) : vibe === "study" ? (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-emerald-200 bg-emerald-50/90 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 shadow-2xs">
+          <span>📚</span> Study Hub
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 rounded-pill border border-rose-200 bg-rose-50/90 px-2.5 py-0.5 text-xs font-semibold text-rose-700 shadow-2xs">
+          <span>📢</span> Campus Issue
+        </span>
+      )}
 
       {/* Topic tags chunk */}
       {post.hashtags.length > 0 ? (

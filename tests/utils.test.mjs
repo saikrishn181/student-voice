@@ -9,6 +9,7 @@ import {
   compactNumber,
   parseHashtags,
   categoryFromHashtags,
+  getPostVibe,
   getSafeRedirect,
   isSafeMediaUrl,
 } from "./utils-runner.mjs"
@@ -80,6 +81,28 @@ test("categoryFromHashtags maps keywords to categories", () => {
   assert.equal(categoryFromHashtags(["placement", "intern"]), "Placements")
   assert.equal(categoryFromHashtags(["exams", "marks"]), "Exams")
   assert.equal(categoryFromHashtags(["hostel"]), "Academic")
+})
+
+test("getPostVibe correctly categorizes grievances, campus life/fun, and study hub/notes", () => {
+  // Campus Life & Fun
+  assert.equal(getPostVibe({ hashtags: ["fest", "collegevibe"] }), "life")
+  assert.equal(getPostVibe({ hashtags: ["freshers", "party"] }), "life")
+  assert.equal(getPostVibe({ hashtags: ["hosteldiaries", "canteen"] }), "life")
+  assert.equal(getPostVibe({ hashtags: ["farewell", "fun"] }), "life")
+  assert.equal(getPostVibe({ text: "Our annual fest DJ night was legendary yesterday!" }), "life")
+
+  // Study Hub & Notes
+  assert.equal(getPostVibe({ hashtags: ["notes", "cheatsheet"] }), "study")
+  assert.equal(getPostVibe({ hashtags: ["pyq", "examprep"] }), "study")
+  assert.equal(getPostVibe({ hashtags: ["placement", "interview"] }), "study")
+  assert.equal(getPostVibe({ text: "Here are my handwritten lecture notes for compiler design" }), "study")
+
+  // Issues & Whistleblower
+  assert.equal(getPostVibe({ hashtags: ["messfood", "insects"] }), "issue")
+  assert.equal(getPostVibe({ hashtags: ["feehike", "protest"] }), "issue")
+  assert.equal(getPostVibe({ isAnonymous: true }), "issue")
+  assert.equal(getPostVibe({ isResolved: true }), "issue")
+  assert.equal(getPostVibe({ category: "Harassment" }), "issue")
 })
 
 test("getSafeRedirect prevents open redirects, backslashes, and dangerous schemes", () => {

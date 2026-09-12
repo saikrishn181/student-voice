@@ -4,10 +4,10 @@
 // media (up to 4 photos or 1 video). Organizations additionally get event
 // fields, scheduling, and embedded polls. State is auto-filled from the current
 // user's profile (not editable) so the post lands in their home state feed.
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert, ShieldCheck, Users, Lock, UserCheck, BookmarkCheck } from "lucide-react"
+import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert, ShieldCheck, Users, Lock, UserCheck, BookmarkCheck, PartyPopper, BookOpen, Megaphone } from "lucide-react"
 import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -18,23 +18,120 @@ import { uploadPostMedia } from "@/lib/supabase/storage"
 import { cn, parseHashtags } from "@/lib/utils"
 import { checkInappropriateContent, scanImageFile } from "@/lib/moderation"
 import s from "@/lib/strings"
-import type { Poll } from "@/lib/types"
+import type { Poll, PostVibe } from "@/lib/types"
 
 const MAX_IMAGES = 4
 
-export default function CreatePostPage() {
+type VibeOption = PostVibe
+
+const VIBE_CONFIG: Record<
+  VibeOption,
+  { title: string; icon: string; subtitle: string; desc: string; placeholder: string; banner: string }
+> = {
+  issue: {
+    title: "Campus Issue",
+    icon: "📢",
+    subtitle: "Mess, hostel, fee hike, admin, ragging",
+    desc: "Mess food hygiene, hostel infrastructure, fee transparency, admin accountability, harassment",
+    placeholder:
+      "Describe the grievance or campus issue in factual detail. Where is it happening? Who is responsible? What needs fixing?",
+    banner:
+      "Whistleblower Protection: Use Anonymous Mode below if you fear retaliation from college administration or faculty.",
+  },
+  life: {
+    title: "Campus Life & Fun",
+    icon: "🎉",
+    subtitle: "Fests, parties, hostel banter, memes",
+    desc: "College fests, cultural nights, fresher & farewell parties, hostel banter, campus memes, canteen",
+    placeholder:
+      "Share what's buzzing on campus! Fest line-ups, party moments, hostel diaries, canteen reviews, campus memes, or college memories...",
+    banner:
+      "Campus Vibes: Add up to 4 photos or a video to show everyone your campus festival, party, or student life moments!",
+  },
+  study: {
+    title: "Study Hub & Notes",
+    icon: "📚",
+    subtitle: "Notes, PYQs, study tips, placements",
+    desc: "Handwritten notes, previous year questions (PYQs), exam cheat sheets, placement prep, study hacks",
+    placeholder:
+      "Share study resources, handwritten notes, exam tips, PYQ solutions, or placement drive experiences to help fellow students...",
+    banner:
+      "Knowledge Hub: Upload handwritten notes, diagrams, or cheat sheet photos so batchmates can ace their exams together!",
+  },
+}
+
+const VIBE_TAGS: Record<VibeOption, string[]> = {
+  issue: ["MessFood", "HostelIssue", "FeeTransparency", "AdminAccountability", "Sanitation", "CampusWiFi", "ExamDelay"],
+  life: ["CampusLife", "FestSeason", "HostelDiaries", "CollegeParty", "Freshers2026", "CampusVibes", "CanteenReview", "CollegeFest"],
+  study: ["StudyNotes", "PYQ", "ExamPrep", "PlacementTips", "CheatSheet", "InternshipDrive", "SubjectReview", "StudyHub"],
+}
+
+function CreatePostContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const currentUser = useAuthStore((s) => s.currentUser)
   const addPost = usePostStore((s) => s.addPost)
   const showToast = useToastStore((s) => s.show)
 
+  const initialVibeParam = searchParams.get("vibe") as VibeOption
+  const [vibe, setVibe] = useState<VibeOption>(
+    initialVibeParam === "life" || initialVibeParam === "study" || initialVibeParam === "issue"
+      ? initialVibeParam
+      : "issue",
+  )
+
   const [text, setText] = useState("")
-  const [hashtagInput, setHashtagInput] = useState("")
+  const [hashtagInput, setHashtagInput] = useState(
+    initialVibeParam === "life"
+      ? "#CampusLife"
+      : initialVibeParam === "study"
+        ? "#StudyNotes"
+        : "",
+  )
   const [media, setMedia] = useState<PickedMedia[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [textError, setTextError] = useState("")
   const [tagError, setTagError] = useState("")
   const [moderationError, setModerationError] = useState("")
+
+  const handleVibeSelect = (selectedVibe: VibeOption) => {
+    setVibe(selectedVibe)
+    const currentTags = parseHashtags(hashtagInput).tags
+    if (currentTags.length === 0) {
+      if (selectedVibe === "life") setHashtagInput("#CampusLife")
+      else if (selectedVibe === "study") setHashtagInput("#StudyNotes")
+      else if (selectedVibe === "issue") setHashtagInput("#CampusIssue")
+    }
+  }
+
+  const handleToggleTag = (tag: string) => {
+    const cleanTag = tag.replace(/^#+/, "").toLowerCase()
+    const currentTags = parseHashtags(hashtagInput).tags
+    if (currentTags.includes(cleanTag)) {
+      const updated = currentTags.filter((t) => t !== cleanTag).map((t) => `#${t}`).join(" ")
+      setHashtagInput(updated)
+    } else {
+      if (currentTags.length >= 5) {
+        showToast("Maximum 5 hashtags allowed", "info")
+        return
+      }
+      const updated = [...currentTags, cleanTag].map((t) => `#${t}`).join(" ")
+      setHashtagInput(updated)
+    }
+  }
+
+  useEffect(() => {
+    const qVibe = searchParams.get("vibe") as VibeOption
+    if (qVibe && (qVibe === "issue" || qVibe === "life" || qVibe === "study")) {
+      setVibe(qVibe)
+      const currentTags = parseHashtags(hashtagInput).tags
+      if (currentTags.length === 0) {
+        if (qVibe === "life") setHashtagInput("#CampusLife")
+        else if (qVibe === "study") setHashtagInput("#StudyNotes")
+        else if (qVibe === "issue") setHashtagInput("#CampusIssue")
+      }
+    }
+  }, [searchParams])
 
   // Poll editor (orgs only).
   const [pollEnabled, setPollEnabled] = useState(false)
@@ -308,7 +405,11 @@ export default function CreatePostPage() {
       <div>
         <h1 className="text-h2 text-slate-900">{s["createPost.title"]}</h1>
         <p className="text-body-sm text-slate-500">
-          {s["createPost.subtitle"]}
+          {vibe === "issue"
+            ? "Speak up about campus issues, mess food, hostel, or administration accountability."
+            : vibe === "life"
+              ? "Share your college fest updates, parties, hostel banter, and campus moments."
+              : "Share study notes, previous year questions (PYQs), and placement strategies."}
         </p>
       </div>
 
@@ -332,12 +433,79 @@ export default function CreatePostPage() {
         ) : null}
 
         <Card className="flex flex-col gap-4">
+          {/* Post Vibe / Type Selector */}
+          <div>
+            <label className="text-body-sm font-semibold text-slate-800 mb-2 block">
+              What are you posting today?
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                {
+                  id: "issue" as const,
+                  icon: "📢",
+                  title: "Campus Issue",
+                  subtitle: "Mess, hostel, fees, admin, ragging",
+                  activeStyle: "border-rose-600 bg-rose-50/70 text-rose-950 ring-2 ring-rose-500/20 shadow-xs",
+                },
+                {
+                  id: "life" as const,
+                  icon: "🎉",
+                  title: "Campus Life & Fun",
+                  subtitle: "Fests, parties, hostel banter, memes",
+                  activeStyle: "border-purple-600 bg-purple-50/70 text-purple-950 ring-2 ring-purple-500/20 shadow-xs",
+                },
+                {
+                  id: "study" as const,
+                  icon: "📚",
+                  title: "Study Hub & Notes",
+                  subtitle: "Notes, PYQs, study tips, prep",
+                  activeStyle: "border-emerald-600 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs",
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleVibeSelect(item.id)}
+                  className={cn(
+                    "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
+                    vibe === item.id
+                      ? item.activeStyle
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700",
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-sm">
+                    <span>{item.icon}</span>
+                    <span>{item.title}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    {item.subtitle}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Vibe Info Banner */}
+          <div
+            className={cn(
+              "p-3 rounded-card text-xs flex items-center gap-2.5 border",
+              vibe === "issue"
+                ? "bg-rose-50/80 border-rose-200 text-rose-800"
+                : vibe === "life"
+                  ? "bg-purple-50/80 border-purple-200 text-purple-800"
+                  : "bg-emerald-50/80 border-emerald-200 text-emerald-800",
+            )}
+          >
+            <span className="text-base shrink-0">{VIBE_CONFIG[vibe].icon}</span>
+            <p className="leading-snug">{VIBE_CONFIG[vibe].banner}</p>
+          </div>
+
           <Textarea
             label={s["createPost.textLabel"]}
             name="post-text"
             rows={5}
             required
-            placeholder={s["createPost.textPlaceholder"]}
+            placeholder={VIBE_CONFIG[vibe].placeholder}
             value={text}
             onChange={(e) => {
               setText(e.target.value)
@@ -362,8 +530,36 @@ export default function CreatePostPage() {
           />
           <p className="-mt-2 text-body-sm text-slate-500">{s["createPost.hashtagsHint"]}</p>
 
+          {/* Quick Clickable Tag Chips */}
+          <div className="flex flex-col gap-1.5 -mt-1">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              Quick 1-Tap Tags ({VIBE_CONFIG[vibe].title}):
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {VIBE_TAGS[vibe].map((tag) => {
+                const isSelected = previewTags.tags.includes(tag.toLowerCase())
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleToggleTag(tag)}
+                    className={cn(
+                      "rounded-pill px-2.5 py-1 text-xs font-semibold transition-all border cursor-pointer",
+                      isSelected
+                        ? "bg-primary-600 text-white border-primary-600 shadow-2xs"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200",
+                    )}
+                  >
+                    #{tag} {isSelected ? "✓" : "+"}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {previewTags.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+              <span className="text-[11px] font-semibold text-slate-400 self-center">Active Tags:</span>
               {previewTags.tags.map((tag) => (
                 <span
                   key={tag}
@@ -728,11 +924,11 @@ export default function CreatePostPage() {
 
         {/* Statutory Compliance Notice */}
         <p className="text-[11px] text-slate-500 text-center sm:text-left leading-relaxed">
-          By posting, you confirm this grievance complies with the{" "}
+          By posting, you confirm this post complies with the{" "}
           <Link href="/guidelines" className="text-primary-600 underline font-semibold">
             Campus Guidelines
           </Link>{" "}
-          and Indian IT Rules (2021). Focus on institutional issues; do not post personal defamation, hate speech, or fake notices.
+          and Indian IT Rules (2021). Focus on constructive student community and institutional accountability; do not post personal defamation, hate speech, or fake notices.
         </p>
 
         <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
@@ -741,5 +937,13 @@ export default function CreatePostPage() {
         </Button>
       </form>
     </div>
+  )
+}
+
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-2xl p-8 text-center text-slate-400">Loading editor...</div>}>
+      <CreatePostContent />
+    </Suspense>
   )
 }

@@ -1,7 +1,7 @@
 import type { ClassValue } from "clsx"
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Category } from "@/lib/types"
+import type { Category, PostVibe } from "@/lib/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -27,18 +27,22 @@ export function timeAgo(iso: string): string {
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" })
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  return `${Math.floor(days / 365)}y ago`
 }
 
-export function compactNumber(n: number): string {
-  if (n < 1000) return String(n)
-  return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k`
+export function compactNumber(num: number): string {
+  if (num < 1000) return num.toString()
+  if (num < 1000000) return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k`
+  return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M`
 }
 
-const TAG_RE = /^[a-zA-Z0-9_]+$/
 const MAX_HASHTAGS = 5
 const MAX_TAG_LENGTH = 30
+// Lowercase alpha-numeric, Hindi / Indic unicode scripts (Devanagari, Telugu, Tamil, Bengali, Kannada, Malayalam, Gujarati, Gurmukhi, Odia), underscore.
+const TAG_RE = /^[a-z0-9_\u0900-\u097F\u0C00-\u0C7F\u0B80-\u0BFF\u0980-\u09FF\u0C80-\u0CFF\u0D00-\u0D7F\u0A80-\u0AFF\u0A00-\u0A7F\u0B00-\u0B7F]+$/
 
 // Keys of the hashtag validation strings (must exist in lib/strings.ts).
 export type HashtagErrorKey =
@@ -51,6 +55,7 @@ export type HashtagErrorKey =
 export function parseHashtags(
   raw: string,
 ): { tags: string[]; error: HashtagErrorKey | null } {
+  if (!raw.trim()) return { tags: [], error: null }
   const tags: string[] = []
   for (const chunk of raw.split(/[\s,]+/)) {
     const tag = chunk.replace(/^#+/, "").trim().toLowerCase()
@@ -73,6 +78,82 @@ export function categoryFromHashtags(tags: string[]): Category {
   if (/(placement|job|intern|career|campus drive)/.test(joined)) return "Placements"
   if (/(exam|stud|academic|study|class|syllabus|marks)/.test(joined)) return "Exams"
   return "Academic"
+}
+
+/**
+ * Detects whether a post is a Campus Grievance / Whistleblower Issue,
+ * a Campus Life & Fun post (fests, parties, hostel banter), or
+ * a Study Hub & Academic post (notes, PYQs, exam cheat sheets, placement tips).
+ */
+export function getPostVibe(post: {
+  text?: string | null
+  category?: string | null
+  hashtags?: string[] | null
+  isAnonymous?: boolean | null
+  isResolved?: boolean | null
+}): PostVibe {
+  const tags = (post.hashtags || []).map((t) => t.toLowerCase())
+  const joinedTags = tags.join(" ")
+
+  // 1. Campus Life & Fun keywords
+  if (
+    /(fest|fests|party|parties|celebrat|freshers|farewell|hostellife|hosteldiar|canteen|foodie|crush|hangout|hangouts|meme|memes|cultural|sports|trip|vibe|vibes|collegeevent|music|dance|fun|reels|nightout|djnight)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "life"
+  }
+
+  // 2. Study Hub & Academics keywords
+  if (
+    /(notes|pyq|pyqs|studytip|studytips|studying|examhack|examhacks|syllabus|cheatsheet|material|materials|lecture|gate|cat|jee|placement|placements|intern|internship|resume|interview|coding|hackathon|project|resources|assignments|solutions)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "study"
+  }
+
+  // 3. Grievances / Whistleblower / Issues:
+  // If anonymous, resolved, or tagged with issues/complaints/ragging/fees/mess/admin
+  if (
+    post.isAnonymous ||
+    post.isResolved ||
+    post.category === "Harassment" ||
+    post.category === "Mental Health" ||
+    post.category === "Financial" ||
+    /(issue|complaint|grievance|problem|mess|food|hostel|water|wifi|admin|fee|fees|fine|fines|ragging|bully|harass|corrupt|hygiene|sanitation|electricity|protest|justice|scam|retaliation|threat|action)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "issue"
+  }
+
+  // Check text content if tags are sparse or empty
+  if (post.text) {
+    const text = post.text.toLowerCase()
+    if (
+      /(fest|annual fest|freshers party|farewell party|dj night|cultural night|hostel fun|canteen food|sports day|college trip|college vibe)/i.test(
+        text,
+      )
+    ) {
+      return "life"
+    }
+    if (
+      /(handwritten notes|pyq|previous year question|study material|lecture notes|exam tips|cheatsheet|placement drive|interview prep|resume review|coding challenge)/i.test(
+        text,
+      )
+    ) {
+      return "study"
+    }
+  }
+
+  // Fallbacks based on category column
+  if (post.category === "Placements" || post.category === "Exams") {
+    return "study"
+  }
+
+  // Krantind's foundational mission: Campus Voice & Issues
+  return "issue"
 }
 
 /**
