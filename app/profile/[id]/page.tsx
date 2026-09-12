@@ -169,6 +169,7 @@ export default function PublicProfilePage({
 
       if (!cancelled) {
         setUserPosts(mapped)
+        usePostStore.getState().upsertPosts(mapped)
         setUserPostsLoading(false)
       }
     })()
@@ -199,12 +200,20 @@ export default function PublicProfilePage({
       .then(({ data }) => {
         if (cancelled) return
         const rows = (data ?? []) as unknown as PostRow[]
-        setUpcomingEvents(rows.map(rowToPost))
+        const mappedEvents = rows.map((r) =>
+          rowToPost(r, {
+            currentUserId: currentUser?.id,
+            isAdmin: currentUser?.isAdmin,
+            isFriend: isFollowing,
+          }),
+        )
+        setUpcomingEvents(mappedEvents)
+        usePostStore.getState().upsertPosts(mappedEvents)
       })
     return () => {
       cancelled = true
     }
-  }, [params.id, isOrg])
+  }, [params.id, isOrg, currentUser?.id, currentUser?.isAdmin, isFollowing])
 
   const handleMessage = async () => {
     if (!currentUser) {

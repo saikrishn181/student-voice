@@ -95,7 +95,9 @@ function SearchPage() {
       } else {
         const blocked = new Set(blockedUserIds)
         const rows = (data as PostRow[]).filter((r) => !blocked.has(r.author_id))
-        setDefaultPosts(rows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin })))
+        const mapped = rows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin }))
+        setDefaultPosts(mapped)
+        usePostStore.getState().upsertPosts(mapped)
       }
       setLoadingDefault(false)
     }
@@ -105,7 +107,7 @@ function SearchPage() {
     return () => {
       cancelled = true
     }
-  }, [isQueryActive, stateFilter, blockedUserIds])
+  }, [isQueryActive, stateFilter, blockedUserIds, currentUser?.id, currentUser?.isAdmin])
 
   // 2. Save non-empty queries to recent searches
   useEffect(() => {
@@ -217,8 +219,11 @@ function SearchPage() {
         isPrivate: Boolean(r.is_private),
       }))
 
+      const mappedPosts = postRows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin }))
+      usePostStore.getState().upsertPosts(mappedPosts)
+
       setResults({
-        posts: postRows.map((r) => rowToPost(r, { currentUserId: currentUser?.id, isAdmin: currentUser?.isAdmin })),
+        posts: mappedPosts,
         accounts: mappedAccounts,
       })
       setSearching(false)
@@ -227,7 +232,7 @@ function SearchPage() {
     return () => {
       cancelled = true
     }
-  }, [debouncedQuery, stateFilter, blockedUserIds])
+  }, [debouncedQuery, stateFilter, blockedUserIds, currentUser?.id, currentUser?.isAdmin])
 
   const hasResults = results.posts.length > 0 || results.accounts.length > 0
   const hasFilters = Boolean(stateFilter)

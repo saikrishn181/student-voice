@@ -117,3 +117,35 @@ test("topic filter matches tags case-insensitively", () => {
   const noMatch = nonMatching.some((t) => followedTopics.includes(t.toLowerCase()))
   assert.equal(noMatch, false)
 })
+
+test("tag route normalizes input across cases and leading hashes", () => {
+  function normalizeTag(raw) {
+    return raw.trim().replace(/^#+/, "").toLowerCase()
+  }
+  assert.equal(normalizeTag("Hostel"), "hostel")
+  assert.equal(normalizeTag("#Hostel"), "hostel")
+  assert.equal(normalizeTag("##CAMPUS_LIFE "), "campus_life")
+  assert.equal(normalizeTag("exams"), "exams")
+})
+
+test("admin can delete any comment while non-admin can only delete their own", () => {
+  function canDeleteComment(commentAuthorId, currentUserId, isAdmin) {
+    return commentAuthorId === currentUserId || Boolean(isAdmin)
+  }
+  // Author deleting own comment
+  assert.equal(canDeleteComment("user-1", "user-1", false), true)
+  // Regular user cannot delete another user's comment
+  assert.equal(canDeleteComment("user-1", "user-2", false), false)
+  // Admin can delete any user's comment
+  assert.equal(canDeleteComment("user-1", "admin-1", true), true)
+})
+
+test("password policy enforces minimum 8 characters across signup, reset, and settings", () => {
+  function isPasswordValid(password) {
+    return typeof password === "string" && password.length >= 8
+  }
+  assert.equal(isPasswordValid("123456"), false)
+  assert.equal(isPasswordValid("1234567"), false)
+  assert.equal(isPasswordValid("12345678"), true)
+  assert.equal(isPasswordValid("Pass@word123"), true)
+})

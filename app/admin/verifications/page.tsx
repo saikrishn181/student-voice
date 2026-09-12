@@ -81,6 +81,7 @@ interface AnonymousPostItem {
 
 export default function AdminVerificationsPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
+  const bootstrapping = useAuthStore((s) => s.bootstrapping)
   const showToast = useToastStore((s) => s.show)
 
   const [orgs, setOrgs] = useState<OrgRow[]>([])
@@ -108,6 +109,7 @@ export default function AdminVerificationsPage() {
   const [strikeBusy, setStrikeBusy] = useState(false)
 
   useEffect(() => {
+    if (bootstrapping) return
     if (!currentUser || !currentUser.isAdmin) {
       setLoading(false)
       return
@@ -256,7 +258,7 @@ export default function AdminVerificationsPage() {
     }
 
     loadData()
-  }, [showToast])
+  }, [currentUser?.id, currentUser?.isAdmin, bootstrapping, showToast])
 
   const deleteAnonPost = async (postId: string) => {
     setBusyId(postId)
@@ -350,6 +352,14 @@ export default function AdminVerificationsPage() {
     setReports((prev) => prev.filter((r) => r.id !== reportId))
   }
 
+  if (bootstrapping || (loading && currentUser?.isAdmin)) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 pt-8 text-body-sm text-slate-500 text-center">
+        Loading admin dashboard…
+      </div>
+    )
+  }
+
   if (!currentUser || !currentUser.isAdmin) {
     return (
       <div className="mx-auto w-full max-w-2xl px-4">
@@ -358,14 +368,6 @@ export default function AdminVerificationsPage() {
           title={s["admin.notAdmin.title"]}
           description={s["admin.notAdmin.description"]}
         />
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 pt-8 text-body-sm text-slate-500 text-center">
-        Loading admin dashboard…
       </div>
     )
   }

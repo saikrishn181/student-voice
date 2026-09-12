@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 // Reset Password: handles the email link sent by /forgot-password.
 // The email link arrives with a `code` (Supabase PKCE flow). We exchange it
@@ -56,8 +56,8 @@ function ResetPasswordInner() {
     e.preventDefault()
     setError("")
 
-    if (password.length < 6) {
-      setError("Password should be at least 6 characters.")
+    if (password.length < 8) {
+      setError("Password should be at least 8 characters.")
       return
     }
     if (password !== confirm) {
@@ -146,7 +146,7 @@ function ResetPasswordInner() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError("") }}
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             error={error || undefined}
           />
           <Input

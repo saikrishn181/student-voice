@@ -47,25 +47,29 @@ export function RsvpButton({ postId, className }: RsvpButtonProps) {
     if (busy) return
     setBusy(true)
     const supabase = createSupabaseBrowserClient()
-    if (mine) {
-      const { error } = await supabase
-        .from("post_rsvps")
-        .delete()
-        .eq("post_id", postId)
-        .eq("user_id", currentUser.id)
-      if (error) showToast(s["rsvp.error"], "error")
-    } else {
-      const { error } = await supabase
-        .from("post_rsvps")
-        .insert({ post_id: postId, user_id: currentUser.id })
-      if (error) {
-        showToast(s["rsvp.error"], "error")
-        setBusy(false)
-        return
+    try {
+      if (mine) {
+        const { error } = await supabase
+          .from("post_rsvps")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", currentUser.id)
+        if (error) showToast(s["rsvp.error"], "error")
+      } else {
+        const { error } = await supabase
+          .from("post_rsvps")
+          .insert({ post_id: postId, user_id: currentUser.id })
+        if (error) {
+          showToast(s["rsvp.error"], "error")
+          return
+        }
       }
+      await load()
+    } catch {
+      showToast(s["rsvp.error"], "error")
+    } finally {
+      setBusy(false)
     }
-    setBusy(false)
-    await load()
   }
 
   return (

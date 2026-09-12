@@ -144,7 +144,7 @@ function PasswordModal({ open, onClose }: { open: boolean; onClose: () => void }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(s["settings.loginMethod.passwordTooShort"])
       return
     }
@@ -611,8 +611,11 @@ export default function SettingsPage() {
         </Card>
 
         {/* Manage Accounts (Single-line row redirecting to /settings/accounts) */}
-        <Card className="transition-app hover:border-slate-300">
-          <Link href="/settings/accounts" className="flex items-center justify-between gap-3 p-4">
+        <Card className="p-0 overflow-hidden transition-app hover:border-primary-400 border border-slate-200 shadow-xs">
+          <Link
+            href="/settings/accounts"
+            className="flex items-center justify-between gap-3 p-4 hover:bg-slate-50 transition-colors"
+          >
             <div className="flex items-center gap-3 min-w-0">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-800">
                 <Users size={18} aria-hidden />

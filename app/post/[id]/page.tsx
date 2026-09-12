@@ -24,7 +24,7 @@ export default function PostDetailPage({
 }) {
   const params = use(paramsPromise)
   const post = usePostStore((s) => s.posts.find((p) => p.id === params.id))
-  const posts = usePostStore((s) => s.posts)
+  const follows = usePostStore((s) => s.follows)
   const [lookingUp, setLookingUp] = useState(!post)
   const [notFound, setNotFound] = useState(false)
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -212,7 +212,6 @@ export default function PostDetailPage({
 
   if (!post) return null
 
-  const follows = usePostStore.getState().follows
   const isFollower = follows.some(
     (f) => f.followerId === currentUser?.id && f.followingId === post.authorId,
   )

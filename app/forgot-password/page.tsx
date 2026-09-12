@@ -111,8 +111,8 @@ export default function ForgotPasswordPage() {
     if (!newPassword) {
       setPasswordError("New password is required")
       hasError = true
-    } else if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters")
+    } else if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters")
       hasError = true
     }
 
@@ -275,7 +275,7 @@ export default function ForgotPasswordPage() {
                 required
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setPasswordError("") }}
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 autoComplete="new-password"
                 error={passwordError || undefined}
                 leftAdornment={<Lock size={17} className="text-slate-400" />}

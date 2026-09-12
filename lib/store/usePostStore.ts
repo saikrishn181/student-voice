@@ -121,6 +121,7 @@ interface PostState {
   }) => Promise<void>
   markPostResolved: (postId: string, resolutionNote?: string) => Promise<void>
   deletePost: (id: string) => Promise<void>
+  upsertPosts: (incoming: Post[]) => void
   toggleSave: (postId: string, currentUserId: string) => Promise<void>
   setPostPinned: (postId: string, pinned: boolean) => Promise<void>
   toggleSupport: (postId: string, currentUserId: string) => Promise<void>
@@ -596,10 +597,42 @@ export const usePostStore = create<PostState>()((set, get) => ({
     }))
   },
 
+  upsertPosts: (incoming) => {
+    if (!incoming || incoming.length === 0) return
+    set((s) => {
+      const map = new Map(s.posts.map((p) => [p.id, p]))
+      for (const post of incoming) {
+        const existing = map.get(post.id)
+        map.set(post.id, existing ? { ...existing, ...post } : post)
+      }
+      return { posts: Array.from(map.values()) }
+    })
+  },
+
   toggleSave: async (postId, currentUserId) => {
     const supabase = createSupabaseBrowserClient()
     const post = get().posts.find((p) => p.id === postId)
-    if (!post) return
+    if (!post) {
+      // Post is not in local feed store; query and toggle directly in Supabase
+      const { data: existing } = await supabase
+        .from("post_saves")
+        .select("post_id")
+        .eq("user_id", currentUserId)
+        .eq("post_id", postId)
+        .maybeSingle()
+      if (existing) {
+        const { error } = await supabase
+          .from("post_saves")
+          .delete()
+          .eq("user_id", currentUserId)
+          .eq("post_id", postId)
+        if (error) throw new Error(error.message)
+      } else {
+        const { error } = await supabase.from("post_saves").insert({ user_id: currentUserId, post_id: postId })
+        if (error) throw new Error(error.message)
+      }
+      return
+    }
 
     const saved = post.savedByCurrentUser
     // Optimistic toggle for snappy UI; reverted on failure.
@@ -644,7 +677,35 @@ export const usePostStore = create<PostState>()((set, get) => ({
     // In-flight lock: ignore double-clicks while a toggle is still pending.
     if (supportLocks[postId]) return
     const post = posts.find((p) => p.id === postId)
-    if (!post) return
+    if (!post) {
+      try {
+        set({ supportLocks: { ...get().supportLocks, [postId]: true } })
+        const { data: existing } = await supabase
+          .from("post_supports")
+          .select("post_id")
+          .eq("post_id", postId)
+          .eq("user_id", currentUserId)
+          .maybeSingle()
+        if (existing) {
+          const { error } = await supabase
+            .from("post_supports")
+            .delete()
+            .eq("post_id", postId)
+            .eq("user_id", currentUserId)
+          if (error) throw new Error("Could not remove support")
+        } else {
+          const { error } = await supabase.from("post_supports").insert({ post_id: postId, user_id: currentUserId })
+          if (error) throw new Error("Could not add support")
+        }
+      } finally {
+        set((s) => {
+          const next = { ...s.supportLocks }
+          delete next[postId]
+          return { supportLocks: next }
+        })
+      }
+      return
+    }
 
     const supported = post.supportedByCurrentUser
     const original = { supportCount: post.supportCount, supportedByCurrentUser: supported }
@@ -737,11 +798,12 @@ export const usePostStore = create<PostState>()((set, get) => ({
     const supabase = createSupabaseBrowserClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error("You need to be logged in")
-    const { error } = await supabase
-      .from("comments")
-      .delete()
-      .eq("id", commentId)
-      .eq("author_id", user.id)
+    const isAdmin = Boolean(useAuthStore.getState().currentUser?.isAdmin)
+    let query = supabase.from("comments").delete().eq("id", commentId)
+    if (!isAdmin) {
+      query = query.eq("author_id", user.id)
+    }
+    const { error } = await query
     if (error) throw new Error("Failed to delete comment")
     await reloadComments(postId)
   },

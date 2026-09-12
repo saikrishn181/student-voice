@@ -840,7 +840,7 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
 
       {/* Actions */}
       <div className="flex items-center gap-1 border-t border-[#F0EAE0] pt-2.5">
-        <SupportButton postId={post.id} />
+        <SupportButton postId={post.id} fallbackPost={post} />
         <Link
           href={`/post/${post.id}`}
           className="transition-app inline-flex h-11 min-h-11 items-center gap-1.5 rounded-card px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 sm:h-9 sm:min-h-0"

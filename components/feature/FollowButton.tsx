@@ -46,6 +46,11 @@ export function FollowButton({
   )
 
   const handleClick = async () => {
+    if (!followerId) {
+      showToast(s["validation.loginRequired"], "error")
+      return
+    }
+    if (followerId === followingId) return
     if (pending) return
     setPending(true)
     try {

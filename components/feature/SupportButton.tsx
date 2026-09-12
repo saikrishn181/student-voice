@@ -12,15 +12,22 @@ import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import s from "@/lib/strings"
 import { cn, compactNumber } from "@/lib/utils"
+import type { Post } from "@/lib/types"
 
-export function SupportButton({ postId }: { postId: string }) {
-  const post = usePostStore((s) => s.posts.find((p) => p.id === postId))
+interface SupportButtonProps {
+  postId: string
+  fallbackPost?: Post
+}
+
+export function SupportButton({ postId, fallbackPost }: SupportButtonProps) {
+  const storePost = usePostStore((s) => s.posts.find((p) => p.id === postId))
   const toggleSupport = usePostStore((s) => s.toggleSupport)
   const locked = usePostStore((s) => Boolean(s.supportLocks[postId]))
   const currentUser = useAuthStore((s) => s.currentUser)
   const showToast = useToastStore((s) => s.show)
   const [bump, setBump] = useState(false)
 
+  const post = storePost ?? fallbackPost
   if (!post) return null
 
   const supported = post.supportedByCurrentUser

@@ -21,7 +21,8 @@ import type { Post } from "@/lib/types"
 
 export default function TagPage() {
   const params = useParams<{ tag: string }>()
-  const tag = decodeURIComponent(params.tag)
+  const rawTag = decodeURIComponent(params.tag ?? "")
+  const tag = rawTag.trim().replace(/^#+/, "").toLowerCase()
   const currentUser = useAuthStore((s) => s.currentUser)
   const followedTopics = usePostStore((s) => s.followedTopics)
   const toggleFollowTopic = usePostStore((s) => s.toggleFollowTopic)
@@ -56,6 +57,11 @@ export default function TagPage() {
   }
 
   const load = () => {
+    if (!tag) {
+      setPosts([])
+      setStatus("ready")
+      return
+    }
     const supabase = createSupabaseBrowserClient()
     supabase
       .from("posts")
@@ -64,13 +70,44 @@ export default function TagPage() {
       .contains("hashtags", [tag])
       .order("created_at", { ascending: false })
       .limit(50)
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           setStatus("error")
           return
         }
         const rows = (data ?? []) as PostRow[]
-        setPosts(rows.map(rowToPost))
+        const postIds = rows.map((r) => r.id)
+        let supportedIds = new Set<string>()
+        let savedIds = new Set<string>()
+        if (currentUser?.id && postIds.length > 0) {
+          const [{ data: sups }, { data: savs }] = await Promise.all([
+            supabase
+              .from("post_supports")
+              .select("post_id")
+              .eq("user_id", currentUser.id)
+              .in("post_id", postIds),
+            supabase
+              .from("post_saves")
+              .select("post_id")
+              .eq("user_id", currentUser.id)
+              .in("post_id", postIds),
+          ])
+          supportedIds = new Set((sups ?? []).map((r) => r.post_id))
+          savedIds = new Set((savs ?? []).map((r) => r.post_id))
+        }
+
+        const mapped = rows.map((r) => {
+          const p = rowToPost(r, {
+            currentUserId: currentUser?.id,
+            isAdmin: currentUser?.isAdmin,
+          })
+          if (supportedIds.has(r.id)) p.supportedByCurrentUser = true
+          if (savedIds.has(r.id)) p.savedByCurrentUser = true
+          return p
+        })
+
+        usePostStore.getState().upsertPosts(mapped)
+        setPosts(mapped)
         // Prefetch authors so names/avatars never flash "Unknown".
         const missing = Array.from(new Set(rows.map((r) => r.author_id))).filter(
           (id) => id !== currentUser?.id && !useUserStore.getState().users[id],
@@ -85,7 +122,7 @@ export default function TagPage() {
     setPosts([])
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tag])
+  }, [tag, currentUser?.id, currentUser?.isAdmin])
 
   const handleRetry = () => {
     setRetrying(true)

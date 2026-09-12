@@ -342,12 +342,12 @@ export default function SignupPage() {
                     required
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setPasswordError("") }}
-                    placeholder="At least 6 characters"
+                    placeholder="At least 8 characters"
                     autoComplete="new-password"
                     error={passwordError || undefined}
                   />
                   {!passwordError ? (
-                    <p className="mt-1 text-[11px] text-slate-500 font-medium">Must be at least 6 characters long</p>
+                    <p className="mt-1 text-[11px] text-slate-500 font-medium">Must be at least 8 characters long</p>
                   ) : null}
                 </div>
 

@@ -46,10 +46,10 @@ const s = {
   "auth.forgotPassword.codeLabel": "Code from your email",
   "auth.forgotPassword.codePlaceholder": "123456",
   "auth.forgotPassword.newPasswordLabel": "New password",
-  "auth.forgotPassword.newPasswordPlaceholder": "At least 6 characters",
+  "auth.forgotPassword.newPasswordPlaceholder": "At least 8 characters",
   "auth.forgotPassword.codeInvalid": "That code is invalid or expired. Request a new one.",
   "auth.forgotPassword.codeRequired": "Please enter the code from your email",
-  "auth.forgotPassword.passwordTooShort": "New password must be at least 6 characters",
+  "auth.forgotPassword.passwordTooShort": "New password must be at least 8 characters",
   "auth.forgotPassword.passwordUpdated": "Password updated — you're logged in",
   "auth.forgotPassword.codeSentTo": (email: string) => `Code sent to ${email}`,
 
@@ -240,8 +240,8 @@ const s = {
   "settings.loginMethod.changePassword": "Change password",
   "settings.loginMethod.passwordHint":
     "With a password you can also log in with email, or recover your account if you ever get locked out.",
-  "settings.loginMethod.passwordPlaceholder": "At least 6 characters",
-  "settings.loginMethod.passwordTooShort": "Password must be at least 6 characters",
+  "settings.loginMethod.passwordPlaceholder": "At least 8 characters",
+  "settings.loginMethod.passwordTooShort": "Password must be at least 8 characters",
   "settings.loginMethod.passwordUpdated": "Password saved",
   "settings.loginMethod.passwordError": "Could not set the password — please try again.",
   "settings.loginMethod.sessionExpired":
@@ -330,10 +330,10 @@ const s = {
   "onboarding.profile.continue": "Finish setup",
   "onboarding.profile.loading": "Setting things up…",
   "onboarding.profile.passwordLabel": "Create a password",
-  "onboarding.profile.passwordPlaceholder": "At least 6 characters",
+  "onboarding.profile.passwordPlaceholder": "At least 8 characters",
   "onboarding.profile.passwordHint":
     "Create a password too, so you can log in with email & password anytime.",
-  "validation.passwordTooShort": "Password must be at least 6 characters",
+  "validation.passwordTooShort": "Password must be at least 8 characters",
 
   // ─── Comment ────────────────────────────────────────────────────────────────
   "comment.placeholder": "Write a comment…",
