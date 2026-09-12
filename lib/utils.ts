@@ -113,7 +113,16 @@ export function getPostVibe(post: {
     return "study"
   }
 
-  // 3. Grievances / Whistleblower / Issues:
+  // 3. Other / General discussions & questions
+  if (
+    /(other|general|campusgeneral|discussion|discuss|askcampus|question|query|advice|thoughts|opinion|random|connect|batch)/i.test(
+      joinedTags,
+    )
+  ) {
+    return "other"
+  }
+
+  // 4. Grievances / Whistleblower / Issues:
   // If anonymous, resolved, or tagged with issues/complaints/ragging/fees/mess/admin
   if (
     post.isAnonymous ||
@@ -144,6 +153,9 @@ export function getPostVibe(post: {
       )
     ) {
       return "study"
+    }
+    if (/(general question|anyone know|quick question|thoughts on|opinions on)/i.test(text)) {
+      return "other"
     }
   }
 

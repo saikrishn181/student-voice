@@ -103,6 +103,12 @@ test("getPostVibe correctly categorizes grievances, campus life/fun, and study h
   assert.equal(getPostVibe({ isAnonymous: true }), "issue")
   assert.equal(getPostVibe({ isResolved: true }), "issue")
   assert.equal(getPostVibe({ category: "Harassment" }), "issue")
+
+  // Other / General Discussions & Questions
+  assert.equal(getPostVibe({ hashtags: ["campusgeneral"] }), "other")
+  assert.equal(getPostVibe({ hashtags: ["askcampus", "question"] }), "other")
+  assert.equal(getPostVibe({ hashtags: ["discussion", "batch2026"] }), "other")
+  assert.equal(getPostVibe({ text: "Quick question for anyone staying near North Campus" }), "other")
 })
 
 test("getSafeRedirect prevents open redirects, backslashes, and dangerous schemes", () => {

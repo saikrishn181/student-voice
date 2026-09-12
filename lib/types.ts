@@ -81,8 +81,8 @@ export type Category =
   | "Exams"
   | "Placements"
 
-// Post vibes for student social media (Campus Issues & Grievances, Campus Life & Fun, Study Hub & Notes).
-export type PostVibe = "issue" | "life" | "study"
+// Post vibes for student social media (Campus Issues & Grievances, Campus Life & Fun, Study Hub & Notes, Other).
+export type PostVibe = "issue" | "life" | "study" | "other"
 
 export type NotificationType =
   | "support"

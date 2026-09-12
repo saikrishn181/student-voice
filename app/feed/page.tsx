@@ -8,7 +8,7 @@
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus, BookOpen, PartyPopper, Megaphone } from "lucide-react"
+import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus, BookOpen, PartyPopper, Megaphone, MessageSquare } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
@@ -198,13 +198,19 @@ export default function FeedPage() {
                 href="/post/create?vibe=life"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-purple-200 bg-purple-50/70 px-2.5 py-1 font-semibold text-purple-700 hover:bg-purple-100 active:scale-95 transition-all"
               >
-                <span>🎉</span> Campus Life & Fest
+                <span>🎉</span> Campus Life
               </Link>
               <Link
                 href="/post/create?vibe=study"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all"
               >
-                <span>📚</span> Share Notes & Tips
+                <span>📚</span> Study Hub
+              </Link>
+              <Link
+                href="/post/create?vibe=other"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-slate-200 bg-slate-50/80 px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
+              >
+                <span>💬</span> Other
               </Link>
             </div>
           </Card>
@@ -251,6 +257,7 @@ export default function FeedPage() {
             { id: "issue", label: "📢 Issues & Voice", activeCls: "bg-rose-700 text-white border-rose-700 shadow-2xs" },
             { id: "life", label: "🎉 Campus Life & Fests", activeCls: "bg-purple-700 text-white border-purple-700 shadow-2xs" },
             { id: "study", label: "📚 Study Hub & Notes", activeCls: "bg-emerald-700 text-white border-emerald-700 shadow-2xs" },
+            { id: "other", label: "💬 Other Discussions", activeCls: "bg-slate-800 text-white border-slate-800 shadow-2xs" },
           ].map((item) => (
             <button
               key={item.id}
@@ -307,25 +314,43 @@ export default function FeedPage() {
                 if (filteredRanked.length === 0 && posts.length > 0) {
                   return (
                     <EmptyState
-                      icon={vibeFilter === "life" ? PartyPopper : vibeFilter === "study" ? BookOpen : Megaphone}
+                      icon={
+                        vibeFilter === "life"
+                          ? PartyPopper
+                          : vibeFilter === "study"
+                            ? BookOpen
+                            : vibeFilter === "other"
+                              ? MessageSquare
+                              : Megaphone
+                      }
                       title={
                         vibeFilter === "life"
                           ? "No Campus Life posts yet"
                           : vibeFilter === "study"
                             ? "No Study Hub notes yet"
-                            : "No Campus Issues right now"
+                            : vibeFilter === "other"
+                              ? "No Other discussions yet"
+                              : "No Campus Issues right now"
                       }
                       description={
                         vibeFilter === "life"
                           ? "Be the first to share a college fest update, party memory, hostel banter, or campus moment!"
                           : vibeFilter === "study"
                             ? "Share handwritten lecture notes, previous year question papers, or exam strategy with batchmates."
-                            : "No active campus grievances in your feed right now."
+                            : vibeFilter === "other"
+                              ? "Start a campus discussion, ask a question, or share thoughts with fellow students."
+                              : "No active campus grievances in your feed right now."
                       }
                       action={
                         <Link href={`/post/create?vibe=${vibeFilter}`}>
                           <Button variant="outline" size="sm">
-                            {vibeFilter === "life" ? "Post Campus Life" : vibeFilter === "study" ? "Share Notes / Tips" : "Report Issue"}
+                            {vibeFilter === "life"
+                              ? "Post Campus Life"
+                              : vibeFilter === "study"
+                                ? "Share Notes / Tips"
+                                : vibeFilter === "other"
+                                  ? "Start Discussion"
+                                  : "Report Issue"}
                           </Button>
                         </Link>
                       }
@@ -357,25 +382,43 @@ export default function FeedPage() {
               if (visible.length === 0 && posts.length > 0) {
                 return (
                   <EmptyState
-                    icon={vibeFilter === "life" ? PartyPopper : vibeFilter === "study" ? BookOpen : Megaphone}
+                    icon={
+                      vibeFilter === "life"
+                        ? PartyPopper
+                        : vibeFilter === "study"
+                          ? BookOpen
+                          : vibeFilter === "other"
+                            ? MessageSquare
+                            : Megaphone
+                    }
                     title={
                       vibeFilter === "life"
                         ? "No Campus Life posts yet"
                         : vibeFilter === "study"
                           ? "No Study Hub notes yet"
-                          : "No Campus Issues right now"
+                          : vibeFilter === "other"
+                            ? "No Other discussions yet"
+                            : "No Campus Issues right now"
                     }
                     description={
                       vibeFilter === "life"
                         ? "Be the first to share a college fest update, party memory, hostel banter, or campus moment!"
                         : vibeFilter === "study"
                           ? "Share handwritten lecture notes, previous year question papers, or exam strategy with batchmates."
-                          : "No active campus grievances found for this selection."
+                          : vibeFilter === "other"
+                            ? "Start a campus discussion, ask a question, or share thoughts with fellow students."
+                            : "No active campus grievances found for this selection."
                     }
                     action={
                       <Link href={`/post/create?vibe=${vibeFilter}`}>
                         <Button variant="outline" size="sm">
-                          {vibeFilter === "life" ? "Post Campus Life" : vibeFilter === "study" ? "Share Notes / Tips" : "Report Issue"}
+                          {vibeFilter === "life"
+                            ? "Post Campus Life"
+                            : vibeFilter === "study"
+                              ? "Share Notes / Tips"
+                              : vibeFilter === "other"
+                                ? "Start Discussion"
+                                : "Report Issue"}
                         </Button>
                       </Link>
                     }

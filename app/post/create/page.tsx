@@ -26,44 +26,43 @@ type VibeOption = PostVibe
 
 const VIBE_CONFIG: Record<
   VibeOption,
-  { title: string; icon: string; subtitle: string; desc: string; placeholder: string; banner: string }
+  { title: string; label: string; desc: string; placeholder: string; starterTag: string }
 > = {
   issue: {
     title: "Campus Issue",
-    icon: "📢",
-    subtitle: "Mess, hostel, fee hike, admin, ragging",
-    desc: "Mess food hygiene, hostel infrastructure, fee transparency, admin accountability, harassment",
-    placeholder:
-      "Describe the grievance or campus issue in factual detail. Where is it happening? Who is responsible? What needs fixing?",
-    banner:
-      "Whistleblower Protection: Use Anonymous Mode below if you fear retaliation from college administration or faculty.",
+    label: "📢 Campus Issue",
+    desc: "Mess food, hostel, fee transparency, admin accountability, or harassment (Whistleblower protection available)",
+    placeholder: "What's the problem on campus? Describe what's happening, who's responsible, and what needs fixing...",
+    starterTag: "#CampusIssue",
   },
   life: {
-    title: "Campus Life & Fun",
-    icon: "🎉",
-    subtitle: "Fests, parties, hostel banter, memes",
-    desc: "College fests, cultural nights, fresher & farewell parties, hostel banter, campus memes, canteen",
-    placeholder:
-      "Share what's buzzing on campus! Fest line-ups, party moments, hostel diaries, canteen reviews, campus memes, or college memories...",
-    banner:
-      "Campus Vibes: Add up to 4 photos or a video to show everyone your campus festival, party, or student life moments!",
+    title: "Campus Life",
+    label: "🎉 Campus Life",
+    desc: "College fests, cultural nights, fresher & farewell parties, hostel banter, canteen, or campus memes",
+    placeholder: "What's buzzing on campus? Share fest moments, parties, hostel banter, campus memes, or college memories...",
+    starterTag: "#CampusLife",
   },
   study: {
-    title: "Study Hub & Notes",
-    icon: "📚",
-    subtitle: "Notes, PYQs, study tips, placements",
-    desc: "Handwritten notes, previous year questions (PYQs), exam cheat sheets, placement prep, study hacks",
-    placeholder:
-      "Share study resources, handwritten notes, exam tips, PYQ solutions, or placement drive experiences to help fellow students...",
-    banner:
-      "Knowledge Hub: Upload handwritten notes, diagrams, or cheat sheet photos so batchmates can ace their exams together!",
+    title: "Study Hub",
+    label: "📚 Study Hub",
+    desc: "Handwritten notes, previous year questions (PYQs), exam tips, placement prep, or study hacks",
+    placeholder: "Share study notes, exam strategies, previous year questions, or placement prep advice...",
+    starterTag: "#StudyNotes",
+  },
+  other: {
+    title: "Other",
+    label: "💬 Other",
+    desc: "General campus discussions, questions, college ideas, thoughts, or open conversations",
+    placeholder: "Ask a question, share an open thought, start a discussion, or connect with batchmates...",
+    starterTag: "#CampusGeneral",
   },
 }
 
 const VIBE_TAGS: Record<VibeOption, string[]> = {
   issue: ["MessFood", "HostelIssue", "FeeTransparency", "AdminAccountability", "Sanitation", "CampusWiFi", "ExamDelay"],
-  life: ["CampusLife", "FestSeason", "HostelDiaries", "CollegeParty", "Freshers2026", "CampusVibes", "CanteenReview", "CollegeFest"],
-  study: ["StudyNotes", "PYQ", "ExamPrep", "PlacementTips", "CheatSheet", "InternshipDrive", "SubjectReview", "StudyHub"],
+  life: ["CampusLife", "FestSeason", "HostelDiaries", "CollegeParty", "Freshers2026", "CampusVibes", "CanteenReview"],
+  study: ["StudyNotes", "PYQ", "ExamPrep", "PlacementTips", "CheatSheet", "InternshipDrive", "StudyHub"],
+  other: ["CampusGeneral", "AskCampus", "StudentLife", "Question", "Discussion", "CampusIdeas", "Batch2026"],
 }
 
 function CreatePostContent() {
@@ -75,7 +74,7 @@ function CreatePostContent() {
 
   const initialVibeParam = searchParams.get("vibe") as VibeOption
   const [vibe, setVibe] = useState<VibeOption>(
-    initialVibeParam === "life" || initialVibeParam === "study" || initialVibeParam === "issue"
+    initialVibeParam === "life" || initialVibeParam === "study" || initialVibeParam === "other" || initialVibeParam === "issue"
       ? initialVibeParam
       : "issue",
   )
@@ -86,7 +85,9 @@ function CreatePostContent() {
       ? "#CampusLife"
       : initialVibeParam === "study"
         ? "#StudyNotes"
-        : "",
+        : initialVibeParam === "other"
+          ? "#CampusGeneral"
+          : "",
   )
   const [media, setMedia] = useState<PickedMedia[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -98,9 +99,7 @@ function CreatePostContent() {
     setVibe(selectedVibe)
     const currentTags = parseHashtags(hashtagInput).tags
     if (currentTags.length === 0) {
-      if (selectedVibe === "life") setHashtagInput("#CampusLife")
-      else if (selectedVibe === "study") setHashtagInput("#StudyNotes")
-      else if (selectedVibe === "issue") setHashtagInput("#CampusIssue")
+      setHashtagInput(VIBE_CONFIG[selectedVibe].starterTag)
     }
   }
 
@@ -122,13 +121,11 @@ function CreatePostContent() {
 
   useEffect(() => {
     const qVibe = searchParams.get("vibe") as VibeOption
-    if (qVibe && (qVibe === "issue" || qVibe === "life" || qVibe === "study")) {
+    if (qVibe && (qVibe === "issue" || qVibe === "life" || qVibe === "study" || qVibe === "other")) {
       setVibe(qVibe)
       const currentTags = parseHashtags(hashtagInput).tags
       if (currentTags.length === 0) {
-        if (qVibe === "life") setHashtagInput("#CampusLife")
-        else if (qVibe === "study") setHashtagInput("#StudyNotes")
-        else if (qVibe === "issue") setHashtagInput("#CampusIssue")
+        setHashtagInput(VIBE_CONFIG[qVibe].starterTag)
       }
     }
   }, [searchParams])
@@ -432,74 +429,43 @@ function CreatePostContent() {
           </div>
         ) : null}
 
-        <Card className="flex flex-col gap-4">
-          {/* Post Vibe / Type Selector */}
-          <div>
-            <label className="text-body-sm font-semibold text-slate-800 mb-2 block">
-              What are you posting today?
+        {/* Modern Human-Designed Post Composer */}
+        <Card className="flex flex-col gap-5 p-4 sm:p-6 border-[#E8E1D6] bg-white shadow-xs rounded-2xl">
+          {/* Post Vibe / Type Selector — Sleek Rounded Pills */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Select Post Category:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {[
-                {
-                  id: "issue" as const,
-                  icon: "📢",
-                  title: "Campus Issue",
-                  subtitle: "Mess, hostel, fees, admin, ragging",
-                  activeStyle: "border-rose-600 bg-rose-50/70 text-rose-950 ring-2 ring-rose-500/20 shadow-xs",
-                },
-                {
-                  id: "life" as const,
-                  icon: "🎉",
-                  title: "Campus Life & Fun",
-                  subtitle: "Fests, parties, hostel banter, memes",
-                  activeStyle: "border-purple-600 bg-purple-50/70 text-purple-950 ring-2 ring-purple-500/20 shadow-xs",
-                },
-                {
-                  id: "study" as const,
-                  icon: "📚",
-                  title: "Study Hub & Notes",
-                  subtitle: "Notes, PYQs, study tips, prep",
-                  activeStyle: "border-emerald-600 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs",
-                },
-              ].map((item) => (
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {(
+                [
+                  { id: "issue" as const, label: "📢 Campus Issue", active: "bg-rose-600 text-white border-rose-600 shadow-xs" },
+                  { id: "life" as const, label: "🎉 Campus Life", active: "bg-purple-600 text-white border-purple-600 shadow-xs" },
+                  { id: "study" as const, label: "📚 Study Hub", active: "bg-emerald-600 text-white border-emerald-600 shadow-xs" },
+                  { id: "other" as const, label: "💬 Other", active: "bg-slate-800 text-white border-slate-800 shadow-xs" },
+                ] as const
+              ).map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => handleVibeSelect(item.id)}
                   className={cn(
-                    "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
+                    "rounded-pill px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer border flex items-center gap-1.5",
                     vibe === item.id
-                      ? item.activeStyle
-                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700",
+                      ? item.active
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
                   )}
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-sm">
-                    <span>{item.icon}</span>
-                    <span>{item.title}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    {item.subtitle}
-                  </p>
+                  {item.label}
                 </button>
               ))}
             </div>
+            <p className="text-xs text-slate-500 pl-0.5 leading-relaxed">
+              {VIBE_CONFIG[vibe].desc}
+            </p>
           </div>
 
-          {/* Vibe Info Banner */}
-          <div
-            className={cn(
-              "p-3 rounded-card text-xs flex items-center gap-2.5 border",
-              vibe === "issue"
-                ? "bg-rose-50/80 border-rose-200 text-rose-800"
-                : vibe === "life"
-                  ? "bg-purple-50/80 border-purple-200 text-purple-800"
-                  : "bg-emerald-50/80 border-emerald-200 text-emerald-800",
-            )}
-          >
-            <span className="text-base shrink-0">{VIBE_CONFIG[vibe].icon}</span>
-            <p className="leading-snug">{VIBE_CONFIG[vibe].banner}</p>
-          </div>
-
+          {/* Text input */}
           <Textarea
             label={s["createPost.textLabel"]}
             name="post-text"
@@ -516,26 +482,37 @@ function CreatePostContent() {
             error={textError || undefined}
           />
 
-          <Input
-            label={s["createPost.hashtagsLabel"]}
-            name="hashtags"
-            placeholder={s["createPost.hashtagsPlaceholder"]}
-            value={hashtagInput}
-            onChange={(e) => {
-              setHashtagInput(e.target.value)
-              setTagError("")
-              setModerationError("")
-            }}
-            error={tagError || undefined}
-          />
-          <p className="-mt-2 text-body-sm text-slate-500">{s["createPost.hashtagsHint"]}</p>
+          {/* Media uploader integrated right inside */}
+          <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-700">{s["createPost.mediaHeading"]}</span>
+              {!media.some((m) => m.type === "video") ? (
+                <span className="text-[11px] text-slate-400">{s["createPost.multiImageHint"](MAX_IMAGES)}</span>
+              ) : null}
+            </div>
+            <MediaUploader value={media} onChange={setMedia} />
+          </div>
 
-          {/* Quick Clickable Tag Chips */}
-          <div className="flex flex-col gap-1.5 -mt-1">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Quick 1-Tap Tags ({VIBE_CONFIG[vibe].title}):
-            </span>
-            <div className="flex flex-wrap gap-1.5">
+          {/* Hashtags input & Quick 1-tap tag chips */}
+          <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
+            <Input
+              label={s["createPost.hashtagsLabel"]}
+              name="hashtags"
+              placeholder={s["createPost.hashtagsPlaceholder"]}
+              value={hashtagInput}
+              onChange={(e) => {
+                setHashtagInput(e.target.value)
+                setTagError("")
+                setModerationError("")
+              }}
+              error={tagError || undefined}
+            />
+
+            {/* Quick 1-tap tags */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                Suggested tags:
+              </span>
               {VIBE_TAGS[vibe].map((tag) => {
                 const isSelected = previewTags.tags.includes(tag.toLowerCase())
                 return (
@@ -544,10 +521,10 @@ function CreatePostContent() {
                     type="button"
                     onClick={() => handleToggleTag(tag)}
                     className={cn(
-                      "rounded-pill px-2.5 py-1 text-xs font-semibold transition-all border cursor-pointer",
+                      "rounded-pill px-2.5 py-0.5 text-xs font-semibold transition-all border cursor-pointer",
                       isSelected
                         ? "bg-primary-600 text-white border-primary-600 shadow-2xs"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200",
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200",
                     )}
                   >
                     #{tag} {isSelected ? "✓" : "+"}
@@ -555,39 +532,26 @@ function CreatePostContent() {
                 )
               })}
             </div>
+
+            {previewTags.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                <span className="text-[11px] font-semibold text-slate-400 self-center">Active:</span>
+                {previewTags.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {previewTags.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-400 self-center">Active Tags:</span>
-              {previewTags.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <p className="rounded-card bg-paper-deep px-3 py-2 text-body-sm text-slate-600">
-            {s["createPost.stateAuto"].replace("{state}", state)}
-          </p>
-        </Card>
-
-        <Card className="flex flex-col gap-3">
-          <h2 className="text-h4">{s["createPost.mediaHeading"]}</h2>
-          <MediaUploader value={media} onChange={setMedia} />
-          {!media.some((m) => m.type === "video") ? (
-            <p className="text-body-sm text-slate-500">{s["createPost.multiImageHint"](MAX_IMAGES)}</p>
-          ) : null}
-        </Card>
-
-        {isOrg ? (
-          <>
-            <Card className="flex flex-col gap-4">
-              <h2 className="text-h4">{s["createPost.advancedHeading"]}</h2>
+          {/* Organizations Advanced Section */}
+          {isOrg ? (
+            <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{s["createPost.advancedHeading"]}</h2>
 
               {/* Poll */}
               <div>
@@ -724,217 +688,173 @@ function CreatePostContent() {
                   </div>
                 ) : null}
               </div>
-            </Card>
-          </>
-        ) : null}
+            </div>
+          ) : null}
 
-        {/* Content warning & NSFW */}
-        <Card className="flex flex-col gap-3.5 p-4">
-          <div className="flex items-center justify-between">
-            <label htmlFor="content-warning" className="text-sm font-semibold text-slate-800">
-              {s["createPost.warningLabel"]}
-            </label>
+          {/* Sensitive Content / NSFW Option */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <label htmlFor="content-warning" className="text-xs font-semibold text-slate-700">
+                {s["createPost.warningLabel"]}
+              </label>
+              <select
+                id="content-warning"
+                name="content-warning"
+                value={contentWarning}
+                onChange={(e) => setContentWarning(e.target.value)}
+                className="rounded-pill border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 focus:border-primary-500 focus:outline-none"
+              >
+                <option value="">None (Safe for all)</option>
+                <option value="ragging">Ragging / Violence</option>
+                <option value="harassment">Harassment / Bullying</option>
+                <option value="mental_health">Mental Health</option>
+                <option value="sensitive">Sensitive Content</option>
+                <option value="nsfw">18+ NSFW</option>
+              </select>
+            </div>
             <button
               type="button"
               onClick={() => setContentWarning((prev) => (prev === "nsfw" ? "" : "nsfw"))}
               className={cn(
-                "rounded-pill border px-3 py-1 text-xs font-semibold transition-app flex items-center gap-1.5",
+                "rounded-pill border px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer",
                 contentWarning === "nsfw"
-                  ? "border-red-500 bg-red-600 text-white shadow-xs"
-                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  ? "border-red-500 bg-red-600 text-white shadow-2xs"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
               )}
             >
-              {contentWarning === "nsfw" ? "18+ NSFW Active" : s["createPost.nsfwToggle"]}
+              {contentWarning === "nsfw" ? "18+ NSFW Active" : "18+ NSFW"}
             </button>
           </div>
-          <select
-            id="content-warning"
-            name="content-warning"
-            value={contentWarning}
-            onChange={(e) => setContentWarning(e.target.value)}
-            className="w-full rounded-card border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-900 shadow-sm transition-app focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30"
-          >
-            <option value="">{s["createPost.warningNone"]}</option>
-            <option value="nsfw">18+ NSFW (Not Safe For Work)</option>
-            <option value="spoiler">Spoiler</option>
-            <option value="triggering">Triggering content</option>
-            <option value="graphic">Graphic content</option>
-          </select>
-          <p className="text-body-sm text-slate-500">{s["createPost.warningHint"]}</p>
-        </Card>
 
-        {/* Private Account Audience Selector OR Public Whistleblower / Anonymous Mode */}
-        {!isOrg && currentUser?.isPrivate ? (
-          <Card className="p-4 flex flex-col gap-3.5 border-purple-200 bg-purple-50/40 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                  <Lock size={16} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
+          {/* Private Account Audience OR Public Whistleblower / Anonymous Mode */}
+          {!isOrg && currentUser?.isPrivate ? (
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock size={15} className="text-purple-600" />
+                  <span className="text-xs font-semibold text-slate-800">
                     Private Account Post Audience
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Choose who can see this post and how your profile appears
-                  </p>
+                  </span>
                 </div>
+                <span className="rounded-pill bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[11px] font-semibold">
+                  Private Account
+                </span>
               </div>
-              <span className="rounded-pill bg-purple-100 text-purple-700 border border-purple-200 px-2.5 py-0.5 text-[11px] font-semibold">
-                Private Account
-              </span>
-            </div>
 
-            {/* Audience selection buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Only for followers */}
-              <button
-                type="button"
-                onClick={() => handleAudienceChange("followers")}
-                className={cn(
-                  "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
-                  audience === "followers"
-                    ? "border-primary-600 bg-white ring-2 ring-primary-500/20 shadow-xs"
-                    : "border-slate-200 bg-white/70 hover:bg-white text-slate-600",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                    <Users size={15} className="text-primary-600" />
-                    Only for followers
-                  </span>
-                  {audience === "followers" ? (
-                    <span className="h-2 w-2 rounded-full bg-primary-600" />
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-slate-500 leading-snug">
-                  Only your accepted followers can see this post. Your name and profile are visible to them.
-                </p>
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAudienceChange("followers")}
+                  className={cn(
+                    "rounded-pill px-3 py-1 text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5",
+                    audience === "followers"
+                      ? "border-primary-600 bg-primary-600 text-white shadow-2xs"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                  )}
+                >
+                  <Users size={13} />
+                  Only for followers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAudienceChange("anonymous")}
+                  className={cn(
+                    "rounded-pill px-3 py-1 text-xs font-semibold transition-all cursor-pointer border flex items-center gap-1.5",
+                    audience === "anonymous"
+                      ? "border-purple-600 bg-purple-600 text-white shadow-2xs"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+                  )}
+                >
+                  <ShieldCheck size={13} />
+                  Anonymous (Everyone)
+                </button>
+              </div>
 
-              {/* Anonymous (Everyone) */}
-              <button
-                type="button"
-                onClick={() => handleAudienceChange("anonymous")}
-                className={cn(
-                  "p-3 rounded-card border text-left transition-all flex flex-col gap-1 cursor-pointer",
-                  audience === "anonymous"
-                    ? "border-purple-600 bg-white ring-2 ring-purple-500/20 shadow-xs"
-                    : "border-slate-200 bg-white/70 hover:bg-white text-slate-600",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-purple-950">
-                    <ShieldCheck size={15} className="text-purple-600" />
-                    Anonymous (Everyone)
-                  </span>
-                  {audience === "anonymous" ? (
-                    <span className="h-2 w-2 rounded-full bg-purple-600" />
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-slate-500 leading-snug">
-                  Visible to everyone across campus as Anonymous Student. Your username and user ID are completely hidden.
-                </p>
-              </button>
-            </div>
-
-            {/* If anonymous: Show "For your friends also" */}
-            {audience === "anonymous" ? (
-              <div className="pt-2 border-t border-purple-100 flex flex-col gap-2">
-                <label className="flex items-center justify-between gap-3 cursor-pointer p-2.5 rounded-lg bg-white/80 border border-purple-100 hover:bg-white transition-colors">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                      <UserCheck size={14} className="text-purple-600" />
-                      For your friends also
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      Visible only to mutual followers you have accepted. Faculty, strangers, and college administrators will only see Anonymous Student.
-                    </span>
-                  </div>
+              {audience === "anonymous" ? (
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 pt-1">
                   <input
                     type="checkbox"
                     checked={friendsAlso}
                     onChange={(e) => handleFriendsAlsoChange(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                   />
+                  <span>Also reveal identity to accepted mutual friends</span>
                 </label>
-              </div>
-            ) : null}
+              ) : null}
 
-            {/* "Always" setting so they won't want to tap while posting */}
-            <div className="pt-2 border-t border-purple-100">
-              <label className="flex items-center justify-between gap-3 cursor-pointer p-2.5 rounded-lg bg-white/80 border border-purple-100 hover:bg-white transition-colors">
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                    <BookmarkCheck size={14} className="text-primary-600" />
-                    Always use this setting
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Remembers your preference so you do not need to tap this every time you post.
-                  </span>
-                </div>
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-500">
                 <input
                   type="checkbox"
                   checked={alwaysUse}
                   onChange={(e) => handleAlwaysChange(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
                 />
+                <span>Remember this preference</span>
               </label>
             </div>
-          </Card>
-        ) : !isOrg ? (
-          <Card className={cn(
-            "p-4 flex flex-col gap-2.5 transition-app",
-            isAnonymous ? "border-purple-300 bg-purple-50/50" : "border-slate-200",
-          )}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  Post Anonymously (Whistleblower Mode)
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Hides your identity from public view to protect you from campus retaliation.
-                </p>
+          ) : !isOrg ? (
+            <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={16} className={cn(isAnonymous ? "text-purple-600" : "text-slate-400")} />
+                  <div>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                      Post Anonymously (Whistleblower Mode)
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Hides your name and profile from public view & administration.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAnonymous((prev) => !prev)}
+                  className={cn(
+                    "rounded-pill border px-3 py-1 text-xs font-semibold transition-all cursor-pointer shrink-0 ml-2",
+                    isAnonymous
+                      ? "border-purple-600 bg-purple-600 text-white shadow-2xs"
+                      : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                  )}
+                >
+                  {isAnonymous ? "Anonymous Active" : "Enable Anonymous"}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAnonymous((prev) => !prev)}
-                className={cn(
-                  "rounded-pill border px-3 py-1.5 text-xs font-semibold transition-app flex items-center gap-1.5 shrink-0 ml-3 min-h-[44px] touch-target",
-                  isAnonymous
-                    ? "border-purple-600 bg-purple-600 text-white shadow-xs"
-                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                )}
-              >
-                {isAnonymous ? "Anonymous Active" : "Enable Anonymous"}
-              </button>
+
+              {isAnonymous ? (
+                <p className="text-xs text-purple-900 bg-purple-50/80 p-2.5 rounded-lg border border-purple-200/80 leading-relaxed mt-1">
+                  Appears as <em>&ldquo;Anonymous Student • {currentUser?.collegeName || "Verified College"}&rdquo;</em>. Your personal profile and email are cryptographically decoupled in secure backend tables to protect against campus retaliation.
+                </p>
+              ) : null}
             </div>
-            {isAnonymous && (
-              <div className="text-xs text-purple-900 bg-purple-100/70 p-3 rounded-card border border-purple-200 flex flex-col gap-1">
-                <p className="font-semibold text-purple-950">
-                  Zero-Retaliation Guarantee & Cryptographic Isolation
-                </p>
-                <p className="text-purple-800 leading-relaxed">
-                  In feeds and searches, this post appears as <em>&ldquo;Anonymous Student • {currentUser?.collegeName || "Verified College"}&rdquo;</em>. Your verified college email and personal profile are cryptographically decoupled in secure backend tables. Campus administrators, professors, and deans have zero technical access to match your account to this post.
-                </p>
-              </div>
-            )}
-          </Card>
-        ) : null}
+          ) : null}
+
+          {/* Action Row */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs text-slate-500 flex items-center gap-1.5 self-start sm:self-center">
+              <span>📍 Posted to:</span>
+              <span className="font-semibold text-slate-700">{state || "All Regions"}</span>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="text-xs text-slate-400">
+                {text.length}/{MAX_POST_CHARS}
+              </span>
+              <Button type="submit" size="md" loading={submitting} className="min-w-32">
+                <Send size={16} aria-hidden />
+                {s["createPost.submitButton"]}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Statutory Compliance Notice */}
-        <p className="text-[11px] text-slate-500 text-center sm:text-left leading-relaxed">
+        <p className="text-[11px] text-slate-500 text-center sm:text-left leading-relaxed px-1">
           By posting, you confirm this post complies with the{" "}
           <Link href="/guidelines" className="text-primary-600 underline font-semibold">
             Campus Guidelines
           </Link>{" "}
           and Indian IT Rules (2021). Focus on constructive student community and institutional accountability; do not post personal defamation, hate speech, or fake notices.
         </p>
-
-        <Button type="submit" size="lg" loading={submitting} className="w-full sm:max-w-xs">
-          <Send size={18} aria-hidden />
-          {s["createPost.submitButton"]}
-        </Button>
       </form>
     </div>
   )
