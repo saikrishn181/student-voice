@@ -279,6 +279,14 @@ export default function GrievancePage() {
                 Our Grievance Officer will review your submission and respond to <strong>{complainantEmail}</strong> within 24 hours in accordance with Rule 3(2) of the IT Rules 2021.
               </p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <a
+                  href={`mailto:1krantind@gmail.com?subject=${encodeURIComponent(`[Statutory Grievance Notice] Ticket ${ticketId} - ${formatCategoryLabel(category)}`)}&body=${encodeURIComponent(
+                    `To: Resident Grievance Officer, Krantind Platform\nEmail: 1krantind@gmail.com\n\nTicket Reference ID: ${ticketId}\nComplainant Name: ${complainantName}\nOfficial Email: ${complainantEmail}\nCapacity: ${complainantType}\nViolation Category: ${formatCategoryLabel(category)}\nTarget Post URL: ${postUrl || "N/A"}\n\nFactual Description & Grounds of Grievance:\n${description}\n\n---\nStatutory Notice issued pursuant to Rule 3(2) of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021.`
+                  )}`}
+                  className="inline-flex items-center gap-1.5 rounded-card border border-emerald-500 bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+                >
+                  <Mail size={14} /> Send Official Email Copy to Grievance Desk
+                </a>
                 <Button
                   size="sm"
                   variant="primary"
