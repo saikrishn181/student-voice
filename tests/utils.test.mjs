@@ -62,6 +62,10 @@ test("parseHashtags normalizes input", () => {
     error: null,
   })
   assert.deepEqual(parseHashtags("  #A  #a  "), { tags: ["a"], error: null })
+  assert.deepEqual(parseHashtags("#a #b #c #d #e #a"), {
+    tags: ["a", "b", "c", "d", "e"],
+    error: null,
+  })
   assert.deepEqual(parseHashtags(""), { tags: [], error: null })
 })
 

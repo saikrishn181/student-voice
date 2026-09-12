@@ -586,12 +586,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           const existing = get().messagesByConversation[convId] ?? []
           if (!existing.some((m) => m.id === row.id)) {
-            set((s) => ({
-              messagesByConversation: {
-                ...s.messagesByConversation,
-                [convId]: [...existing, rowToMessage(row)],
-              },
-            }))
+            set((s) => {
+              const current = s.messagesByConversation[convId] ?? []
+              if (current.some((m) => m.id === row.id)) return s
+              return {
+                messagesByConversation: {
+                  ...s.messagesByConversation,
+                  [convId]: [...current, rowToMessage(row)],
+                },
+              }
+            })
             // Unread badge: incoming messages count up unless this conversation
             // is open right now (the thread page marks it read instead).
             const me = useAuthStore.getState().currentUser?.id

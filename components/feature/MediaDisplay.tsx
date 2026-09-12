@@ -41,6 +41,7 @@ export function MediaDisplay({
   className,
 }: MediaDisplayProps) {
   const urls = splitMediaUrls(mediaUrl)
+  if (urls.length === 0) return null
   // Videos are always single-item; only photos can be multi.
   const isCarousel = mediaType === "photo" && urls.length > 1
   const [index, setIndex] = useState(0)

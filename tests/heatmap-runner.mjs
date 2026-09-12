@@ -13,7 +13,7 @@ export function detectHotIssues(posts, usersMap) {
 
   const baselineDays = 30
   const baselineCutoff = now - baselineDays * 24 * 60 * 60 * 1000
-  const baselineWindows = (baselineDays * 24) / WINDOW_HOURS
+  const baselineWindows = ((baselineDays * 24) - WINDOW_HOURS) / WINDOW_HOURS
 
   const buckets = new Map()
 
@@ -25,8 +25,8 @@ export function detectHotIssues(posts, usersMap) {
     const collegeName = author?.collegeName?.trim() || undefined
     const stateName = post.state?.trim() || author?.state?.trim() || undefined
 
-    for (const rawTag of (post.hashtags || [])) {
-      const tag = rawTag.toLowerCase()
+    const uniqueTags = new Set((post.hashtags || []).map((t) => t.toLowerCase()))
+    for (const tag of uniqueTags) {
 
       let bucket = buckets.get(tag)
       if (!bucket) {

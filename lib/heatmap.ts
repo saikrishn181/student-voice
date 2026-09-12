@@ -93,7 +93,7 @@ export function detectHotIssues(
   // 30-day baseline window (for computing average per WINDOW_HOURS).
   const baselineDays = 30
   const baselineCutoff = now - baselineDays * 24 * 60 * 60 * 1000
-  const baselineWindows = (baselineDays * 24) / WINDOW_HOURS // e.g. 15 windows in 30 days
+  const baselineWindows = ((baselineDays * 24) - WINDOW_HOURS) / WINDOW_HOURS // e.g. 14 windows in the 28-day baseline period
 
   // Step 1: Bucket posts by hashtag.
   const buckets = new Map<string, TopicBucket>()
@@ -106,8 +106,8 @@ export function detectHotIssues(
     const collegeName = author?.collegeName?.trim() || undefined
     const stateName = post.state?.trim() || author?.state?.trim() || undefined
 
-    for (const rawTag of post.hashtags) {
-      const tag = rawTag.toLowerCase()
+    const uniqueTags = new Set((post.hashtags || []).map((t) => t.toLowerCase()))
+    for (const tag of uniqueTags) {
 
       let bucket = buckets.get(tag)
       if (!bucket) {

@@ -32,6 +32,12 @@ test("moderation blocks severe profanity & abuses", () => {
   assert.equal(result.category, "profanity")
 })
 
+test("moderation blocks repeated-character leetspeak obfuscation", () => {
+  const result = checkInappropriateContent("this is total fuuuuck")
+  assert.equal(result.isAllowed, false)
+  assert.equal(result.category, "profanity")
+})
+
 test("moderation blocks abusive slang and gaalis", () => {
   const result = checkInappropriateContent("tum sab bhenchod ho")
   assert.equal(result.isAllowed, false)

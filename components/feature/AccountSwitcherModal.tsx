@@ -37,6 +37,16 @@ export function AccountSwitcherModal({ open, onClose }: AccountSwitcherModalProp
     }
   }, [open, currentUser])
 
+  // Clean up long-press timer on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (pressTimerRef.current) {
+        clearTimeout(pressTimerRef.current)
+        pressTimerRef.current = null
+      }
+    }
+  }, [])
+
   const handleSwitch = async (account: SavedAccount) => {
     if (account.id === currentUser?.id) {
       onClose()

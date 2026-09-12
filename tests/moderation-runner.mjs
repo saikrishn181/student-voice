@@ -60,7 +60,7 @@ function normalizeText(input) {
     decoded += LEET_MAP[char] ?? char
   }
   decoded = decoded.replace(/\b([a-z])\s+([a-z])\s+([a-z])(?:\s+([a-z]))?\b/g, "$1$2$3$4")
-  decoded = decoded.replace(/(.)\1{2,}/g, "$1$1")
+  decoded = decoded.replace(/(.)\1{2,}/g, "$1")
   return decoded
 }
 

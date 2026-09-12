@@ -6,7 +6,7 @@
 // Moderation notifications (content_warning, post_removed) render with special
 // system styling and metadata details.
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 import { Avatar } from "@/components/ui"
 import { useUserById } from "@/hooks"
@@ -26,6 +26,7 @@ function isModerationNotification(type: string): boolean {
 }
 
 export function NotificationItem({ notification }: NotificationItemProps) {
+  const router = useRouter()
   const actor = useUserById(notification.actorId)
   const markAsRead = useNotificationStore((s) => s.markAsRead)
   const Icon = notificationIcon(notification.type)
@@ -52,16 +53,30 @@ export function NotificationItem({ notification }: NotificationItemProps) {
           ? `/post/${notification.postId}`
           : undefined
 
-  const onClick = () => {
+  const handleClick = () => {
     if (unread) markAsRead(notification.id)
+    if (cardHref) {
+      router.push(cardHref)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      handleClick()
+    }
   }
 
   const profileHref = `/profile/${notification.actorId}`
 
-  const body = (
+  return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className={cn(
-        "surface-card flex items-start gap-3 p-4 transition-colors",
+        "surface-card flex items-start gap-3 p-4 transition-colors cursor-pointer text-left block w-full",
         isModeration && notification.type === "post_removed" && "border-red-200 bg-red-50/60",
         isModeration && notification.type === "content_warning" && "border-amber-200 bg-amber-50/60",
         !isModeration && unread && "border-primary-200 bg-primary-50/60",
@@ -145,19 +160,5 @@ export function NotificationItem({ notification }: NotificationItemProps) {
         />
       ) : null}
     </div>
-  )
-
-  if (cardHref) {
-    return (
-      <Link href={cardHref} onClick={onClick} className="block">
-        {body}
-      </Link>
-    )
-  }
-
-  return (
-    <button type="button" onClick={onClick} className="block w-full text-left">
-      {body}
-    </button>
   )
 }

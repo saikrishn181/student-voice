@@ -5,7 +5,7 @@
 // RegionTag, CategoryTag, timestamp, text, media, SupportButton, comment count,
 // and a FollowButton (hidden for the viewer's own posts). Own posts show an
 // actions menu (Edit / Delete) with a delete confirmation dialog.
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import {
@@ -132,6 +132,14 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
   const tapTimerRef = useRef<NodeJS.Timeout | null>(null)
   const heartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const toggleSupport = usePostStore((s) => s.toggleSupport)
+
+  // Clean up timers on unmount to prevent memory leaks and unmounted updates
+  useEffect(() => {
+    return () => {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current)
+      if (heartTimeoutRef.current) clearTimeout(heartTimeoutRef.current)
+    }
+  }, [])
 
   const triggerDoubleTapSupport = async () => {
     // Haptic feedback

@@ -29,10 +29,12 @@ export function BannedUserScreen({ user }: BannedUserScreenProps) {
 
   if (user.bannedUntil) {
     const untilDate = new Date(user.bannedUntil)
-    remainingDays = Math.max(1, Math.ceil((untilDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    formattedUntil = untilDate.toLocaleDateString(undefined, {
-      dateStyle: "medium",
-    })
+    if (!isNaN(untilDate.getTime())) {
+      remainingDays = Math.max(1, Math.ceil((untilDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      formattedUntil = untilDate.toLocaleDateString(undefined, {
+        dateStyle: "medium",
+      })
+    }
   }
 
   const handleLogout = async () => {

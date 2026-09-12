@@ -54,6 +54,19 @@ test("detects hot issue when 4+ posts on same hashtag surge in 48h", () => {
   assert.equal(result[0].recentPostCount, 5)
 })
 
+test("deduplicates multiple identical hashtags on a single post", () => {
+  const posts = [
+    makePost("p1", ["mess", "mess", "MESS"], "u1", 1, 10, 5),
+    makePost("p2", ["mess"], "u2", 3, 8, 3),
+    makePost("p3", ["mess"], "u3", 6, 5, 2),
+    makePost("p4", ["mess"], "u4", 12, 3, 1),
+  ]
+  const result = detectHotIssues(posts, usersMap)
+  assert.ok(result.length >= 1)
+  assert.equal(result[0].recentPostCount, 4)
+  assert.equal(result[0].totalSupports, 26)
+})
+
 test("detects multi-college spread", () => {
   const posts = [
     makePost("p1", ["feehike"], "u1", 2),

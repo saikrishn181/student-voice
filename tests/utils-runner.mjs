@@ -56,10 +56,11 @@ export function parseHashtags(raw) {
   for (const chunk of raw.split(/[\s,]+/)) {
     const tag = chunk.replace(/^#+/, "").trim().toLowerCase()
     if (!tag) continue
+    if (tags.includes(tag)) continue
     if (tags.length >= MAX_HASHTAGS) return { tags, error: "validation.hashtagsTooMany" }
     if (tag.length > MAX_TAG_LENGTH) return { tags, error: "validation.hashtagTooLong" }
     if (!TAG_RE.test(tag)) return { tags, error: "validation.hashtagInvalid" }
-    if (!tags.includes(tag)) tags.push(tag)
+    tags.push(tag)
   }
   return { tags, error: null }
 }

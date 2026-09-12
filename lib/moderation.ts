@@ -158,7 +158,7 @@ export function normalizeText(input: string): string {
   decoded = decoded.replace(/\b([a-z])\s+([a-z])\s+([a-z])(?:\s+([a-z]))?\b/g, "$1$2$3$4")
 
   // Collapse 3+ repeated characters to 1 or 2 (e.g. "fuuuuck" -> "fuck")
-  decoded = decoded.replace(/(.)\1{2,}/g, "$1$1")
+  decoded = decoded.replace(/(.)\1{2,}/g, "$1")
 
   return decoded
 }

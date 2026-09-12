@@ -605,7 +605,9 @@ export const usePostStore = create<PostState>()((set, get) => ({
         const existing = map.get(post.id)
         map.set(post.id, existing ? { ...existing, ...post } : post)
       }
-      return { posts: Array.from(map.values()) }
+      const merged = Array.from(map.values())
+      merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      return { posts: merged }
     })
   },
 
