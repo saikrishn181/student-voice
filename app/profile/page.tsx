@@ -29,14 +29,48 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<FeedTab>("posts")
   const [savedPosts, setSavedPosts] = useState<Post[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
+  const [myPosts, setMyPosts] = useState<Post[]>([])
+  const [myPostsLoading, setMyPostsLoading] = useState(false)
+
+  const loadMyPosts = useCallback(async () => {
+    if (!currentUser) return
+    setMyPostsLoading(true)
+    const supabase = createSupabaseBrowserClient()
+    const { data: rows } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("author_id", currentUser.id)
+      .or("scheduled_for.is.null,scheduled_for.lte.now")
+      .order("is_pinned", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(100)
+
+    const ids = (rows ?? []).map((r) => r.id)
+    const [{ data: supports }, { data: saves }] = await Promise.all([
+      ids.length > 0
+        ? supabase.from("post_supports").select("post_id").eq("user_id", currentUser.id).in("post_id", ids)
+        : Promise.resolve({ data: [] }),
+      ids.length > 0
+        ? supabase.from("post_saves").select("post_id").eq("user_id", currentUser.id).in("post_id", ids)
+        : Promise.resolve({ data: [] }),
+    ])
+    const supportedIds = new Set((supports ?? []).map((r) => r.post_id))
+    const savedIds = new Set((saves ?? []).map((r) => r.post_id))
+
+    const mapped = ((rows ?? []) as PostRow[]).map((r) => {
+      const p = rowToPost(r, { currentUserId: currentUser.id, isAdmin: currentUser.isAdmin })
+      p.supportedByCurrentUser = supportedIds.has(p.id)
+      p.savedByCurrentUser = savedIds.has(p.id)
+      return p
+    })
+    setMyPosts(mapped)
+    setMyPostsLoading(false)
+  }, [currentUser])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 400)
-    return () => window.clearTimeout(timer)
-  }, [])
+    if (currentUser) void loadMyPosts()
+  }, [currentUser, loadMyPosts])
 
-  // Bookmarked posts, fetched straight from Supabase (all of them, newest save
-  // first) so the tab works even if the feed store hasn't loaded everything.
   const loadSaved = useCallback(async () => {
     if (!currentUser) return
     setSavedLoading(true)
@@ -58,15 +92,13 @@ export default function ProfilePage() {
       .select("*")
       .in("id", ids)
       .or("scheduled_for.is.null,scheduled_for.lte.now")
-    setSavedPosts(((rows ?? []) as PostRow[]).map(rowToPost))
+    setSavedPosts(((rows ?? []) as PostRow[]).map((r) => rowToPost(r, { currentUserId: currentUser.id, isAdmin: currentUser.isAdmin })))
     setSavedLoading(false)
   }, [currentUser])
 
   useEffect(() => {
     if (tab === "saved") void loadSaved()
   }, [tab, loadSaved])
-
-  const myPosts = posts.filter((p) => p.authorId === currentUser?.id)
 
   if (loading) {
     return (
@@ -186,26 +218,28 @@ export default function ProfilePage() {
           </div>
 
           {tab === "posts" ? (
-            <>
-              {myPosts.length === 0 ? (
-                <EmptyState
-                  icon={Inbox}
-                  title={s["profile.noPosts.title"]}
-                  description={s["profile.noPosts.description"]}
-                  action={
-                    <Link href="/post/create">
-                      <Button>{s["profile.createPost"]}</Button>
-                    </Link>
-                  }
-                />
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {myPosts.map((post) => (
-                    <PostCard key={post.id} post={post} showFollow={false} />
-                  ))}
-                </div>
-              )}
-            </>
+            myPostsLoading ? (
+              <div className="flex justify-center py-10">
+                <Spinner />
+              </div>
+            ) : myPosts.length === 0 ? (
+              <EmptyState
+                icon={Inbox}
+                title={s["profile.noPosts.title"]}
+                description={s["profile.noPosts.description"]}
+                action={
+                  <Link href="/post/create">
+                    <Button>{s["profile.createPost"]}</Button>
+                  </Link>
+                }
+              />
+            ) : (
+              <div className="flex flex-col gap-4">
+                {myPosts.map((post) => (
+                  <PostCard key={post.id} post={post} showFollow={false} />
+                ))}
+              </div>
+            )
           ) : savedLoading ? (
             <div className="flex justify-center py-10">
               <Spinner />

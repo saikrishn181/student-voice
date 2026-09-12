@@ -313,8 +313,11 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       try {
         await navigator.share({ title: s["share.title"], text: post.text.slice(0, 140), url })
         return
-      } catch {
-        // User cancelled the sheet — fall through to copy.
+      } catch (err) {
+        if (err instanceof Error && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+          return
+        }
+        // If navigator.share failed due to unhandled error, fall through to copy.
       }
     }
     try {

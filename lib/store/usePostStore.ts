@@ -807,13 +807,15 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   toggleFollowTopic: async (tag, currentUserId) => {
+    const cleanTag = tag.trim().replace(/^#+/, "").toLowerCase()
+    if (!cleanTag) return
     const supabase = createSupabaseBrowserClient()
-    const followed = get().followedTopics.includes(tag)
+    const followed = get().followedTopics.includes(cleanTag)
     // Optimistic toggle; reverted on failure.
     set((s) => ({
       followedTopics: followed
-        ? s.followedTopics.filter((t) => t !== tag)
-        : [...s.followedTopics, tag],
+        ? s.followedTopics.filter((t) => t !== cleanTag)
+        : [...s.followedTopics, cleanTag],
     }))
     try {
       if (followed) {
@@ -821,19 +823,19 @@ export const usePostStore = create<PostState>()((set, get) => ({
           .from("followed_topics")
           .delete()
           .eq("user_id", currentUserId)
-          .eq("tag", tag)
+          .eq("tag", cleanTag)
         if (error) throw new Error(error.message)
       } else {
         const { error } = await supabase
           .from("followed_topics")
-          .insert({ user_id: currentUserId, tag })
+          .insert({ user_id: currentUserId, tag: cleanTag })
         if (error) throw new Error(error.message)
       }
     } catch (err) {
       set((s) => ({
         followedTopics: followed
-          ? [...s.followedTopics, tag]
-          : s.followedTopics.filter((t) => t !== tag),
+          ? [...s.followedTopics, cleanTag]
+          : s.followedTopics.filter((t) => t !== cleanTag),
       }))
       throw err instanceof Error ? err : new Error("Could not update topic")
     }

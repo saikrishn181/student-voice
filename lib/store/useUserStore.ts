@@ -27,6 +27,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
       .from("profiles")
       .select("*")
       .order("follower_count", { ascending: false })
+      .limit(100)
     if (error || !data) return []
     const users = data.map((row) => rowToUser(row as Profile))
     set((s) => ({

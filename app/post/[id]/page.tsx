@@ -58,18 +58,40 @@ export default function PostDetailPage({
         return
       }
       // Hydrate the shared store so PostCard/CommentThread work normally.
-      const { data: commentRows } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("post_id", params.id)
-        .order("created_at", { ascending: true })
+      const [{ data: commentRows }, { data: supRow }, { data: savRow }] = await Promise.all([
+        supabase
+          .from("comments")
+          .select("*")
+          .eq("post_id", params.id)
+          .order("created_at", { ascending: true }),
+        currentUser?.id
+          ? supabase
+              .from("post_supports")
+              .select("post_id")
+              .eq("post_id", params.id)
+              .eq("user_id", currentUser.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        currentUser?.id
+          ? supabase
+              .from("post_saves")
+              .select("post_id")
+              .eq("post_id", params.id)
+              .eq("user_id", currentUser.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ])
       const mappedPost = rowToPost(row as unknown as PostRow, {
         currentUserId: currentUser?.id,
         isAdmin: currentUser?.isAdmin,
       })
+      if (supRow) mappedPost.supportedByCurrentUser = true
+      if (savRow) mappedPost.savedByCurrentUser = true
       const mappedComments = (commentRows ?? []).map((r) => rowToComment(r as unknown as CommentRow))
       usePostStore.setState((s) => ({
-        posts: s.posts.some((p) => p.id === row.id) ? s.posts : [mappedPost, ...s.posts],
+        posts: s.posts.some((p) => p.id === row.id)
+          ? s.posts.map((p) => (p.id === row.id ? { ...p, ...mappedPost } : p))
+          : [mappedPost, ...s.posts],
         comments: [
           ...s.comments.filter((c) => c.postId !== params.id),
           ...mappedComments,
@@ -81,7 +103,7 @@ export default function PostDetailPage({
     return () => {
       cancelled = true
     }
-  }, [params.id, post, posts.length])
+  }, [params.id, post, posts.length, currentUser?.id])
 
   // Count this visit: bump view_count once per mount (RLS requires a signed-in
   // user to update, so anonymous visits simply don't count).

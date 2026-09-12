@@ -109,7 +109,7 @@ export function calculatePostScore(
   }
 
   // 2. Topic / Hashtag Affinity Match
-  const followedSet = new Set(followedTopics.map((t) => t.toLowerCase()))
+  const followedSet = new Set((followedTopics ?? []).filter(Boolean).map((t) => String(t).toLowerCase()))
   let maxTopicScore = 0
   let matchingTopicName = ""
 

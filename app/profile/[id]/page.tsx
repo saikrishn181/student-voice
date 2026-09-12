@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Lock, MessageSquare, UserPlus, UserCheck, Clock, ShieldCheck, CalendarClock, MapPin } from "lucide-react"
-import { Avatar, Button, Card, EmptyState, Skeleton } from "@/components/ui"
+import { Avatar, Button, Card, EmptyState, Skeleton, Spinner } from "@/components/ui"
 import { PostCard, VerifiedBadge, CollegeBadge, FollowButton, FollowersModal, RsvpButton } from "@/components/feature"
 import { useAuthStore } from "@/lib/store/useAuthStore"
 import { usePostStore } from "@/lib/store/usePostStore"
@@ -112,19 +112,70 @@ export default function PublicProfilePage({
     }
   }, [params.id, currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const theirPosts = useMemo(
-    () =>
-      posts
+  const [userPosts, setUserPosts] = useState<Post[]>([])
+  const [userPostsLoading, setUserPostsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!params.id) return
+    let cancelled = false
+    setUserPostsLoading(true)
+    const supabase = createSupabaseBrowserClient()
+    ;(async () => {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id)
+      let resolvedAuthorId = params.id
+      if (!isUuid) {
+        const cleanUser = params.id.replace(/^@+/, "")
+        const { data: pRow } = await supabase.from("profiles").select("id").ilike("username", cleanUser).maybeSingle()
+        if (pRow) resolvedAuthorId = pRow.id
+      }
+
+      const { data: rows } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("author_id", resolvedAuthorId)
+        .or("scheduled_for.is.null,scheduled_for.lte.now")
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(100)
+
+      if (cancelled) return
+      const ids = (rows ?? []).map((r) => r.id)
+      const [{ data: supports }, { data: saves }] = await Promise.all([
+        currentUser?.id && ids.length > 0
+          ? supabase.from("post_supports").select("post_id").eq("user_id", currentUser.id).in("post_id", ids)
+          : Promise.resolve({ data: [] }),
+        currentUser?.id && ids.length > 0
+          ? supabase.from("post_saves").select("post_id").eq("user_id", currentUser.id).in("post_id", ids)
+          : Promise.resolve({ data: [] }),
+      ])
+      const supportedIds = new Set((supports ?? []).map((r) => r.post_id))
+      const savedIds = new Set((saves ?? []).map((r) => r.post_id))
+
+      const mapped = ((rows ?? []) as unknown as PostRow[])
+        .map((r) => {
+          const p = rowToPost(r, {
+            currentUserId: currentUser?.id,
+            isAdmin: currentUser?.isAdmin,
+            isFriend: isFollowing,
+          })
+          p.supportedByCurrentUser = supportedIds.has(p.id)
+          p.savedByCurrentUser = savedIds.has(p.id)
+          return p
+        })
         .filter((p) => {
-          if (p.authorId !== params.id) return false
-          // If viewing someone else's profile, hide anonymous posts from non-admins
-          if (p.isAnonymous && currentUser?.id !== params.id && !currentUser?.isAdmin) return false
+          if (p.isAnonymous && currentUser?.id !== resolvedAuthorId && !currentUser?.isAdmin) return false
           return true
         })
-        // Pinned posts first, then newest.
-        .sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || b.createdAt.localeCompare(a.createdAt)),
-    [posts, params.id, currentUser?.id, currentUser?.isAdmin],
-  )
+
+      if (!cancelled) {
+        setUserPosts(mapped)
+        setUserPostsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [params.id, currentUser?.id, currentUser?.isAdmin, isFollowing])
 
   // Upcoming events from this org (only org profiles).
   const [upcomingEvents, setUpcomingEvents] = useState<Post[]>([])
@@ -346,7 +397,11 @@ export default function PublicProfilePage({
 
             <div>
               <h2 className="mb-3 text-h4">{s["profile.yourPosts"]}</h2>
-              {theirPosts.length === 0 ? (
+              {userPostsLoading ? (
+                <div className="flex justify-center py-10">
+                  <Spinner />
+                </div>
+              ) : userPosts.length === 0 ? (
                 <EmptyState
                   icon={ShieldCheck}
                   title={s["profile.noPosts.title"]}
@@ -354,7 +409,7 @@ export default function PublicProfilePage({
                 />
               ) : (
                 <div className="flex flex-col gap-4">
-                  {theirPosts.map((post) => (
+                  {userPosts.map((post) => (
                     <PostCard key={post.id} post={post} showFollow={false} />
                   ))}
                 </div>

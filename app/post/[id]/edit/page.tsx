@@ -12,6 +12,8 @@ import { uploadPostMedia } from "@/lib/supabase/storage"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { cn, parseHashtags } from "@/lib/utils"
 import { checkInappropriateContent, scanImageFile } from "@/lib/moderation"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { rowToPost, type PostRow } from "@/lib/mappers"
 import s from "@/lib/strings"
 
 export default function EditPostPage({
@@ -47,17 +49,35 @@ export default function EditPostPage({
   // Hydrate the form once the post is available.
   useEffect(() => {
     if (!postId) return
-    usePostStore.getState().loadAll(currentUser?.id).finally(() => {
+    usePostStore.getState().loadAll(currentUser?.id).finally(async () => {
       const fresh = usePostStore.getState().posts.find((p) => p.id === postId)
-      if (!fresh) {
+      if (fresh) {
+        setText(fresh.text)
+        setHashtagInput(fresh.hashtags.join(" "))
+        setContentWarning(fresh.contentWarning ?? "")
+        setExistingMediaUrls((fresh.mediaUrl ?? "").split(" ").filter(Boolean))
+        setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
         setLoaded(true)
         return
       }
-      setText(fresh.text)
-      setHashtagInput(fresh.hashtags.join(" "))
-      setContentWarning(fresh.contentWarning ?? "")
-      setExistingMediaUrls((fresh.mediaUrl ?? "").split(" ").filter(Boolean))
-      setExistingMediaType(fresh.mediaType as "photo" | "video" | null)
+
+      // If not in first batch of posts, fetch directly by ID
+      const supabase = createSupabaseBrowserClient()
+      const { data: row } = await supabase.from("posts").select("*").eq("id", postId).maybeSingle()
+      if (row) {
+        const mapped = rowToPost(row as unknown as PostRow, {
+          currentUserId: currentUser?.id,
+          isAdmin: currentUser?.isAdmin,
+        })
+        usePostStore.setState((s) => ({
+          posts: s.posts.some((p) => p.id === mapped.id) ? s.posts : [mapped, ...s.posts],
+        }))
+        setText(mapped.text)
+        setHashtagInput(mapped.hashtags.join(" "))
+        setContentWarning(mapped.contentWarning ?? "")
+        setExistingMediaUrls((mapped.mediaUrl ?? "").split(" ").filter(Boolean))
+        setExistingMediaType(mapped.mediaType as "photo" | "video" | null)
+      }
       setLoaded(true)
     })
   }, [postId, currentUser?.id])
