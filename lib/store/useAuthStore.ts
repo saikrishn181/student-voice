@@ -42,6 +42,8 @@ interface AuthState {
   signup: (payload: SignupPayload) => Promise<AuthResult>
   verifySignupOtp: (email: string, token: string) => Promise<AuthResult>
   resendSignupOtp: (email: string) => Promise<AuthResult>
+  sendPasswordResetOtp: (email: string) => Promise<AuthResult>
+  verifyPasswordResetOtp: (email: string, token: string, newPassword: string) => Promise<AuthResult>
   signInWithGoogle: (next?: string) => Promise<AuthResult>
   setRegion: (state: string) => Promise<void>
   // One-time onboarding: name, region, account type (Google users), privacy
@@ -189,6 +191,81 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (error) {
       return { ok: false, error: normalizeErrorMessage(error.message) }
     }
+    return { ok: true }
+  },
+
+  sendPasswordResetOtp: async (email) => {
+    const supabase = createSupabaseBrowserClient()
+    const cleanEmail = email.trim()
+    // First, try signInWithOtp (which sends a 6-digit code with type: email)
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: cleanEmail,
+      options: { shouldCreateUser: false },
+    })
+    if (!otpError) {
+      return { ok: true }
+    }
+    // Fallback: resetPasswordForEmail (sends recovery code / link)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail)
+    if (resetError) {
+      return { ok: false, error: normalizeErrorMessage(resetError.message || otpError?.message) }
+    }
+    return { ok: true }
+  },
+
+  verifyPasswordResetOtp: async (email, token, newPassword) => {
+    const supabase = createSupabaseBrowserClient()
+    const cleanEmail = email.trim()
+    const cleanToken = token.trim()
+
+    // Try recovery type first, then email type fallback
+    let session = null
+    let lastError = null
+
+    const attempt1 = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanToken,
+      type: "recovery",
+    })
+    if (attempt1.data?.session) {
+      session = attempt1.data.session
+    } else {
+      lastError = attempt1.error
+      const attempt2 = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: "email",
+      })
+      if (attempt2.data?.session) {
+        session = attempt2.data.session
+      } else {
+        lastError = attempt2.error || lastError
+      }
+    }
+
+    if (!session) {
+      return {
+        ok: false,
+        error: lastError?.message?.includes("Token")
+          ? "Invalid or expired verification code."
+          : normalizeErrorMessage(lastError?.message || "Invalid verification code"),
+      }
+    }
+
+    // Apply the new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+    if (updateError) {
+      return { ok: false, error: normalizeErrorMessage(updateError.message) }
+    }
+
+    // Hydrate profile & restore active store session
+    const user = await fetchProfile(session.user.id)
+    if (user) {
+      saveAccount(user)
+    }
+    set({ isLoggedIn: true, currentUser: user ?? null })
     return { ok: true }
   },
 

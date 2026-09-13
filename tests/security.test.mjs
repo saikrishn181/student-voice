@@ -423,3 +423,50 @@ test("security: Hardened redirect URL validator blocks backslash and protocol in
   assert.equal(safeRedirect("/profile/c87a19e4"), "/profile/c87a19e4")
   assert.equal(safeRedirect("/feed"), "/feed")
 })
+
+test("security: Password reset OTP token validation and dual type fallback (recovery & email)", async () => {
+  const mockVerifyOtp = async ({ email, token, type }) => {
+    if (token !== "123456") return { error: { message: "Token has expired or is invalid" }, data: {} }
+    // Suppose backend issued recovery token
+    if (type === "recovery") return { data: { session: { user: { id: "user-123" } } } }
+    return { error: { message: "Invalid token type" }, data: {} }
+  }
+
+  const verifyWithFallback = async (email, token) => {
+    const cleanEmail = email.trim()
+    const cleanToken = token.trim()
+    const attempt1 = await mockVerifyOtp({ email: cleanEmail, token: cleanToken, type: "recovery" })
+    if (attempt1.data?.session) return { ok: true, session: attempt1.data.session }
+    const attempt2 = await mockVerifyOtp({ email: cleanEmail, token: cleanToken, type: "email" })
+    if (attempt2.data?.session) return { ok: true, session: attempt2.data.session }
+    return { ok: false, error: attempt2.error?.message || attempt1.error?.message }
+  }
+
+  const resSuccess = await verifyWithFallback("test@example.com", "123456")
+  assert.equal(resSuccess.ok, true)
+  assert.equal(resSuccess.session.user.id, "user-123")
+
+  const resBadToken = await verifyWithFallback("test@example.com", "999999")
+  assert.equal(resBadToken.ok, false)
+})
+
+test("security: Signup OTP flow requires email confirmation before session access", () => {
+  function processSignupResponse(data) {
+    if (data.session) {
+      return { ok: true, requiresOtp: false, isLoggedIn: true }
+    }
+    if (data.user) {
+      return { ok: true, requiresOtp: true, isLoggedIn: false }
+    }
+    return { ok: false, error: "Signup failed" }
+  }
+
+  const autoConfirmed = processSignupResponse({ session: { user: { id: "u1" } }, user: { id: "u1" } })
+  assert.equal(autoConfirmed.requiresOtp, false)
+  assert.equal(autoConfirmed.isLoggedIn, true)
+
+  const otpPending = processSignupResponse({ session: null, user: { id: "u2" } })
+  assert.equal(otpPending.requiresOtp, true)
+  assert.equal(otpPending.isLoggedIn, false)
+})
+

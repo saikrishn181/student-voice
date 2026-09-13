@@ -12,6 +12,7 @@ import Link from "next/link"
 import { MailCheck, KeyRound, Lock } from "lucide-react"
 import { Button, Input, Tabs } from "@/components/ui"
 import { Logo } from "@/components/feature"
+import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { LOGGED_IN_HOME } from "@/constants"
@@ -24,6 +25,8 @@ type Method = "otp" | "link"
 export default function ForgotPasswordPage() {
   const router = useRouter()
   const showToast = useToastStore((s) => s.show)
+  const sendPasswordResetOtp = useAuthStore((s) => s.sendPasswordResetOtp)
+  const verifyPasswordResetOtp = useAuthStore((s) => s.verifyPasswordResetOtp)
   const [method, setMethod] = useState<Method>("otp")
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
@@ -77,14 +80,10 @@ export default function ForgotPasswordPage() {
   const handleRequestCode = async () => {
     if (!validateEmail()) return
     setLoading(true)
-    const supabase = createSupabaseBrowserClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: false },
-    })
+    const result = await sendPasswordResetOtp(email.trim())
     setLoading(false)
-    if (error) {
-      showToast(error.message || "Could not send verification code. Please check your email and try again.", "error")
+    if (!result.ok) {
+      showToast(result.error || "Could not send verification code. Please check your email and try again.", "error")
       return
     }
     setCodeSent(true)
@@ -127,28 +126,13 @@ export default function ForgotPasswordPage() {
     if (hasError) return
 
     setLoading(true)
-    const supabase = createSupabaseBrowserClient()
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: cleanCode,
-      type: "email",
-    })
-    if (verifyError) {
-      setLoading(false)
-      const msg = verifyError.message?.includes("Token")
-        ? "Invalid or expired verification code."
-        : verifyError.message
+    const result = await verifyPasswordResetOtp(email.trim(), cleanCode, newPassword)
+    setLoading(false)
+
+    if (!result.ok) {
+      const msg = result.error || "Invalid or expired verification code."
       setCodeError(msg)
       showToast(msg, "error")
-      return
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
-    setLoading(false)
-    if (updateError) {
-      showToast(updateError.message || "Could not update your password", "error")
       return
     }
 
