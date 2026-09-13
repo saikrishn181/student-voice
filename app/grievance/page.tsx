@@ -148,26 +148,9 @@ export default function GrievancePage() {
       return
     }
 
-    // Deterministic lookup for external or simulated ticket IDs
-    const now = new Date()
-    const filedDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
-    const ackDate = new Date(filedDate.getTime() + 24 * 60 * 60 * 1000)
-    const resDate = new Date(filedDate.getTime() + 15 * 24 * 60 * 60 * 1000)
-
-    const synthesized: GrievanceTicket = {
-      id: query.startsWith("KRANTIND-GRV-") ? query : `KRANTIND-GRV-${query.replace(/[^0-9A-Z]/g, "")}`,
-      name: "Registered Complainant",
-      email: "Verified IT Rules Submitter",
-      capacity: "student",
-      category: "defamation",
-      description: "Content takedown and intermediary review request registered under Rule 3(2).",
-      filedAt: filedDate.toISOString(),
-      status: "investigating",
-      ackDeadline: ackDate.toISOString(),
-      resolutionDeadline: resDate.toISOString(),
-    }
-
-    setTrackedTicket(synthesized)
+    // If not found in local storage, display an honest not-found notice
+    setTrackedTicket(null)
+    showToast(`No ticket found for reference "${query}". Please check your ticket ID or ensure it was filed from this browser.`, "error")
   }
 
   return (

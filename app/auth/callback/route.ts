@@ -41,17 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(POST_SIGNUP_ROUTE, request.url))
   }
 
-  // Returning user: require entering password after selecting Google mail
-  const confirmUrl = new URL("/login", request.url)
-  confirmUrl.searchParams.set("google_confirm", "true")
-  if (userEmail) confirmUrl.searchParams.set("email", userEmail)
-  if (profile?.name) confirmUrl.searchParams.set("name", profile.name)
-  if (next) {
-    const safeNext = getSafeRedirect(next, "")
-    if (safeNext) {
-      confirmUrl.searchParams.set("next", safeNext)
-    }
-  }
-
-  return NextResponse.redirect(confirmUrl)
+  // Returning user: redirect directly to the requested page or the home feed.
+  const targetPath = next ? getSafeRedirect(next, LOGGED_IN_HOME) : LOGGED_IN_HOME
+  return NextResponse.redirect(new URL(targetPath, request.url))
 }

@@ -2,7 +2,7 @@
 
 // Campus Impact & Resolution Leaderboard
 // Highlights real-world resolved student grievances, active campus stats, and victory stories across India.
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Trophy,
@@ -16,7 +16,7 @@ import {
   Award,
   ShieldCheck,
 } from "lucide-react"
-import { Card, Button } from "@/components/ui"
+import { Card, Button, Spinner } from "@/components/ui"
 import { PostCard } from "@/components/feature/PostCard"
 import { usePostStore } from "@/lib/store/usePostStore"
 import { useUserStore } from "@/lib/store/useUserStore"
@@ -25,6 +25,22 @@ export default function ImpactPage() {
   const posts = usePostStore((s) => s.posts)
   const users = useUserStore((s) => s.users)
   const [filterTab, setFilterTab] = useState<"all" | "recent">("all")
+  const [loading, setLoading] = useState(posts.length === 0)
+
+  useEffect(() => {
+    let cancelled = false
+    const hydrate = async () => {
+      if (posts.length === 0) {
+        await usePostStore.getState().loadAll()
+      }
+      await useUserStore.getState().loadAll()
+      if (!cancelled) setLoading(false)
+    }
+    void hydrate()
+    return () => {
+      cancelled = true
+    }
+  }, [posts.length])
 
   // Filter resolved issues
   const resolvedPosts = useMemo(

@@ -7,6 +7,14 @@ import { createServerClient } from "@supabase/ssr"
 const PUBLIC_ROUTES = [
   "/",
   "/about",
+  "/legal",
+  "/terms",
+  "/privacy",
+  "/grievance",
+  "/guidelines",
+  "/impact",
+  "/contact",
+  "/faq",
   "/forgot-password",
   "/reset-password",
   "/login",
@@ -17,11 +25,6 @@ const PUBLIC_ROUTES = [
   "/sw.js",
   "/robots.txt",
   "/sitemap.xml",
-  "/privacy",
-  "/terms",
-  "/guidelines",
-  "/contact",
-  "/faq",
 ]
 
 export async function middleware(request: NextRequest) {
@@ -60,7 +63,10 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  const isPublicRoute = PUBLIC_ROUTES.includes(path)
+  // Public post viewing allows sharing links externally; creating/editing remains protected
+  const isPublicPost = path.startsWith("/post/") && path !== "/post/create" && !path.endsWith("/edit")
+  const isPublicTag = path.startsWith("/tag/")
+  const isPublicRoute = PUBLIC_ROUTES.includes(path) || isPublicPost || isPublicTag
 
   // Important: always call getUser() so the session cookie is refreshed.
   const { data } = await supabase.auth.getUser()
@@ -75,9 +81,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // A signed-in user hitting an auth page is bounced to the feed instead,
+  // A signed-in user hitting an auth page or root landing page is bounced to the feed instead,
   // unless they are explicitly adding another account (?add_account=true).
-  const AUTH_ONLY_GUEST_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password"]
+  const AUTH_ONLY_GUEST_PAGES = ["/", "/login", "/signup", "/forgot-password", "/reset-password"]
   const isAddAccount = request.nextUrl.searchParams.get("add_account") === "true"
   if (AUTH_ONLY_GUEST_PAGES.includes(path) && isAuthenticated && !isAddAccount) {
     const url = request.nextUrl.clone()

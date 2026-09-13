@@ -72,7 +72,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [isLoggedIn, currentUser?.id])
 
-  const isPublic = PUBLIC_ROUTES.includes(pathname)
+  const isPublicPost = pathname.startsWith("/post/") && pathname !== "/post/create" && !pathname.endsWith("/edit")
+  const isPublicTag = pathname.startsWith("/tag/")
+  const isPublic = PUBLIC_ROUTES.includes(pathname) || isPublicPost || isPublicTag
   // Onboarding pages are authenticated but shown WITHOUT the app shell (no Navbar),
   // per the spec — Landing, Login, Signup, Region Selection have no Navbar.
   const isBareAuthenticated = pathname.startsWith("/onboarding")
