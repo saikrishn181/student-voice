@@ -314,15 +314,7 @@ export default function FeedPage() {
                 if (filteredRanked.length === 0 && posts.length > 0) {
                   return (
                     <EmptyState
-                      icon={
-                        vibeFilter === "life"
-                          ? PartyPopper
-                          : vibeFilter === "study"
-                            ? BookOpen
-                            : vibeFilter === "other"
-                              ? MessageSquare
-                              : Megaphone
-                      }
+                      icon={Inbox}
                       title={
                         vibeFilter === "life"
                           ? "No Campus Life posts yet"
@@ -382,15 +374,7 @@ export default function FeedPage() {
               if (visible.length === 0 && posts.length > 0) {
                 return (
                   <EmptyState
-                    icon={
-                      vibeFilter === "life"
-                        ? PartyPopper
-                        : vibeFilter === "study"
-                          ? BookOpen
-                          : vibeFilter === "other"
-                            ? MessageSquare
-                            : Megaphone
-                    }
+                    icon={Inbox}
                     title={
                       vibeFilter === "life"
                         ? "No Campus Life posts yet"
