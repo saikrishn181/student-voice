@@ -7,7 +7,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert, ShieldCheck, Users, Lock, UserCheck, BookmarkCheck, PartyPopper, BookOpen, Megaphone, MessageSquare, MapPin, Check, Plus } from "lucide-react"
+import { BarChart3, CalendarClock, Send, Trash2, X, ShieldAlert, ShieldCheck, Users, Lock, UserCheck, BookmarkCheck, MapPin, Check, Plus } from "lucide-react"
 import { Button, Card, Input, Textarea } from "@/components/ui"
 import { MediaUploader, type PickedMedia } from "@/components/feature/MediaUploader"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -26,33 +26,29 @@ type VibeOption = PostVibe
 
 const VIBE_CONFIG: Record<
   VibeOption,
-  { title: string; label: string; desc: string; placeholder: string; starterTag: string }
+  { title: string; label: string; placeholder: string; starterTag: string }
 > = {
   issue: {
     title: "Campus Issue",
     label: "Campus Issue",
-    desc: "Mess food, hostel, fee transparency, admin accountability, or harassment (Whistleblower protection available)",
     placeholder: "What's the problem on campus? Describe what's happening, who's responsible, and what needs fixing...",
     starterTag: "#CampusIssue",
   },
   life: {
     title: "Campus Life",
     label: "Campus Life",
-    desc: "College fests, cultural nights, fresher & farewell parties, hostel banter, canteen, or campus memes",
     placeholder: "What's buzzing on campus? Share fest moments, parties, hostel banter, campus memes, or college memories...",
     starterTag: "#CampusLife",
   },
   study: {
     title: "Study Hub",
     label: "Study Hub",
-    desc: "Handwritten notes, previous year questions (PYQs), exam tips, placement prep, or study hacks",
     placeholder: "Share study notes, exam strategies, previous year questions, or placement prep advice...",
     starterTag: "#StudyNotes",
   },
   other: {
     title: "Other",
     label: "Other",
-    desc: "General campus discussions, questions, college ideas, thoughts, or open conversations",
     placeholder: "Ask a question, share an open thought, start a discussion, or connect with batchmates...",
     starterTag: "#CampusGeneral",
   },
@@ -437,36 +433,27 @@ function CreatePostContent() {
               Select Post Category:
             </label>
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {(
-                [
-                  { id: "issue" as const, label: "Campus Issue", icon: Megaphone, active: "bg-rose-600 text-white border-rose-600 shadow-xs" },
-                  { id: "life" as const, label: "Campus Life", icon: PartyPopper, active: "bg-purple-600 text-white border-purple-600 shadow-xs" },
-                  { id: "study" as const, label: "Study Hub", icon: BookOpen, active: "bg-emerald-600 text-white border-emerald-600 shadow-xs" },
-                  { id: "other" as const, label: "Other", icon: MessageSquare, active: "bg-slate-800 text-white border-slate-800 shadow-xs" },
-                ] as const
-              ).map((item) => {
-                const Icon = item.icon
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleVibeSelect(item.id)}
-                    className={cn(
-                      "rounded-pill px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer border flex items-center gap-1.5",
-                      vibe === item.id
-                        ? item.active
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-                    )}
-                  >
-                    <Icon size={14} aria-hidden />
-                    {item.label}
-                  </button>
-                )
-              })}
+              {[
+                { id: "issue" as const, label: "Campus Issue" },
+                { id: "life" as const, label: "Campus Life" },
+                { id: "study" as const, label: "Study Hub" },
+                { id: "other" as const, label: "Other" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleVibeSelect(item.id)}
+                  className={cn(
+                    "rounded-pill px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer border",
+                    vibe === item.id
+                      ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-slate-500 pl-0.5 leading-relaxed">
-              {VIBE_CONFIG[vibe].desc}
-            </p>
           </div>
 
           {/* Text input */}
