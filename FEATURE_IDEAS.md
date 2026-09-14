@@ -4,7 +4,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 🛡️ Category 1: Whistleblower & Anonymous Protection (1–7)
+## Category 1: Whistleblower & Anonymous Protection (1–7)
 
 1. **Burner Pseudonyms & Identity Scrambling**:
    Instead of just "Anonymous Student", generate fun or contextual campus pseudonyms (e.g. *Mechanical Wing Anonymous*, *Hostel 4 Whistleblower*, *Batch of '25 Voice*) to preserve context while maintaining 100% anonymity.
@@ -23,7 +23,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 📢 Category 2: Collective Action, Petitions & RTI (8–15)
+## Category 2: Collective Action, Petitions & RTI (8–15)
 
 8. **Digital Student Petitions & Sign-in Drives**:
    Transform a grievance post into an official petition requiring a milestone (e.g., 250 verified college signatures).
@@ -44,7 +44,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 🏫 Category 3: Campus & College Ecosystem (16–22)
+## Category 3: Campus & College Ecosystem (16–22)
 
 16. **College Portal & Campus Leaderboard**:
     Dedicated `/campus/[slug]` page showing top issues, resolved rate, student union officers, and active student clubs for every university.
@@ -63,7 +63,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 📱 Category 4: Real-time Messaging, Groups & Community (23–29)
+## Category 4: Real-time Messaging, Groups & Community (23–29)
 
 23. **College / Batch Megagroups**:
     Auto-joined, read-only or discussion channels based on college verification (e.g., *IIT Bombay Class of '26*, *DU North Campus Voice*).
@@ -75,14 +75,14 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
     Share study materials, previous year exam papers (PYQs), and hostel handbook PDFs directly in group chats.
 27. **Anonymous Chat Within Post Discussions**:
     Allow post authors who posted anonymously to reply in their own comment thread with an "Author (Anonymous)" badge without leaking their username.
-28. **Message Reactions with Indian Campus Emojis**:
-    Custom emoji reactions: ✊ (Kranti/Solidarity), ☕ (Chai/Discussion), 🫡 (Respect), 📢 (Loud & Clear), 🚩 (Red Flag).
+28. **Message Reactions with Indian Campus Badges**:
+    Custom badge reactions: Kranti/Solidarity, Chai/Discussion, Respect, Loud & Clear, Red Flag.
 29. **Disappearing Messages in DMs**:
     Timer-based auto-deletion for sensitive 1:1 direct messages (e.g., after 1 hour or 24 hours).
 
 ---
 
-## 🔍 Category 5: Discovery, Content & Multilingual Access (30–36)
+## Category 5: Discovery, Content & Multilingual Access (30–36)
 
 30. **Regional Indian Language UI & Voice Transcriptions**:
     Support Hindi, Telugu, Tamil, Marathi, Bengali, and Kannada for UI copy and automatic post audio transcriptions.
@@ -101,7 +101,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 🔒 Category 6: Safety, Trust & Verification (37–43)
+## Category 6: Safety, Trust & Verification (37–43)
 
 37. **Student ID Card OCR Auto-Verification**:
     Scan college ID cards with instant on-device OCR to verify student status without requiring an `.edu.in` or `.ac.in` institutional email (crucial for Tier-2/Tier-3 colleges lacking official emails).
@@ -120,7 +120,7 @@ Here are 50 concrete, actionable suggestions designed specifically for **Krantin
 
 ---
 
-## 🚀 Category 7: Growth, Viral Mechanics & Retention (44–50)
+## Category 7: Growth, Viral Mechanics & Retention (44–50)
 
 44. **WhatsApp Direct Share with Rich Previews**:
     Optimized OpenGraph cards specifically engineered for WhatsApp and Telegram groups (where Indian students communicate most).

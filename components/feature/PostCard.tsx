@@ -35,6 +35,9 @@ import {
   Users,
   ShieldAlert,
   EyeOff,
+  PartyPopper,
+  BookOpen,
+  Megaphone,
 } from "lucide-react"
 import { Card, Avatar, Modal, Button } from "@/components/ui"
 import { useAuthStore } from "@/lib/store/useAuthStore"
@@ -410,19 +413,19 @@ export function PostCard({ post, recommendationReason, showFollow = true, classN
       {/* Campus Vibe pill */}
       {vibe === "life" ? (
         <span className="inline-flex items-center gap-1 rounded-pill border border-purple-200 bg-purple-50/90 px-2.5 py-0.5 text-xs font-semibold text-purple-700 shadow-2xs">
-          <span>🎉</span> Campus Life
+          <PartyPopper size={12} aria-hidden /> Campus Life
         </span>
       ) : vibe === "study" ? (
         <span className="inline-flex items-center gap-1 rounded-pill border border-emerald-200 bg-emerald-50/90 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 shadow-2xs">
-          <span>📚</span> Study Hub
+          <BookOpen size={12} aria-hidden /> Study Hub
         </span>
       ) : vibe === "other" ? (
         <span className="inline-flex items-center gap-1 rounded-pill border border-slate-200 bg-slate-100/90 px-2.5 py-0.5 text-xs font-semibold text-slate-700 shadow-2xs">
-          <span>💬</span> Other
+          <MessageSquare size={12} aria-hidden /> Other
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 rounded-pill border border-rose-200 bg-rose-50/90 px-2.5 py-0.5 text-xs font-semibold text-rose-700 shadow-2xs">
-          <span>📢</span> Campus Issue
+          <Megaphone size={12} aria-hidden /> Campus Issue
         </span>
       )}
 

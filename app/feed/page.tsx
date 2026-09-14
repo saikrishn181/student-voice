@@ -8,7 +8,7 @@
 // sidebar lists trending posts and suggested organizations.
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus, BookOpen, PartyPopper, Megaphone, MessageSquare } from "lucide-react"
+import { TrendingUp, Building2, Inbox, AlertTriangle, RefreshCw, Sparkles, Plus, BookOpen, PartyPopper, Megaphone, MessageSquare, Zap } from "lucide-react"
 import { PostCard } from "@/components/feature"
 import { HotIssueBanner } from "@/components/feature/HotIssueBanner"
 import { PostCardSkeleton } from "@/components/feature/PostCardSkeleton"
@@ -192,25 +192,25 @@ export default function FeedPage() {
                 href="/post/create?vibe=issue"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-rose-200 bg-rose-50/70 px-2.5 py-1 font-semibold text-rose-700 hover:bg-rose-100 active:scale-95 transition-all"
               >
-                <span>📢</span> Report Issue
+                <Megaphone size={13} aria-hidden /> Report Issue
               </Link>
               <Link
                 href="/post/create?vibe=life"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-purple-200 bg-purple-50/70 px-2.5 py-1 font-semibold text-purple-700 hover:bg-purple-100 active:scale-95 transition-all"
               >
-                <span>🎉</span> Campus Life
+                <PartyPopper size={13} aria-hidden /> Campus Life
               </Link>
               <Link
                 href="/post/create?vibe=study"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 font-semibold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition-all"
               >
-                <span>📚</span> Study Hub
+                <BookOpen size={13} aria-hidden /> Study Hub
               </Link>
               <Link
                 href="/post/create?vibe=other"
                 className="inline-flex items-center gap-1.5 rounded-pill border border-slate-200 bg-slate-50/80 px-2.5 py-1 font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
               >
-                <span>💬</span> Other
+                <MessageSquare size={13} aria-hidden /> Other
               </Link>
             </div>
           </Card>
@@ -253,26 +253,30 @@ export default function FeedPage() {
             Campus Pulse:
           </span>
           {[
-            { id: "all", label: "⚡ All Campus", activeCls: "bg-slate-900 text-white border-slate-900 shadow-2xs" },
-            { id: "issue", label: "📢 Issues & Voice", activeCls: "bg-rose-700 text-white border-rose-700 shadow-2xs" },
-            { id: "life", label: "🎉 Campus Life & Fests", activeCls: "bg-purple-700 text-white border-purple-700 shadow-2xs" },
-            { id: "study", label: "📚 Study Hub & Notes", activeCls: "bg-emerald-700 text-white border-emerald-700 shadow-2xs" },
-            { id: "other", label: "💬 Other Discussions", activeCls: "bg-slate-800 text-white border-slate-800 shadow-2xs" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setVibeFilter(item.id as "all" | PostVibe)}
-              className={cn(
-                "rounded-pill px-3 py-1 font-semibold transition-all shrink-0 border",
-                vibeFilter === item.id
-                  ? item.activeCls
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+            { id: "all", label: "All Campus", icon: Zap, activeCls: "bg-slate-900 text-white border-slate-900 shadow-2xs" },
+            { id: "issue", label: "Issues & Voice", icon: Megaphone, activeCls: "bg-rose-700 text-white border-rose-700 shadow-2xs" },
+            { id: "life", label: "Campus Life & Fests", icon: PartyPopper, activeCls: "bg-purple-700 text-white border-purple-700 shadow-2xs" },
+            { id: "study", label: "Study Hub & Notes", icon: BookOpen, activeCls: "bg-emerald-700 text-white border-emerald-700 shadow-2xs" },
+            { id: "other", label: "Other Discussions", icon: MessageSquare, activeCls: "bg-slate-800 text-white border-slate-800 shadow-2xs" },
+          ].map((item) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setVibeFilter(item.id as "all" | PostVibe)}
+                className={cn(
+                  "rounded-pill px-3 py-1 font-semibold transition-all shrink-0 border inline-flex items-center gap-1.5",
+                  vibeFilter === item.id
+                    ? item.activeCls
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+                )}
+              >
+                <Icon size={12} aria-hidden />
+                {item.label}
+              </button>
+            )
+          })}
         </div>
 
         {/* Mobile follower suggestions (horizontal scroll, hidden on desktop) */}
