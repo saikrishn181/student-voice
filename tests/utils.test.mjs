@@ -12,6 +12,7 @@ import {
   getPostVibe,
   getSafeRedirect,
   isSafeMediaUrl,
+  containsEmoji,
 } from "./utils-runner.mjs"
 
 test("cn merges tailwind classes without conflicts", () => {
@@ -76,6 +77,17 @@ test("parseHashtags rejects invalid input", () => {
   assert.equal(tooLong.error, "validation.hashtagTooLong")
   const invalid = parseHashtags("has-tag")
   assert.equal(invalid.error, "validation.hashtagInvalid")
+  const withEmoji = parseHashtags("#campus🔥")
+  assert.equal(withEmoji.error, "validation.hashtagNoEmoji")
+})
+
+test("containsEmoji accurately identifies emojis while allowing regular text", () => {
+  assert.equal(containsEmoji("Hello World"), false)
+  assert.equal(containsEmoji("Rahul Sharma"), false)
+  assert.equal(containsEmoji("rahul_sharma123"), false)
+  assert.equal(containsEmoji("Rahul 🔥"), true)
+  assert.equal(containsEmoji("Hostel 4 🚀"), true)
+  assert.equal(containsEmoji("🎉"), true)
 })
 
 test("categoryFromHashtags maps keywords to categories", () => {

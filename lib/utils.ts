@@ -44,11 +44,22 @@ const MAX_TAG_LENGTH = 30
 // Lowercase alpha-numeric, Hindi / Indic unicode scripts (Devanagari, Telugu, Tamil, Bengali, Kannada, Malayalam, Gujarati, Gurmukhi, Odia), underscore.
 const TAG_RE = /^[a-z0-9_\u0900-\u097F\u0C00-\u0C7F\u0B80-\u0BFF\u0980-\u09FF\u0C80-\u0CFF\u0D00-\u0D7F\u0A80-\u0AFF\u0A00-\u0A7F\u0B00-\u0B7F]+$/
 
+// Emoji and pictographic symbols regex
+export const EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}]/u
+
+/**
+ * Checks if a string contains any emojis or pictographic symbols.
+ */
+export function containsEmoji(str: string): boolean {
+  return EMOJI_REGEX.test(str)
+}
+
 // Keys of the hashtag validation strings (must exist in lib/strings.ts).
 export type HashtagErrorKey =
   | "validation.hashtagsTooMany"
   | "validation.hashtagTooLong"
   | "validation.hashtagInvalid"
+  | "validation.hashtagNoEmoji"
 
 // Parse a raw hashtag input ("#academic, hostel #Fees" -> ["academic","hostel","fees"]).
 // Returns an error key (via `strings`) when invalid, or null when valid.
@@ -63,6 +74,7 @@ export function parseHashtags(
     if (tags.includes(tag)) continue
     if (tags.length >= MAX_HASHTAGS) return { tags, error: "validation.hashtagsTooMany" }
     if (tag.length > MAX_TAG_LENGTH) return { tags, error: "validation.hashtagTooLong" }
+    if (containsEmoji(tag)) return { tags, error: "validation.hashtagNoEmoji" }
     if (!TAG_RE.test(tag)) return { tags, error: "validation.hashtagInvalid" }
     tags.push(tag)
   }

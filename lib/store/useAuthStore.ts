@@ -15,6 +15,7 @@ import { useUserStore } from "./useUserStore"
 import { useNotificationStore } from "./useNotificationStore"
 import { useChatStore } from "./useChatStore"
 import { saveAccount, getSavedAccounts, removeSavedAccount } from "@/lib/savedAccounts"
+import { containsEmoji } from "@/lib/utils"
 
 export interface SignupPayload {
   name: string
@@ -114,6 +115,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   signup: async (payload) => {
+    if (containsEmoji(payload.name)) {
+      return { ok: false, error: "Names cannot contain emojis." }
+    }
     const supabase = createSupabaseBrowserClient()
     const meta: Record<string, string> = {
       name: payload.name,
@@ -296,6 +300,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   finishOnboarding: async (payload) => {
     const { currentUser } = get()
     if (!currentUser) return { ok: false, error: "Not logged in." }
+    if (payload.name && containsEmoji(payload.name)) {
+      return { ok: false, error: "Names cannot contain emojis." }
+    }
 
     const supabase = createSupabaseBrowserClient()
 
@@ -353,6 +360,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   updateProfile: async (patch) => {
     const { currentUser } = get()
     if (!currentUser) return { ok: false, error: "Not logged in." }
+    if (patch.name && containsEmoji(patch.name)) {
+      return { ok: false, error: "Names cannot contain emojis." }
+    }
+    if (patch.username && containsEmoji(patch.username)) {
+      return { ok: false, error: "Usernames cannot contain emojis." }
+    }
 
     const supabase = createSupabaseBrowserClient()
 

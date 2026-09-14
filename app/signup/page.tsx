@@ -12,7 +12,7 @@ import { useAuthStore } from "@/lib/store/useAuthStore"
 import { useToastStore } from "@/lib/store/useToastStore"
 import { ORGANIZATION_TYPES, POST_SIGNUP_ROUTE } from "@/constants"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
+import { cn, containsEmoji } from "@/lib/utils"
 import type { AccountType, OrganizationType } from "@/lib/types"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -89,6 +89,9 @@ export default function SignupPage() {
     let hasError = false
     if (!name.trim()) {
       setNameError("Name is required")
+      hasError = true
+    } else if (containsEmoji(name.trim())) {
+      setNameError(s["validation.nameNoEmoji"] || "Names cannot contain emojis")
       hasError = true
     }
     if (!email.trim()) {

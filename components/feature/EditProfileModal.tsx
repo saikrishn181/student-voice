@@ -12,7 +12,7 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { uploadAvatar } from "@/lib/supabase/storage"
 import { STATES } from "@/constants"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
+import { cn, containsEmoji } from "@/lib/utils"
 
 interface EditProfileModalProps {
   open: boolean
@@ -136,8 +136,16 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       setNameError(s["validation.nameRequired"])
       return
     }
+    if (containsEmoji(trimmedName)) {
+      setNameError(s["validation.nameNoEmoji"])
+      return
+    }
     setNameError(undefined)
 
+    if (trimmedUsername && containsEmoji(trimmedUsername)) {
+      setUsernameError(s["validation.usernameNoEmoji"])
+      return
+    }
     if (trimmedUsername && !USERNAME_RE.test(trimmedUsername)) {
       setUsernameError(s["validation.usernameInvalid"])
       return

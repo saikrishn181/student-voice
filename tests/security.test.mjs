@@ -470,3 +470,43 @@ test("security: Signup OTP flow requires email confirmation before session acces
   assert.equal(otpPending.isLoggedIn, false)
 })
 
+test("security: Names and usernames reject emojis while posts and group names allow them", () => {
+  const EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}]/u
+  function containsEmoji(str) {
+    return EMOJI_REGEX.test(str)
+  }
+
+  function validateUserName(name) {
+    if (!name || !name.trim()) return { ok: false, error: "Name is required" }
+    if (containsEmoji(name)) return { ok: false, error: "Names cannot contain emojis" }
+    return { ok: true }
+  }
+
+  function validateUsername(username) {
+    if (containsEmoji(username)) return { ok: false, error: "Usernames cannot contain emojis" }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) return { ok: false, error: "Invalid username" }
+    return { ok: true }
+  }
+
+  function validatePostText(text) {
+    if (!text || !text.trim()) return { ok: false, error: "Post cannot be empty" }
+    return { ok: true }
+  }
+
+  function validateGroupName(groupTitle) {
+    if (!groupTitle || !groupTitle.trim()) return { ok: false, error: "Group name is required" }
+    return { ok: true }
+  }
+
+  // Name & username checks
+  assert.equal(validateUserName("Rohan Sharma").ok, true)
+  assert.equal(validateUserName("Rohan 🔥").ok, false)
+  assert.equal(validateUsername("rohan_12").ok, true)
+  assert.equal(validateUsername("rohan_😎").ok, false)
+
+  // Posts & groups allow emojis
+  assert.equal(validatePostText("Water cooler is broken on 3rd floor 🚰😢").ok, true)
+  assert.equal(validateGroupName("Hostel 4 Boys ⚡").ok, true)
+})
+
+

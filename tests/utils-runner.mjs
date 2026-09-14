@@ -51,6 +51,12 @@ const TAG_RE = /^[a-zA-Z0-9_]+$/
 const MAX_HASHTAGS = 5
 const MAX_TAG_LENGTH = 30
 
+export const EMOJI_REGEX = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}]/u
+
+export function containsEmoji(str) {
+  return EMOJI_REGEX.test(str)
+}
+
 export function parseHashtags(raw) {
   const tags = []
   for (const chunk of raw.split(/[\s,]+/)) {
@@ -59,6 +65,7 @@ export function parseHashtags(raw) {
     if (tags.includes(tag)) continue
     if (tags.length >= MAX_HASHTAGS) return { tags, error: "validation.hashtagsTooMany" }
     if (tag.length > MAX_TAG_LENGTH) return { tags, error: "validation.hashtagTooLong" }
+    if (containsEmoji(tag)) return { tags, error: "validation.hashtagNoEmoji" }
     if (!TAG_RE.test(tag)) return { tags, error: "validation.hashtagInvalid" }
     tags.push(tag)
   }

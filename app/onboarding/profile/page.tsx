@@ -21,7 +21,7 @@ import { useToastStore } from "@/lib/store/useToastStore"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { STATES, ORGANIZATION_TYPES, LOGGED_IN_HOME } from "@/constants"
 import s from "@/lib/strings"
-import { cn } from "@/lib/utils"
+import { cn, containsEmoji } from "@/lib/utils"
 import type { AccountType, OrganizationType } from "@/lib/types"
 
 export default function OnboardingProfilePage() {
@@ -91,6 +91,10 @@ export default function OnboardingProfilePage() {
   const handleContinue = async () => {
     if (!name.trim()) {
       setNameError(s["validation.nameRequired"])
+      return
+    }
+    if (containsEmoji(name.trim())) {
+      setNameError(s["validation.nameNoEmoji"] || "Names cannot contain emojis")
       return
     }
     setNameError(undefined)
